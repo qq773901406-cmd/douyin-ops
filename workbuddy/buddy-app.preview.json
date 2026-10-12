@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0",
+  "application": {
+    "name": "豆蜂抖音运营工作台",
+    "nameEn": "Doufeng Douyin Operations",
+    "description": "从账号定位、内容研究、原创创作到发布复盘的一体化 WorkBuddy 应用。",
+    "inputPlaceholderZh": "告诉豆蜂：你今天要诊断账号、找选题、写脚本，还是复盘数据？",
+    "inputPlaceholderEn": "Tell Doufeng what you want to diagnose, create or review today."
+  },
+  "workModes": [
+    { "id": "strategy", "name": "账号与策略", "systemPrompt": "基于可验证信息进行账号诊断、受众分析和内容策略规划。", "skills": ["douyin-ops"] },
+    { "id": "creation", "name": "内容创作", "systemPrompt": "生成原创选题、钩子、脚本和发布清单，不虚构事实或经历。", "skills": ["douyin-ops", "browser-skill"] },
+    { "id": "operation", "name": "发布与复盘", "systemPrompt": "整理发布准备、评论草稿和效果复盘；任何外部写操作执行前必须取得用户确认。", "skills": ["douyin-ops", "browser-skill"] }
+  ],
+  "scenes": [
+    { "name": "账号五维诊断", "prompt": "读取我的工作区和账号主页，完成五维诊断并保存。" },
+    { "name": "推荐流研究", "prompt": "围绕我给的主题研究推荐流样本，提炼可复用模式并保存。" },
+    { "name": "生成原创选题", "prompt": "结合账号画像和近期研究，生成 3 个可拍的原创选题。" },
+    { "name": "拆解参考内容", "prompt": "拆解这条参考内容的结构，并给出不复制原作的原创改写方向。" },
+    { "name": "发布前检查", "prompt": "检查素材、封面、标题、话题和发布时间，生成发布清单。" },
+    { "name": "评论回复草稿", "prompt": "根据评论上下文和账号语气，生成自然的回复草稿。" },
+    { "name": "效果复盘", "prompt": "汇总近期视频数据，提炼结论并设计下一轮单变量实验。" }
+  ],
+  "market": {
+    "skills": ["douyin-ops", "browser-skill"],
+    "connectors": ["doufeng-douyin-ops"]
+  },
+  "notes": "此文件用于在 WorkBuddy 开放平台录入配置时做本地预览与核对；平台生成的应用 ID、授权项和模型 ID需在开放平台填写。"
+}

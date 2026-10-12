@@ -1,0 +1,24 @@
+{
+  "name": "豆蜂运营工作台",
+  "name_zh": "豆蜂运营工作台",
+  "name_en": "Doufeng Douyin Operations",
+  "description": "Manage Douyin account diagnosis, research, ideas, publishing checklists, comments and performance reviews.",
+  "description_zh": "用自然语言管理抖音账号诊断、推荐流研究、选题脚本、发布清单、评论草稿和效果复盘。",
+  "description_en": "Manage Douyin account diagnosis, research, ideas, publishing checklists, comments and performance reviews with natural language.",
+  "source": "doufeng-douyin-ops",
+  "type": "mcp",
+  "version": "1.0.0",
+  "minWorkbuddyVersion": "5.0.0",
+  "examples_zh": [
+    "给我的账号做一次五维诊断并保存",
+    "根据这批推荐流观察生成 3 个原创选题",
+    "创建一条发布前检查清单",
+    "汇总最近视频数据并给出下一轮实验"
+  ],
+  "examples_en": [
+    "Diagnose my account and save the result",
+    "Create three original ideas from my feed research",
+    "Create a pre-publish checklist",
+    "Review recent video metrics and suggest the next experiment"
+  ]
+}

@@ -1,51 +1,32 @@
-# douyin-ops 技能 Smoke Test（2026-09-03）
+# 豆蜂 WorkBuddy 版验收清单
 
-## 测试环境
-- Browser: OpenClaw 内置浏览器
-- Profile: `openclaw`（启动命令：`openclaw browser start --browser-profile openclaw`）
-- 站点: `https://www.douyin.com`
-- 创作后台: `https://creator.douyin.com`
-- 测试方式: 手工执行最小闭环（采样→分析→写入知识库）
-- 交互模型: `snapshot → ref → act`（详见 `references/dy-openclaw-browser-guide.md`）
+## 本地工作台
 
-## 测试结果总览
+- `node server.mjs` 后首页可访问。
+- 账号诊断、推荐流、选题、拆解、发布、评论、效果和知识库表单可保存。
+- 刷新页面后数据仍存在。
+- JSON 备份可导出和导入。
+- 素材可复制到 `runtime/uploads`。
 
-1. ⬜ 推荐流分析
-   - 执行：采样推荐流，抓取高赞视频样本及前3秒钩子
-   - 预期产物：`knowledge-base/patterns/2026-09-03-home-feed-sample.md`
+## WorkBuddy Connector
 
-2. ⬜ 账号分析
-   - 执行：打开账号主页并采样账号信息/近帖表现
-   - 预期产物：`knowledge-base/accounts/2026-09-03-account-analysis.md`
+- `initialize` 返回 MCP 版本、服务器信息和 tools 能力。
+- `tools/list` 返回全部豆蜂工具。
+- `workspace_summary` 能读取当前工作区。
+- 各 add/save 工具能写入 `runtime/workbench.json`。
+- `knowledge_search` 能查到已保存记录。
+- `job_create/list/delete` 能维护回采计划。
 
-3. ⬜ 选题灵感
-   - 执行：结合推荐流信号 + 账号定位生成 5 条选题
-   - 预期产物：`knowledge-base/topics/2026-09-03-topic-ideas.md`
+## BrowserSkill
 
-4. ⬜ 知识库沉淀
-   - 执行：按类型写入 patterns/accounts/topics/actions
-   - 预期产物：`knowledge-base/actions/2026-09-03-smoke-test.md`
+- 未安装时页面显示明确安装提示，不影响其他功能。
+- 安装并连接扩展后，`bsk doctor` 通过。
+- 可启动会话、打开抖音、观察页面并结束会话。
+- 最终发布、评论发送等写操作只能由 WorkBuddy 在确认后执行。
 
-5. ⬜ 自动发布
-   - 执行：上传视频/图片，填写标题文案话题，停在发布按钮
-   - 预期产物：半程预发完成确认
+## Buddy 应用
 
-6. ⬜ 自动回复评论
-   - 执行：打开消息通知页，检查最新评论，对位回复
-   - 预期产物：回复成功确认
-
-7. ⬜ 爆款视频复刻
-   - 执行：输入爆款视频URL，拆解爆款因素，生成新内容
-   - 预期产物：Source Template + 新内容素材
-
-## 已知限制
-
-- 抖音 Web 端部分功能需要在 App 内操作（如部分评论互动）
-- 视频上传受网络带宽影响较大
-- 创作后台数据看板字段可能随平台更新变化
-- 抖音反自动化检测较严格，需严格遵守反封号规则
-
-## 结论
-
-- 技能框架已完成搭建，等待实际环境验证。
-- 建议首测顺序：推荐流分析 → 账号分析 → 选题灵感 → 知识库沉淀 → 发布 → 评论回复 → 爆款复刻
+- 3 个工作模式和 7 个场景可在开放平台配置。
+- 绑定 `douyin-ops`、`doufeng-douyin-ops` 和 `browser-skill`。
+- 预览态能调用 MCP 工具并读取工作区数据。
+- 账号登录与验证码可由用户接管。

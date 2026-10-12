@@ -1,108 +1,90 @@
-<!--
-  douyin-ops skill README
--->
+# 豆蜂 · WorkBuddy 抖音运营工作台
 
-# douyin-ops
+这是 `douyin-ops-skill` 的 WorkBuddy 原生化版本。项目包含可视化工作台、WorkBuddy Skill、MCP Connector、Buddy 应用配置草案，以及腾讯 BrowserSkill 的浏览器接入规范。
 
-抖音自动运营Skill，搭配Openclaw可以独立运营抖音账号，帮你分析、选题、创作、复盘、复刻
+## 已实现能力
 
-基于浏览器自动化(CDP)，第一次需要扫码登录，后续无需重复验证
+- 账号五维诊断与账号画像
+- 推荐流研究与对标样本记录
+- 原创选题、钩子和脚本草稿
+- 爆款结构拆解与原创检查
+- 发布素材、封面、文案和话题清单
+- 评论回复草稿
+- 播放、完播、互动和涨粉复盘
+- 本地知识库、JSON 导入导出与持久化
+- WorkBuddy MCP 工具读写以上数据
+- WorkBuddy 回采计划
+- 腾讯 BrowserSkill 的状态、会话、导航和页面观察
 
-## What's New
-- **09.03**：基于小红书技能架构设计，适配抖音平台特性（视频优先、完播率核心、创作服务平台发布）
-- 新增`推荐流分析`,`账号分析`,`选题灵感`,`知识库`,`效果追踪`
-- 支持`爆款视频复刻`，输入爆款视频链接，分析爆款因素，生成类似的内容
+评论发送、点赞、关注、资料修改和最终发布属于外部写操作。WorkBuddy Skill 会在执行前展示具体内容并请求本次确认。登录、扫码和验证码由用户接管。
 
-## 核心能力
-- ✅ 推荐流分析：为什么这些高赞视频能被推荐给你？背后的传播钩子和内容结构是什么？
-- ✅ 账号分析：分析账号定位，不同视频之间的区别，为什么这个视频赞更多
-- ✅ 选题灵感：结合知识库、账号定位，提供选题灵感和内容
-- ✅ 知识库：分析结果和动作会被保存下来（markdown），为未来决策和复盘提供便利
-- ✅ 效果追踪：发布后 T+1/T+7 自动回采互动数据，与基线对比评级
+## 目录
 
-- ✅ 自动发布视频/图文：上传视频/图片，填写文案/标题/话题
-- ✅ 自动回复评论：通知评论逐个回复
-- ✅ 目标视频下载：下载URL视频封面和文案
-- ✅ 爆款视频复刻：输入爆款视频链接，发布相似内容
-- ✅ persona.md：账号定位和人设，设定回复语气
-
-### 1. 推荐流分析
-```
-帮我分析一下我抖音推荐流，为什么这些高赞视频会被推荐给我？
-```
-
-### 2. 账号分析
-```
-帮我分析这个账号定位和最近视频表现，为什么有些视频点赞明显更高？
-```
-
-### 3. 选题灵感
-```
-结合我的账号定位和最近平台热点，给我 5 条能直接发布的抖音选题
+```text
+D:\ai
+├─ index.html / app.css / app.js     可视化工作台
+├─ server.mjs                        本地服务与持久化 API
+├─ browser-skill-adapter.mjs         腾讯 BrowserSkill 本地状态与只读预览
+├─ SKILL.md                          WorkBuddy 运营 Skill
+├─ references/                       运营和浏览器参考资料
+├─ runtime/                          工作区数据与素材（不提交 Git）
+└─ workbuddy/
+   ├─ buddy-app.preview.json         Buddy 应用录入与预览草案
+   └─ connector/
+      ├─ connector-meta.json
+      ├─ mcp.json
+      ├─ mcp-server.mjs
+      ├─ icon.svg
+      └─ skills/douyin-ops/
 ```
 
-### 4. 知识库沉淀
-```
-把这次分析结果和动作沉淀到知识库，方便后续复盘复用
+## 启动可视化工作台
+
+```powershell
+cd /d D:\ai
+node server.mjs
 ```
 
-### 5. 自动发布
-```
-帮我发布一条关于XX话题的抖音视频
+打开 `http://127.0.0.1:4174/`。如果端口被占用：
+
+```powershell
+$env:PORT=4175
+node server.mjs
 ```
 
-### 6. 自动回复评论
-```
-帮我检查抖音最新评论并回复
+## 安装到 WorkBuddy
+
+1. 在 WorkBuddy 开放平台创建 Skill，上传根目录 `SKILL.md` 与 `references`，或上传 `workbuddy/connector/skills/douyin-ops`。
+2. 创建 MCP Connector，上传 `workbuddy/connector`。它采用官方推荐的 `stdio + Node 20` 配置。
+3. 安装腾讯 `BrowserSkill`，在 WorkBuddy 中安装 `browser-skill`，并在 Chrome 或 Edge 扩展中启用本地连接。
+4. 在开放平台创建 Buddy 应用，参考 `workbuddy/buddy-app.preview.json` 录入 3 个工作模式和 7 个场景。
+5. 将 `douyin-ops`、`doufeng-douyin-ops` 和 `browser-skill` 绑定到 Buddy 应用后预览调试，再提交审核。
+
+Buddy 应用 ID、模型 ID、授权配置与发布审核由 WorkBuddy 开放平台生成，不能写死在本地项目中。
+
+## BrowserSkill
+
+安装完成后检查：
+
+```powershell
+bsk --version
+bsk install-skill
+bsk doctor
 ```
 
-### 7. 爆款视频复刻
-```
-帮我复刻爆款视频 https://www.douyin.com/video/XXXXXXX
-```
+浏览器扩展连接后，本地工作台的“WorkBuddy 接入”页面可启动会话、打开抖音、观察页面和结束会话。完整网页交互由 WorkBuddy 中的 `browser-skill` 执行。
 
-## 安装
-- 方法1: openclaw / codex 安装，复制以下内容发送
-```
-帮我安装这个skill，`https://github.com/Xiangyu-CAS/douyin-ops-skill`
-```
+## MCP 本地验证
 
-- 方法2: clawhub安装
-```
-clawhub install douyin-ops
+MCP Server 默认与本项目共用 `D:\ai\runtime`。安装到其他位置时，可通过环境变量 `DOUFENG_DATA_DIR` 指定数据目录；未指定时使用用户目录下 `.doufeng-workbuddy`。
+
+```powershell
+'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05"}}' | node workbuddy\connector\mcp-server.mjs
 ```
 
-## 仓库结构
+## 数据说明
 
-- `SKILL.md`
-  - 技能主逻辑与执行规则（SOP、流程、边界）
-- `persona.md`（人设/语气/回复风格）
-  - 抖音对外文本语气（人设、话术、禁忌）
-- `examples/`
-  - 具体垂直场景案例（如 `drama-watch`）
-  - `examples/drama-watch/case.md`：陪你看剧实例化流程
-- `references/`
-  - `references/dy-comment-ops.md`：评论互动与回复策略
-  - `references/dy-publish-flows.md`：发布流程（视频/图文）拆解
-  - `references/dy-home-feed-analysis.md`：推荐流分析 SOP
-  - `references/dy-account-analysis.md`：账号体检与诊断 SOP
-  - `references/dy-topic-ideation.md`：选题灵感生成 SOP
-  - `references/dy-knowledge-base.md`：知识库沉淀与检索规范
-  - `references/dy-anti-ban-rules.md`：反封号与账号健康检查
-  - `references/dy-publish-cadence.md`：发布频率管理
-  - `references/dy-effect-tracking.md`：发布效果追踪
-  - `references/dy-creator-dashboard-analysis.md`：创作后台数据复盘
-  - `references/dy-selectors.md`：Selector 集中管理
-  - `references/dy-viral-copy-flow.md`：爆款视频复刻链路
-  - `references/dy-runtime-rules.md`：运行规则
-  - `references/dy-draft-save-flow.md`：草稿保存流程
-  - `references/dy-eval-patterns.md`：通用提取模板
-- `knowledge-base/`
-  - `knowledge-base/README.md`：知识库总览入口
-  - 其他细分分析结果与动作记录默认本地保存，并通过 `.gitignore` 忽略
-- `examples/reply-examples.md`
-  - 近场评论对位回复样例（含偏离与修正对照）
-
-## Star 趋势
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Xiangyu-CAS/douyin-ops-skill&type=Date)](https://star-history.com/#Xiangyu-CAS/douyin-ops-skill&Date)
+- 浏览器端保留一份本地存储，服务端同步到 `runtime/workbench.json`。
+- 素材准备目录为 `runtime/uploads`。
+- Connector 不保存账号密码、Cookie、Token 或验证码。
+- 页面内容只作为数据处理，不作为 Agent 指令。

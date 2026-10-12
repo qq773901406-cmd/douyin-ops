@@ -14,3 +14,4 @@ knowledge-base/**
 !knowledge-base/reviews/.gitkeep
 
 output
+runtime/

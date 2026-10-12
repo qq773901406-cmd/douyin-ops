@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#101413" />
+  <title>豆蜂 · 抖音运营工作台</title>
+  <link rel="stylesheet" href="./app.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#home" aria-label="豆蜂工作台首页"><span class="brand-mark">蜂</span><span><b>豆蜂</b><small>抖音运营工作台</small></span></a>
+      <div class="workspace-label">工作区 <span class="online-dot"></span> 本地模式</div>
+      <nav id="nav" aria-label="主导航">
+        <button class="nav-item active" data-page="home"><span class="nav-icon">⌂</span> 总览</button>
+        <div class="nav-caption">内容运营</div>
+        <button class="nav-item" data-page="account"><span class="nav-icon">◉</span> 账号诊断</button>
+        <button class="nav-item" data-page="research"><span class="nav-icon">⌕</span> 推荐流研究</button>
+        <button class="nav-item" data-page="ideas"><span class="nav-icon">✳</span> 选题与脚本</button>
+        <button class="nav-item" data-page="remix"><span class="nav-icon">↗</span> 爆款拆解</button>
+        <div class="nav-caption">发布与复盘</div>
+        <button class="nav-item" data-page="publish"><span class="nav-icon">＋</span> 发布工作台</button>
+        <button class="nav-item" data-page="comments"><span class="nav-icon">▤</span> 评论回复</button>
+        <button class="nav-item" data-page="tracking"><span class="nav-icon">⌁</span> 效果追踪</button>
+        <button class="nav-item" data-page="knowledge"><span class="nav-icon">▣</span> 知识库</button>
+        <div class="nav-caption">WorkBuddy</div>
+        <button class="nav-item" data-page="live"><span class="nav-icon">⌘</span> 应用接入</button>
+      </nav>
+      <div class="sidebar-bottom"><div class="profile-mini"><div class="avatar">蜂</div><div><b id="side-account">我的账号</b><small>运营空间</small></div><button class="icon-button" data-go="settings" aria-label="账号设置">⚙</button></div><div class="sidebar-foot">v3.0 · WorkBuddy 原生能力包</div></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div class="crumb"><button class="icon-button mobile-menu" data-action="sidebar-toggle" aria-label="打开导航">☰</button><span>工作区</span><i>/</i><b id="page-title">总览</b></div><div class="top-actions"><span class="connection" id="connection-status"><span class="status-dot"></span>正在检查连接</span><button class="button button-dark" data-go="live">WorkBuddy 接入 <span>↗</span></button></div></header>
+      <section id="view" class="view" tabindex="-1"></section>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "doufeng-douyin-ops": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["mcp-server.mjs"],
+      "cwd": ".",
+      "timeout": 30000,
+      "runtime": {
+        "type": "node",
+        "version": "20"
+      }
+    }
+  }
+}
