@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "doufeng-douyin-ops": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "workbuddy/connector/mcp-server.mjs"
+      ],
+      "env": {
+        "DOUFENG_DATA_DIR": "runtime"
+      }
+    }
+  }
+}

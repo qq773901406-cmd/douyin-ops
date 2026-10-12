@@ -1,12 +1,24 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 const execFileAsync = promisify(execFile);
 let activeSession = process.env.BSK_SESSION_ID || '';
 
+function browserSkillBinary() {
+  if (process.env.BSK_BIN) return process.env.BSK_BIN;
+  if (process.platform === 'win32') {
+    const userInstall = join(homedir(), '.local', 'bin', 'bsk.exe');
+    if (existsSync(userInstall)) return userInstall;
+  }
+  return 'bsk';
+}
+
 async function run(args, timeout = 30000) {
   try {
-    const { stdout, stderr } = await execFileAsync(process.env.BSK_BIN || 'bsk', args, { timeout, windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
+    const { stdout, stderr } = await execFileAsync(browserSkillBinary(), args, { timeout, windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
     return { ok: true, stdout: stdout.trim(), stderr: stderr.trim() };
   } catch (error) {
     return { ok: false, code: error.code === 'ENOENT' ? 'BSK_NOT_FOUND' : (error.code || 'BSK_ERROR'), message: error.code === 'ENOENT' ? '未检测到 BrowserSkill CLI。请安装腾讯 BrowserSkill，并在 Chrome 或 Edge 扩展中启用本地连接。' : (error.stderr || error.message || 'BrowserSkill 调用失败。').trim(), stdout: String(error.stdout || '').trim(), stderr: String(error.stderr || '').trim() };

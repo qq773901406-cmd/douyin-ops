@@ -15,3 +15,4 @@ knowledge-base/**
 
 output
 runtime/
+.codex_tmp/

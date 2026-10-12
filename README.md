@@ -54,6 +54,8 @@ node server.mjs
 
 ## 安装到 WorkBuddy
 
+项目根目录的 `.mcp.json` 已声明 `doufeng-douyin-ops`，从 `D:\ai` 打开 WorkBuddy/CodeBuddy 项目时可以直接发现本地 MCP Server。也可以把以下目录作为正式 Connector 包上传：
+
 1. 在 WorkBuddy 开放平台创建 Skill，上传根目录 `SKILL.md` 与 `references`，或上传 `workbuddy/connector/skills/douyin-ops`。
 2. 创建 MCP Connector，上传 `workbuddy/connector`。它采用官方推荐的 `stdio + Node 20` 配置。
 3. 安装腾讯 `BrowserSkill`，在 WorkBuddy 中安装 `browser-skill`，并在 Chrome 或 Edge 扩展中启用本地连接。
@@ -64,15 +66,29 @@ Buddy 应用 ID、模型 ID、授权配置与发布审核由 WorkBuddy 开放平
 
 ## BrowserSkill
 
-安装完成后检查：
+Windows 安装与 WorkBuddy Skill 接入：
 
 ```powershell
-bsk --version
-bsk install-skill
+irm https://raw.githubusercontent.com/Tencent/BrowserSkill/main/install.ps1 | iex
+bsk install-skill --harness workbuddy --json
+```
+
+WorkBuddy/CodeBuddy 会管理子进程，BrowserSkill 守护进程需要用独立终端保持运行：
+
+```powershell
+$env:BSK_AUTO_START='0'
+bsk daemon start --foreground
+```
+
+保持该终端打开，在另一个终端检查：
+
+```powershell
+$env:BSK_AUTO_START='0'
+bsk status --json
 bsk doctor
 ```
 
-浏览器扩展连接后，本地工作台的“WorkBuddy 接入”页面可启动会话、打开抖音、观察页面和结束会话。完整网页交互由 WorkBuddy 中的 `browser-skill` 执行。
+浏览器扩展连接后，本地工作台的“WorkBuddy 接入”页面可启动会话、打开抖音、观察页面和结束会话。浏览器显示登录按钮时，需要用户本人扫码或登录；验证码和账号凭据不进入本项目。完整网页交互由 WorkBuddy 中的 `browser-skill` 执行。
 
 ## MCP 本地验证
 
