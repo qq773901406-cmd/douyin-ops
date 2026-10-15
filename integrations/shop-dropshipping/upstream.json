@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/qq773901406-cmd/shop-dropshipping-automation",
+  "commit": "c7facaf95b5e21308097af9d50e7d46d1ee817a1",
+  "integratedAt": "2026-10-15",
+  "adaptedFrom": ["tools/card-generator/index.js", "README.md"],
+  "integrated": ["Daily report folder conventions", "Price table parsing", "Product and summary cards", "Bilingual publishing drafts", "Eight platform identifiers"],
+  "execution": "Local report import, canvas PNG generation and draft preparation. No automatic external publication, scheduler registration or messaging."
+}
