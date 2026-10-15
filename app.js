@@ -1,96 +1,202 @@
-(() => {
-  const KEY='douyinOpsWorkbench.v1';
-  const blank={account:'我的账号',persona:'直球、短句、有梗；给到关键信息，不攻击人。视频前三秒有钩子，结尾留一个自然问题。',audience:'',pillars:'',records:[],drafts:[],metrics:[],ideas:[],research:[],comments:[],diagnosis:null};
-  let state; try{state={...blank,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{state={...blank}}
-  let page='home', toastTimer;
-  let runtime={online:false,workbuddy:{packageReady:false},browserSkill:{installed:false,connected:false,message:'正在检查'},jobs:[],activity:[]};
-  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const api=async(path,options={})=>{const response=await fetch(path,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});const data=await response.json();if(!response.ok)throw new Error(data.message||'服务请求失败');return data};
-  const save=()=>{localStorage.setItem(KEY,JSON.stringify(state));api('/api/state',{method:'PUT',body:JSON.stringify(state)}).catch(()=>{})};
-  const today=()=>new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit'});
-  const count=t=>state.records.filter(x=>x.type===t).length;
-  const toast=m=>{const el=$('#toast');el.textContent=m;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2300)};
-  const head=(eyebrow,title,desc,actions='')=>`<div class="page-head"><div><p class="eyebrow">${eyebrow}</p><h1>${title}</h1><p>${desc}</p></div><div class="page-actions">${actions}</div></div>`;
-  const card=(title,body,extra='')=>`<section class="card ${extra}"><div class="card-title"><h3>${title}</h3></div>${body}</section>`;
-  const btn=(label,action,kind='button-light',extra='')=>`<button class="button ${kind}" data-action="${action}" ${extra}>${label}</button>`;
-  const empty=(icon,title,desc)=>`<div class="empty"><div class="empty-icon">${icon}</div><b>${title}</b><div>${desc}</div></div>`;
-  const field=(label,name,placeholder='',type='text',value='',cls='')=>`<div class="field ${cls}"><label for="${name}">${label}</label>${type==='textarea'?`<textarea id="${name}" name="${name}" placeholder="${placeholder}">${esc(value)}</textarea>`:`<input id="${name}" name="${name}" type="${type}" placeholder="${placeholder}" value="${esc(value)}" />`}</div>`;
-  const metric=(name,value,note,icon)=>`<div class="card metric-card"><div class="metric-top">${name}<span class="metric-icon">${icon}</span></div><div class="metric-value">${value}</div><div class="metric-note">${note}</div></div>`;
-  const navNames={home:'总览',account:'账号诊断',research:'推荐流研究',ideas:'选题与脚本',remix:'爆款拆解',publish:'发布工作台',comments:'评论回复',tracking:'效果追踪',knowledge:'知识库',live:'WorkBuddy 接入',settings:'连接与设置'};
-  const go=p=>{page=p;render();$('.view').focus({preventScroll:true});};
-  function home(){
-    const recent=[...state.records].slice(-4).reverse(); const drafts=state.drafts.filter(x=>x.status!=='已发布').length;
-    return `${head('MONDAY, YOUR STUDIO','内容做得好，复盘也得跟上。',`早上好，${esc(state.account)}。先看今天最值得推进的事情。`,btn('新建内容计划','go-ideas','button-green'))}
-    <div class="card hero"><div class="hero-copy"><p class="eyebrow">豆蜂运营搭子 · 第 01 天</p><h2>每条视频，都能留下下一次的线索。</h2><p>从账号定位到选题、脚本、发布准备，再到数据复盘。把零散动作放进一条可回看的内容链路。</p>${btn('开始一轮选题','go-ideas','button-dark')}</div><div class="hero-aside"><small>WorkBuddy 工作区</small><b>${state.records.length} 条沉淀</b><span>浏览器与本地服务双重保存</span></div></div>
-    <div class="grid grid-4" style="margin-top:15px">${metric('选题草稿',state.ideas.length,'已生成并保存','✳')}${metric('待准备发布',drafts,'发布前确认','＋')}${metric('知识记录',state.records.length,'账号 · 选题 · 复盘','▣')}${metric('效果记录',state.metrics.length,'手动或 WorkBuddy 回采','⌁')}</div>
-    <div class="grid grid-2"><div><div class="section-row"><h2>今天可以做</h2><span class="pill green">工作流</span></div><div class="task-list">
-    ${[['◉','做一次账号诊断','用五个维度找到下一步重点','account'],['⌕','记录推荐流信号','从内容结构里提炼可复用线索','research'],['✳','生成一组可拍选题','带上前三秒钩子和拍摄建议','ideas'],['＋','准备一条发布草稿','检查视频素材、标题和发布条件','publish']].map(x=>`<button class="task-row" data-go="${x[3]}"><span class="task-badge">${x[0]}</span><span><b>${x[1]}</b><small>${x[2]}</small></span><span class="arrow">→</span></button>`).join('')}</div>
-    <div class="section-row"><h2>最近沉淀</h2><button class="text-link" data-go="knowledge">查看全部 →</button></div><div class="card">${recent.length?recent.map(r=>`<div class="kb-item"><div class="kb-meta"><span>${esc(r.category)} · ${esc(r.date)}</span><span class="pill">${esc(r.type)}</span></div><b>${esc(r.title)}</b><p>${esc(r.summary)}</p></div>`).join(''):empty('▣','这里还没有记录','完成一次分析后，把有效结论存进知识库。')}</div></div>
-    <div><div class="section-row"><h2>工作区状态</h2></div><div class="grid" style="gap:12px"><div class="notice ${runtime.browserSkill?.connected?'green':'orange'}"><span class="notice-icon">◉</span><span><b>${runtime.browserSkill?.connected?'BrowserSkill 已连接':'等待浏览器连接'}</b><br>${runtime.browserSkill?.connected?'WorkBuddy 可以读取当前登录账号；写操作仍需确认。':'安装并连接腾讯 BrowserSkill 后，可在 WorkBuddy 中读取账号和执行受控操作。'}</span></div>${card('创作节奏',`<div class="score-big">${state.drafts.length}<span style="font-size:13px;color:#8d978f"> 条草稿</span></div><div class="muted" style="font-size:11px">先把内容准备完整，再由 WorkBuddy 在最终提交前向你确认。</div><div class="form-actions">${btn('查看发布工作台','go-publish','button-light')}</div>`)}${card('复盘趋势',state.metrics.length?`<div class="score-big">${esc(state.metrics[state.metrics.length-1].plays||'—')}<span style="font-size:13px;color:#8d978f"> 次播放</span></div><div class="muted" style="font-size:11px">最近记录 · ${esc(state.metrics[state.metrics.length-1].date)}</div>`:`<div class="muted" style="font-size:12px;line-height:1.8">发布后可手动录入，或让 WorkBuddy 通过 BrowserSkill 读取创作者中心数据。</div><div class="form-actions">${btn('录入效果数据','go-tracking','button-light')}</div>`)}</div></div></div>`;
+import { cachedState, createStateSync } from './state-sync.js';
+import { normalizeState } from './workbuddy/connector/lib/workspace-model.mjs';
+import { moveToTrash, validateMetric } from './workbuddy/connector/lib/workspace-actions.mjs';
+import { createVideoStudio } from './video-studio.js';
+import { createPublishPlanner } from './publish-planner.js';
+import { createContentLibrary } from './content-library.js';
+import { createDataCenter } from './data-center.js';
+import { dashboard } from './dashboard.js';
+import { renderLegacyPage } from './legacy-pages.js';
+import { esc, request, download, localDay, createFormMemory } from './workspace-ui.js';
+
+const defaults = normalizeState({ account: '我的账号', persona: '表达直接、自然，用具体信息帮助观众。视频前三秒有钩子，结尾留一个自然问题。' });
+let state = cachedState(defaults), page = 'home', toastTimer, refreshing = false, connectorBusy = false;
+const runtime = { online: false, workbuddy: { packageReady: false }, browserSkill: { installed: false, connected: false, message: '打开应用接入后检查' }, jobs: [], activity: [] };
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = selector => [...document.querySelectorAll(selector)];
+const makeId = () => crypto.randomUUID();
+const today = () => new Date().toLocaleDateString('zh-CN');
+const memory = createFormMemory();
+const save = () => sync.save();
+
+function notify(message) {
+  const el = $('#toast'); el.textContent = message; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 4200);
+}
+function remove(collection, id) {
+  if (!confirm('将这条内容移入回收站？之后可以在数据管理中恢复。')) return false;
+  try { moveToTrash(state, collection, id); save(); render(); notify('已移入回收站'); return true; }
+  catch (error) { notify(error.message); return false; }
+}
+function go(next, fromHistory = false) {
+  page = Object.hasOwn(pages, next) ? next : 'home';
+  if (!fromHistory && location.hash !== `#${page}`) history.pushState(null, '', `#${page}`);
+  render(); $('#view').focus({ preventScroll: true }); $('#sidebar').classList.remove('open');
+  if (page === 'live') void refreshRuntime(true);
+}
+function track(id) {
+  const draft = state.drafts.find(item => item.id === id); if (!draft) return;
+  go('tracking'); $('#mTitle').value = draft.pubTitle || draft.title || ''; $('#metric-draft').value = id;
+  if (draft.publishedAt || draft.scheduledAt) $('#mPublished').value = localDay(new Date(draft.publishedAt || draft.scheduledAt));
+  $('#mTitle').dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+const studio = createVideoStudio({ getState: () => state, save, go, openDraft: id => planner.open(id), notify, esc });
+const planner = createPublishPlanner({ getState: () => state, save, render, notify, go, remove, track });
+const library = createContentLibrary({ getState: () => state, save, render, notify, openVideo: id => studio.open(id), openDraft: id => planner.open(id), remove });
+const dataCenter = createDataCenter({ getState: () => state, getSync: () => sync, save, render, notify });
+const sync = createStateSync({ getState: () => state, setState(value, { initial = false } = {}) {
+  state = value; studio.reset({ preserveEditor: initial }); planner.reset({ preserveEditor: initial });
+  if (!initial) memory.reset();
+}, render, notify });
+
+const head = (eyebrow, title, desc, actions = '') => `<div class="page-head"><div><p class="eyebrow">${eyebrow}</p><h1>${title}</h1><p>${desc}</p></div><div class="page-actions">${actions}</div></div>`;
+const card = (title, body, extra = '') => `<section class="card ${extra}"><div class="card-title"><h3>${title}</h3></div>${body}</section>`;
+const btn = (label, action, kind = 'button-light', extra = '') => `<button type="button" class="button ${kind}" data-action="${esc(action)}" ${extra}>${label}</button>`;
+const empty = (icon, title, desc) => `<div class="empty"><div class="empty-icon">${icon}</div><b>${title}</b><div>${desc}</div></div>`;
+const metric = (name, value, note, icon) => `<div class="card metric-card"><div class="metric-top">${name}<span class="metric-icon">${icon}</span></div><div class="metric-value">${value}</div><div class="metric-note">${note}</div></div>`;
+function field(label, name, placeholder = '', type = 'text', value = '', cls = '') {
+  const required = ['title', 'mTitle', 'recordTitle', 'commentText', 'accountName', 'pain', 'jobLabel', 'jobUrl', 'nextRunAt'].includes(name) ? 'required' : '';
+  const bounds = type === 'number' ? ['completion', 'retention', 'conversion'].includes(name) ? 'min="0" max="100" step="0.01"' : 'min="0" step="1"' : '';
+  return `<div class="field ${cls}"><label for="${name}">${label}</label>${type === 'textarea' ? `<textarea id="${name}" name="${name}" placeholder="${esc(placeholder)}" maxlength="20000" ${required}>${esc(value)}</textarea>` : `<input id="${name}" name="${name}" type="${type}" placeholder="${esc(placeholder)}" value="${esc(value)}" maxlength="2000" ${required} ${bounds}>`}</div>`;
+}
+const navNames = { home: '总览', account: '账号诊断', research: '推荐流研究', ideas: '选题与脚本', video: '视频制作台', remix: '爆款拆解', publish: '发布计划', comments: '评论回复', tracking: '效果追踪', knowledge: '内容库', data: '数据管理', live: '应用接入', settings: '账号与设置' };
+const pages = { home: () => dashboard(state), video: studio.render, publish: planner.render, knowledge: library.render, data: dataCenter.render };
+for (const name of ['account', 'research', 'ideas', 'remix', 'comments', 'tracking', 'live', 'settings']) pages[name] = () => renderLegacyPage(name, { state, runtime, head, card, btn, field, metric, empty });
+
+function connectionStatus() {
+  $('#connection-status').innerHTML = `<span class="status-dot ${runtime.online ? 'connected' : ''}"></span>${runtime.online ? '本地服务已连接' : '本地服务未连接'}`;
+}
+function render() {
+  $('#side-account').textContent = state.account; $('#page-title').textContent = navNames[page];
+  document.title = `${navNames[page]} · 豆蜂`;
+  try { $('#view').innerHTML = pages[page](); memory.restore(); }
+  catch (error) {
+    console.error(error);
+    $('#view').innerHTML = `${head('WORKSPACE', '暂时无法显示页面', '可以导出当前数据，或打开数据管理恢复备份。')}<div class="notice orange">${esc(error.message)}</div><div class="form-actions">${btn('导出当前数据', 'export-data')}<button class="button button-green" data-go="data">数据管理</button></div>`;
   }
-  function account(){const d=state.diagnosis;const dims=['定位清晰','内容结构','互动转化','辨识度','可持续性'];return `${head('ACCOUNT CHECKUP','账号诊断','按定位、结构、互动、辨识度和可持续性做一次轻量体检。')}
-  <div class="grid grid-2"><div>${card('账号基本信息',`<form id="diagnosis-form"><div class="form-grid">${field('目标用户','audience','例如：通勤人群，想快速学会做饭','text',state.audience)}${field('内容支柱','pillars','例如：快手菜、厨房技巧、食材避坑','text',state.pillars)}${field('样本观察','sample','记录最近 9–15 条视频的共同特点','textarea','', 'full')}${dims.map((x,i)=>`<div class="field"><label>${x}（1–5）</label><select name="score${i}">${[1,2,3,4,5].map(n=>`<option value="${n}" ${d?.scores?.[i]===n?'selected':''}>${n} 分</option>`).join('')}</select></div>`).join('')}${field('最大优势','strength','写下最明显的一点','text','','full')}${field('最大短板','weakness','最需要改善的一点','text','','full')}${field('下一步动作','next','本周可以完成的一件事','text','','full')}</div><div class="form-actions"><button class="button button-green">保存诊断</button><span class="form-hint">数据来自你填写的观察，不会自动访问账号。</span></div></form>`)}
-  </div><div>${card('五维评分',d?dims.map((x,i)=>`<div class="score-row"><span>${x}</span><div class="bar"><i style="width:${d.scores[i]*20}%"></i></div><b>${d.scores[i]}</b></div>`).join(''):`<div class="empty"><div class="empty-icon">◉</div><b>待完成体检</b><div>填写左侧表单后查看维度得分。</div></div>`)}${d?`<div class="divider"></div><p class="inline-title">诊断结论</p><p style="font-size:12px"><b>优势：</b>${esc(d.strength)}</p><p style="font-size:12px"><b>短板：</b>${esc(d.weakness)}</p><div class="notice green"><span>→</span><span><b>下一步</b><br>${esc(d.next)}</span></div>`:''}</div></div>`;}
-  function research(){return `${head('FEED RESEARCH','推荐流研究','记录或由 WorkBuddy 读取内容信号，提炼结构、钩子与可迁移的选题方向。')}
-  <div class="notice orange" style="margin-bottom:15px"><span class="notice-icon">ⓘ</span><span>仅研究你有权查看的公开内容或自己的推荐流。WorkBuddy 通过 BrowserSkill 读取时会保留来源并区分事实和推断。</span></div><div class="grid grid-2"><div>${card('新增观察',`<form id="research-form"><div class="form-grid">${field('视频链接（可选）','url','粘贴公开视频链接')}${field('作者 / 账号','creator','账号名称')}${field('主题与标题','title','这条内容讲了什么？','text','','full')}${field('开场钩子','hook','前 3 秒如何留住观众？','text','','full')}${field('内容结构','structure','例如：反常识开场 → 具体例子 → 评论提问','textarea','','full')}${field('评论区信号','signal','观众集中在问什么、争论什么？','textarea','','full')}${field('可借鉴点','takeaway','记录结构和方法，避免照搬内容','textarea','','full')}</div><div class="form-actions"><button class="button button-green">保存观察</button></div></form>`)}</div><div>${card('研究摘要',state.research.length?`<div class="score-big">${state.research.length}<span style="font-size:13px;color:#8d978f"> 条观察</span></div><p class="muted" style="font-size:11px">最近记录：${esc(state.research[state.research.length-1].date)}</p><div class="chip-list">${[...new Set(state.research.map(x=>x.creator).filter(Boolean))].slice(0,5).map(x=>`<span class="chip">${esc(x)}</span>`).join('')}</div>`:empty('⌕','观察池还是空的','记录一条视频的结构，逐步建立自己的内容判断。'))}${card('观察时关注',`<div class="check-row"><span>01</span><span>开场是否在前三秒提出悬念、冲突或反差？</span></div><div class="check-row"><span>02</span><span>视频长度、节奏和信息密度如何配合？</span></div><div class="check-row"><span>03</span><span>互动引导是否自然？评论区出现了什么需求？</span></div><div class="check-row"><span>04</span><span>哪些结构能迁移，哪些表达或素材不能照搬？</span></div>`)}</div></div><div class="section-row"><h2>最近观察</h2><span class="pill">${state.research.length} 条</span></div>${state.research.length?`<div class="grid grid-2">${[...state.research].reverse().map(x=>`<article class="card"><div class="kb-meta"><span>${esc(x.creator||'未标注账号')} · ${esc(x.date)}</span><button class="text-link" data-delete="research:${x.id}">删除</button></div><b>${esc(x.title)}</b><p class="quote" style="margin:12px 0">${esc(x.hook||'暂无开场记录')}</p><p class="muted" style="font-size:11px">${esc(x.takeaway||x.structure||'未填写可借鉴点')}</p></article>`).join('')}</div>`:''}`;}
-  function ideas(){return `${head('IDEA STUDIO','选题与脚本','把账号定位和观察到的需求，整理成能拍、能讲、能互动的短视频提案。')}
-  <div class="grid grid-2"><div>${card('选题参数',`<form id="ideas-form"><div class="form-grid">${field('内容方向','direction','例如：厨房效率、职场沟通、亲子阅读','text',state.pillars)}${field('目标观众','target','例如：工作日没时间做饭的人','text',state.audience)}${field('本轮主题 / 用户痛点','pain','这次想解决的问题或热点','textarea','','full')}${field('表达立场','angle','你的独特角度是什么？')}${field('语气 / 人设','tone','直球、轻松、专业…','text',state.persona)}<div class="field"><label>建议时长</label><select name="duration"><option>15–30 秒</option><option>30–60 秒</option><option>60 秒以上</option></select></div></div><div class="form-actions"><button class="button button-green">生成 3 个提案</button><span class="form-hint">提案是创作起点，发布前请核对事实与版权。</span></div></form>`)}</div><div>${card('内容支柱',`<p style="font-size:12px;line-height:1.9">${esc(state.pillars||'在账号设置中填写内容支柱，选题会更贴合定位。')}</p><div class="notice green"><span>✳</span><span>每个提案都会包含开场钩子、三段结构、互动问题、时长和 BGM 方向。</span></div>`)}</div></div><div class="section-row"><h2>本地选题草稿</h2><span class="pill">${state.ideas.length} 条</span></div><div id="idea-results">${state.ideas.length?`<div class="grid grid-2">${[...state.ideas].reverse().map(x=>ideaCard(x)).join('')}</div>`:empty('✳','还没有选题草稿','填写一个主题，生成适合你账号的拍摄提案。')}</div>`;}
-  function ideaCard(x){return `<article class="card"><div class="kb-meta"><span>${esc(x.date)} · ${esc(x.duration)}</span><button class="text-link" data-delete="ideas:${x.id}">删除</button></div><h3 style="font-size:15px;margin:7px 0">${esc(x.title)}</h3><div class="chip-list"><span class="chip">${esc(x.angle)}</span><span class="chip">BGM：${esc(x.bgm)}</span></div><div class="divider"></div><p class="inline-title">前三秒钩子</p><p class="quote">${esc(x.hook)}</p><p class="inline-title" style="margin-top:14px">视频结构</p><p style="font-size:11px;line-height:1.8">${esc(x.script)}</p><p class="muted" style="font-size:11px">结尾互动：${esc(x.cta)}</p>${btn('沉淀到知识库','save-idea:'+x.id,'button-light')}</article>`;}
-  function remix(){return `${head('VIRAL STRUCTURE LAB','爆款拆解','学习主题和叙事结构，产出原创表达。记录来源，避免照搬原文、画面或音乐。')}
-  <div class="notice green" style="margin-bottom:15px"><span>↗</span><span>拆解方法、节奏和互动设计；不下载、不复制他人视频素材。成稿请核对事实、素材授权和平台音乐版权。</span></div><div class="grid grid-2"><div>${card('录入参考视频',`<form id="remix-form"><div class="form-grid">${field('参考链接','sourceUrl','粘贴你有权查看的公开链接','url','','full')}${field('主题 / 核心观点','sourceTopic','源内容在讨论什么？','text','','full')}${field('开场方式','sourceHook','悬念、冲突、反差或共鸣？')}${field('叙事结构','sourceFlow','开场 → 展开 → 收尾','text')}${field('互动机制','sourceCta','如何邀请观众参与？')}${field('准备迁移的角度','newAngle','你自己的经验或新观点','text')}${field('原创脚本草稿','newScript','用自己的案例、事实和语言重写','textarea','','full')}</div><div class="form-actions"><button class="button button-green">保存拆解</button></div></form>`)}</div><div>${card('原创检查清单',`<label class="check-row"><input type="checkbox">选题有自己的经验、观点或新证据。</label><label class="check-row"><input type="checkbox">没有逐字复用标题、口播或字幕。</label><label class="check-row"><input type="checkbox">画面、配乐和封面素材来源清楚。</label><label class="check-row"><input type="checkbox">核心事实已核验，表达不会误导。</label><div class="notice orange" style="margin-top:12px"><span>!</span><span>拆解只用于创作参考，不提供“相似度过关”或规避检测的判断。</span></div>`)}</div></div><div class="section-row"><h2>已保存拆解</h2><span class="pill">${count('拆解')} 条</span></div>${state.records.filter(x=>x.type==='拆解').length?`<div class="grid grid-2">${[...state.records].filter(x=>x.type==='拆解').reverse().map(x=>`<article class="card"><div class="kb-meta"><span>${esc(x.date)}</span><button class="text-link" data-delete="records:${x.id}">删除</button></div><h3 style="font-size:14px">${esc(x.title)}</h3><p class="muted" style="font-size:11px;white-space:pre-wrap">${esc(x.summary)}</p></article>`).join('')}</div>`:empty('↗','还没有拆解记录','录入一条参考内容，留下结构和原创改写方向。')}`;}
-  function publish(){return `${head('PUBLISH DESK','发布工作台','整理视频 / 图文信息；WorkBuddy 可代为填写，最终提交前由你确认。',`<a class="button button-light" href="https://creator.douyin.com/" target="_blank" rel="noreferrer">打开创作者中心 ↗</a>`)}
-  <div class="notice orange" style="margin-bottom:15px"><span>ⓘ</span><span><b>最终发布需要确认。</b>WorkBuddy 可以通过 BrowserSkill 打开页面、上传和填写；会在点击发布前展示账号、素材和文案。</span></div><div class="grid grid-2"><div>${card('准备发布内容',`<form id="publish-form"><div class="form-grid"><div class="field"><label>内容形式</label><select name="format"><option>视频</option><option>图文</option></select></div>${field('内容标题','pubTitle','标题建议清晰、准确')}${field('视频文件 / 素材备注','asset','例如：本地路径或素材说明')}${field('封面说明','cover','封面文字、构图和素材来源')}${field('发布文案','caption','视频描述与补充信息','textarea','','full')}${field('话题标签','hashtags','#话题1 #话题2','text','','full')}<div class="field full"><label>发布前检查</label><label class="check-row"><input type="checkbox" name="ck1" required>素材和音乐已确认有使用权限。</label><label class="check-row"><input type="checkbox" name="ck2" required>标题、字幕和事实信息已检查。</label><label class="check-row"><input type="checkbox" name="ck3" required>账号状态和发布时间已由我确认。</label></div></div><div class="form-actions"><button class="button button-green">保存发布准备</button></div></form>`)}</div><div>${card('发布节奏参考',`<div class="grid" style="gap:9px"><div class="task-row"><span class="pill">起步期</span><span style="font-size:11px">每天 1 条以内，保持稳定质量</span></div><div class="task-row"><span class="pill green">成长期</span><span style="font-size:11px">每天 1–2 条，关注内容反馈</span></div><div class="task-row"><span class="pill blue">稳定期</span><span style="font-size:11px">按团队产能规划，避免为频率牺牲质量</span></div></div><p class="muted" style="font-size:10px;margin-top:12px">频率只是规划参考，不代表平台规则；以账号状态和官方规范为准。</p>`)}</div></div><div class="section-row"><h2>发布准备清单</h2><span class="pill">${state.drafts.length} 条</span></div>${state.drafts.length?`<div class="grid grid-2">${[...state.drafts].reverse().map(d=>`<article class="card"><div class="kb-meta"><span>${esc(d.format)} · ${esc(d.date)}</span><div><span class="pill ${d.status==='已发布'?'green':''}">${esc(d.status)}</span> <button class="text-link" data-delete="drafts:${d.id}">删除</button></div></div><h3 style="font-size:14px;margin:7px 0">${esc(d.pubTitle||d.title)}</h3><p class="muted" style="font-size:11px">${esc(d.caption)}</p><div class="chip-list"><span class="chip">素材：${esc(d.asset||'待补')}</span><span class="chip">封面：${esc(d.cover||'待补')}</span></div><div class="form-actions">${d.status!=='已发布'?btn('标记为已发布','published:'+d.id,'button-light'):''}${btn('记录数据','track:'+d.id,'button-light')}</div></article>`).join('')}</div>`:empty('＋','发布清单还是空的','填写左侧信息，整理下一条内容的发布准备。')}`;}
-  function comments(){return `${head('COMMUNITY CARE','评论回复','为评论准备符合人设的回复草稿；需要发送时由 WorkBuddy 在确认后执行。')}
-  <div class="notice orange" style="margin-bottom:15px"><span>ⓘ</span><span>WorkBuddy 可通过 BrowserSkill 读取评论。发送前会展示目标评论和最终文本；请避免泄露隐私、虚假承诺或引战。</span></div><div class="grid grid-2"><div>${card('生成回复草稿',`<form id="comment-form"><div class="form-grid">${field('评论原文','commentText','粘贴需要回复的评论','textarea','','full')}${field('视频主题','commentContext','这条评论对应哪条内容？','text','','full')}<div class="field"><label>回复场景</label><select name="replyType"><option>普通交流</option><option>用户提问</option><option>被夸 / 闲聊</option><option>观点不同</option></select></div><div class="field"><label>回复风格</label><select name="replyStyle"><option>简短自然</option><option>直球带梗</option><option>先认同再补充</option><option>温和解释</option></select></div></div><div class="form-actions"><button class="button button-green">生成回复</button><span class="form-hint">发送前请核对事实和语气。</span></div></form><div id="reply-output"></div>`)}</div><div>${card('回复边界',`<div class="check-row"><span>✓</span><span>先回应对方真正说的内容，不套用万能话术。</span></div><div class="check-row"><span>✓</span><span>涉及隐私、争议或专业建议时，收敛表达并核实信息。</span></div><div class="check-row"><span>✓</span><span>一条一条确认，控制对话质量；不批量轰炸。</span></div><div class="check-row"><span>✓</span><span>遇到平台警告、验证码或异常提示，停止操作并人工处理。</span></div>`)}</div></div><div class="section-row"><h2>回复草稿记录</h2><span class="pill">${state.comments.length} 条</span></div>${state.comments.length?`<div class="grid grid-2">${[...state.comments].reverse().map(c=>`<article class="card"><div class="kb-meta"><span>${esc(c.date)} · ${esc(c.replyType)}</span><button class="text-link" data-delete="comments:${c.id}">删除</button></div><p style="font-size:11px;color:#839087">评论：${esc(c.comment)}</p><p class="quote">${esc(c.reply)}</p><button class="button button-light" data-copy="${esc(c.reply)}">复制回复</button></article>`).join('')}</div>`:empty('▤','暂时没有回复草稿','粘贴一条评论，准备一条自然、合适的回应。')}`;}
-  function tracking(){
-    const last=state.metrics.at(-1);
-    const latest=last?`<div class="metric-value">${esc(last.plays)}<span style="font-size:12px;color:#87928b"> 次播放</span></div><p class="muted" style="font-size:11px">${esc(last.title)} · ${esc(last.date)}</p><div class="grid grid-3" style="margin:14px 0">${[['完播率',`${esc(last.completion)}%`],['互动量',Number(last.likes||0)+Number(last.mComments||0)+Number(last.shares||0)],['粉丝转化',`${esc(last.conversion)}%`]].map(v=>`<div class="card" style="padding:11px;background:#fafbf9"><small class="muted">${v[0]}</small><b style="display:block;font-size:15px">${v[1]}</b></div>`).join('')}</div>${last.baseline?`<div class="notice ${Number(last.plays)>=Number(last.baseline)?'green':''}">对比基线 ${esc(last.baseline)} 次 · ${Number(last.plays)>=Number(last.baseline)?'达到或超过':'低于'}当前基线</div>`:''}`:empty('⌁','等待第一条数据','从创作者中心录入真实数据后开始复盘。');
-    const history=state.metrics.length?`<div class="card table-wrap"><table class="data-table"><thead><tr><th>日期</th><th>内容</th><th>播放</th><th>完播率</th><th>点赞</th><th>评论</th><th>复盘</th><th></th></tr></thead><tbody>${[...state.metrics].reverse().map(m=>`<tr><td>${esc(m.date)}</td><td>${esc(m.title)}</td><td>${esc(m.plays)}</td><td>${esc(m.completion)}%</td><td>${esc(m.likes)}</td><td>${esc(m.mComments)}</td><td>${esc(m.reflection||'—')}</td><td><button class="text-link" data-delete="metrics:${m.id}">删除</button></td></tr>`).join('')}</tbody></table></div>`:empty('⌁','还没有效果记录','发布后把真实数据加进来，形成内容闭环。');
-    return `${head('PERFORMANCE REVIEW','效果追踪','手动录入创作者中心数据，对照你的账号基线，复盘下一步内容动作。')}
-    <div class="notice green" style="margin-bottom:15px"><span>⌁</span><span>支持播放、点赞、评论、分享、收藏、完播率、5 秒留存和粉丝转化。数据由你从官方后台录入。</span></div><div class="grid grid-2"><div>${card('录入一次效果回采',`<form id="metrics-form"><div class="form-grid">${field('视频标题 / 标识','mTitle','便于回查')}${field('发布时间','mPublished','','date')}${field('播放量','plays','0','number')}${field('点赞','likes','0','number')}${field('评论','mComments','0','number')}${field('分享','shares','0','number')}${field('收藏','saves','0','number')}${field('完播率（%）','completion','例如 35','number')}${field('5 秒留存（%）','retention','例如 60','number')}${field('粉丝转化（%）','conversion','例如 2','number')}${field('账号播放基线','baseline','最近 5 条平均播放量','number')}${field('观察与下一步','reflection','下条视频打算调整什么？','textarea','','full')}</div><div class="form-actions"><button class="button button-green">保存效果记录</button></div></form>`)}</div><div>${card('最近一次表现',latest)}${card('建议的回采节点',`<div class="task-row"><span class="pill">T+1</span><span style="font-size:11px">观察首日播放、互动和留存</span></div><div class="task-row" style="margin-top:8px"><span class="pill blue">T+7</span><span style="font-size:11px">观察一周表现，判断是否值得复用</span></div><p class="muted" style="font-size:10px;margin-top:12px">工作台不会后台定时采集；可在回采时点手动补录。</p>`)}</div></div><div class="section-row"><h2>历史表现</h2><span class="pill">${state.metrics.length} 条</span></div>${history}`;
-  }  function knowledge(){const cats=['账号','选题','模式','动作','复盘','拆解'];return `${head('YOUR KNOWLEDGE BASE','知识库','把分析结论、可复用做法和复盘写在一起，后续能搜到、能继续用。',btn('新增记录','new-record','button-green'))}
-  <div class="grid grid-4">${['账号','选题','模式','复盘'].map(c=>metric(c,state.records.filter(r=>r.category===c).length,'本地记录','▣')).join('')}</div><div class="grid grid-2" style="margin-top:15px"><div>${card('快速记录',`<form id="record-form"><div class="form-grid"><div class="field"><label>分类</label><select name="category">${cats.map(c=>`<option>${c}</option>`).join('')}</select></div>${field('记录标题','recordTitle','一句话概括')}${field('结论 / 证据 / 可复用点 / 风险 / 下一步','recordSummary','写下关键事实和下一步动作','textarea','','full')}</div><div class="form-actions"><button class="button button-green">保存记录</button><button type="button" class="button button-light" data-action="export-data">导出备份</button><label class="button button-light file-input">导入备份<input id="import-file" type="file" accept="application/json" hidden></label></div></form>`)}</div><div>${card('数据说明',`<p style="font-size:12px;line-height:1.9;color:#68756c">运营记录保存在浏览器本地存储，并同步到本地服务的 runtime/workbench.json，供 WorkBuddy MCP Connector 读取。清除数据前请先导出备份。</p><div class="notice green"><span>▣</span><span>知识库分类：账号定位、选题候选、内容模式、运营动作、复盘结论。</span></div>`)}</div></div><div class="section-row"><h2>所有记录</h2><span class="pill">${state.records.length} 条</span></div>${state.records.length?`<div class="card">${[...state.records].reverse().map(r=>`<div class="kb-item"><div class="kb-meta"><span>${esc(r.category)} · ${esc(r.date)}</span><button class="text-link" data-delete="records:${r.id}">删除</button></div><b>${esc(r.title)}</b><p>${esc(r.summary)}</p></div>`).join('')}</div>`:empty('▣','知识库空空的','把有效经验保存下来，让下一次少走弯路。')}`;}
-  function live(){const c=runtime.browserSkill||{};const connected=c.installed&&c.connected;return `${head('WORKBUDDY INTEGRATION','WorkBuddy 接入','Skill、MCP Connector 与腾讯 BrowserSkill 已拆分成可安装的 WorkBuddy 能力包。',btn('刷新状态','connector-refresh','button-light'))}
-  <div class="grid grid-3"><div>${metric('Buddy 应用',runtime.workbuddy?.packageReady?'就绪':'待生成','配置草案','WB')}</div><div>${metric('MCP 工具','13','工作区读写','⌘')}</div><div>${metric('浏览器',connected?'已连接':c.installed?'待连接':'未安装','腾讯 BrowserSkill','◎')}</div></div>
-  <div class="notice ${connected?'green':'orange'}" style="margin:15px 0"><span>${connected?'✓':'!'}</span><span><b>${connected?'BrowserSkill 已连接':c.installed?'BrowserSkill 已安装，浏览器扩展尚未连接':'未检测到 BrowserSkill'}</b><br>${esc(c.message||'安装 bsk CLI 与浏览器扩展后运行 bsk doctor。')}</span></div>
-  <div class="grid grid-2"><div>${card('浏览器会话（只读预览）',`<div class="form-actions">${btn('启动会话','connector-start','button-green')}${btn('打开抖音','open-douyin','button-light')}${btn('打开创作者中心','open-creator','button-light')}${btn('观察当前页面','connector-observe','button-light')}${btn('结束会话','connector-stop','button-light')}</div><p class="form-hint">本页仅提供导航和页面观察。输入、上传、评论与发布由 WorkBuddy 调用 BrowserSkill，并按 Skill 规则先确认。</p>`)}</div>
-  <div>${card('最近执行结果',`<pre id="connector-output" class="output-card console-output">${esc(runtime.output||'等待操作。')}</pre>`)}</div></div>
-  <div class="grid grid-2" style="margin-top:15px"><div>${card('WorkBuddy 安装包',`<div class="check-row"><span>01</span><span><b>运营 Skill</b><br><small>SKILL.md 与业务参考资料</small></span></div><div class="check-row"><span>02</span><span><b>MCP Connector</b><br><small>workbuddy/connector，提供结构化数据工具</small></span></div><div class="check-row"><span>03</span><span><b>Buddy 应用配置</b><br><small>workbuddy/buddy-app.preview.json</small></span></div><div class="notice green" style="margin-top:12px"><span>→</span><span>在 WorkBuddy 开放平台创建 Buddy 应用后，绑定 douyin-ops Skill、豆蜂 Connector 和 browser-skill。</span></div>`)}</div>
-  <div>${card('数据回采计划',`<form id="job-form"><div class="form-grid">${field('任务名称','jobLabel','例如：视频 001 T+1 回采')}${field('抖音页面地址','jobUrl','https://www.douyin.com/video/...','url')}<div class="field"><label>读取内容</label><select name="extractor"><option value="currentVideo">视频公开数据</option><option value="creatorMetrics">创作者后台数据</option><option value="account">账号主页信息</option></select></div>${field('首次执行时间','nextRunAt','','datetime-local')}<div class="field"><label>重复</label><select name="repeat"><option value="once">仅一次</option><option value="daily">每天</option><option value="weekly">每周</option></select></div></div><div class="form-actions"><button class="button button-green">保存计划</button><span class="form-hint">计划由 WorkBuddy 任务调用 BrowserSkill 执行；本地服务只保存计划。</span></div></form>`)}</div></div>
-  <div style="margin-top:15px">${card('素材准备',`<form id="upload-form"><div class="form-grid"><div class="field full"><label>视频、封面或图文素材</label><input id="media-file" name="media" type="file" accept="video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp" required></div></div><div class="form-actions"><button class="button button-green">复制到工作区素材目录</button><span class="form-hint">准备后的路径可交给 WorkBuddy；BrowserSkill 在本地模式下完成上传。</span></div>${runtime.lastUploadPath?`<div class="output-card" style="margin-top:12px">${esc(runtime.lastUploadPath)}</div>`:''}</form>`)}</div>
-  <div class="section-row"><h2>回采任务</h2><span class="pill">${runtime.jobs.length} 个</span></div>${runtime.jobs.length?`<div class="card table-wrap"><table class="data-table"><thead><tr><th>任务</th><th>计划时间</th><th>频率</th><th>执行器</th><th></th></tr></thead><tbody>${runtime.jobs.map(j=>`<tr><td>${esc(j.label)}</td><td>${esc(j.nextRunAt?new Date(j.nextRunAt).toLocaleString('zh-CN'):'—')}</td><td>${esc(j.repeat)}</td><td><span class="pill green">WorkBuddy</span></td><td><button class="text-link" data-job-delete="${esc(j.id)}">删除</button></td></tr>`).join('')}</tbody></table></div>`:empty('⌁','没有回采计划','添加 T+1、T+7 或周期性数据采集计划。')}
-  <div class="section-row"><h2>本地执行记录</h2><span class="pill">${runtime.activity.length} 条</span></div>${runtime.activity.length?`<div class="card">${runtime.activity.slice(0,12).map(a=>`<div class="kb-item"><div class="kb-meta"><span>${esc(new Date(a.at).toLocaleString('zh-CN'))} · ${esc(a.type)}</span><span class="pill ${a.ok?'green':'orange'}">${a.ok?'成功':'需处理'}</span></div><b>${esc(a.label||a.action||'浏览器任务')}</b><p>${esc(a.message||'已记录执行结果')}</p></div>`).join('')}</div>`:empty('⌘','还没有执行记录','启动 BrowserSkill 会话后，状态会记录在这里。')}`;}
-  function settings(){return `${head('WORKSPACE SETTINGS','连接与设置','管理账号定位、人设和本地数据。工作台数据会同步保存到本地服务。')}
-    <div class="grid grid-2"><div>${card('账号工作区',`<form id="settings-form"><div class="form-grid">${field('账号名称','accountName','给工作区起个名字','text',state.account)}${field('目标用户','settingsAudience','你希望服务谁？','text',state.audience)}${field('内容支柱','settingsPillars','用逗号分隔，例如：知识、经验、故事','text',state.pillars)}${field('内容人设与语气','settingsPersona','视频和回复采用的表达风格','textarea',state.persona,'full')}</div><div class="form-actions"><button class="button button-green">保存设置</button></div></form>`)}</div><div>${card('连接状态',`<div class="task-row"><span class="task-badge">WB</span><span><b>WorkBuddy 能力包</b><small>Skill + MCP Connector + Buddy 应用配置</small></span><span class="pill ${runtime.workbuddy?.packageReady?'green':'orange'}">${runtime.workbuddy?.packageReady?'已就绪':'待检查'}</span></div><div class="task-row" style="margin-top:8px"><span class="task-badge">◎</span><span><b>腾讯 BrowserSkill</b><small>${esc(runtime.browserSkill?.message||'等待检查')}</small></span><span class="pill ${runtime.browserSkill?.connected?'green':'orange'}">${runtime.browserSkill?.connected?'已连接':'未连接'}</span></div><div class="divider"></div><p class="muted" style="font-size:11px;line-height:1.8">内容生成由 WorkBuddy 的模型完成；登录和验证码由你接管；评论发送与发布等写操作执行前必须确认。</p>${btn('打开 WorkBuddy 接入','connector-page','button-light')}`)}</div>${card('工作区数据',`<p class="muted" style="font-size:11px">数据同时保存在浏览器和 D:\\ai\\runtime。当前有 ${state.records.length} 条知识记录、${state.drafts.length} 条发布准备、${state.metrics.length} 条效果数据。</p><div class="form-actions">${btn('导出 JSON 备份','export-data','button-light')}<button class="button button-danger" data-action="clear-data">清空本地数据</button></div><p class="form-hint">清空操作不可撤销，请先导出备份。</p>`)}</div>`;}
-  const pages={home,account,research,ideas,remix,publish,comments,tracking,knowledge,live,settings};
-  function render(){ $('#page-title').textContent=navNames[page]||'总览';$('#side-account').textContent=state.account||'我的账号';$('#view').innerHTML=pages[page]();$$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page));const status=$('#connection-status');if(status)status.innerHTML=`<span class="status-dot ${runtime.browserSkill?.connected?'connected':''}"></span>${runtime.browserSkill?.connected?'BrowserSkill 已连接':runtime.online?'WorkBuddy 包已就绪':'服务未连接'}`; }
-  function makeId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
-  function getForm(form){return Object.fromEntries(new FormData(form).entries())}
-  async function refreshRuntime(hydrate=false){try{const [health,jobs,activity,stored]=await Promise.all([api('/api/health'),api('/api/jobs'),api('/api/activity'),hydrate?api('/api/state'):Promise.resolve(null)]);runtime.online=true;runtime.workbuddy=health.workbuddy||runtime.workbuddy;runtime.browserSkill=health.browserSkill||runtime.browserSkill;runtime.jobs=jobs.jobs||[];runtime.activity=activity.activity||[];if(hydrate&&stored?.state){state={...blank,...stored.state};localStorage.setItem(KEY,JSON.stringify(state))}else if(hydrate&&!stored?.state){await api('/api/state',{method:'PUT',body:JSON.stringify(state)})}}catch(error){runtime.online=false;runtime.browserSkill={installed:false,connected:false,message:error.message||'本地服务不可用'}}render()}
-  async function runConnector(input,label){runtime.output=`${label}执行中…`;render();try{const result=await api('/api/browser-skill/execute',{method:'POST',body:JSON.stringify(input)});runtime.output=JSON.stringify(result.data??result.stdout??result,null,2);toast(`${label}完成`)}catch(error){runtime.output=`${label}失败：${error.message}`;toast(runtime.output)}await refreshRuntime(false)}
-  document.addEventListener('click',async e=>{const nav=e.target.closest('[data-page]');if(nav){go(nav.dataset.page);return}const goBtn=e.target.closest('[data-go]');if(goBtn){go(goBtn.dataset.go);return}const jobDelete=e.target.closest('[data-job-delete]');if(jobDelete){if(confirm('删除这个回采任务？')){try{await api(`/api/jobs/${encodeURIComponent(jobDelete.dataset.jobDelete)}`,{method:'DELETE'});await refreshRuntime(false);toast('回采任务已删除')}catch(error){toast(error.message)}}return}const b=e.target.closest('[data-action]');if(b){const a=b.dataset.action;if(a==='go-ideas')go('ideas');else if(a==='go-publish')go('publish');else if(a==='go-tracking')go('tracking');else if(a==='connector-page')go('live');else if(a==='connector-refresh')await refreshRuntime(false);else if(a==='connector-start')await runConnector({action:'start'},'启动 BrowserSkill 会话');else if(a==='connector-stop')await runConnector({action:'stop'},'结束 BrowserSkill 会话');else if(a==='open-douyin')await runConnector({action:'navigate',url:'https://www.douyin.com/'},'打开抖音');else if(a==='open-creator')await runConnector({action:'navigate',url:'https://creator.douyin.com/'},'打开创作者中心');else if(a==='connector-observe')await runConnector({action:'observe'},'观察当前页面');else if(a==='new-record')$('#recordTitle')?.focus();else if(a==='export-data')exportData();else if(a==='clear-data'){if(confirm('确定清空此浏览器内的所有工作台数据？建议先导出备份。')){state={...blank};save();render();toast('本地数据已清空')}}else if(a==='sidebar-toggle')$('#sidebar')?.classList.toggle('open');else if(a.startsWith('published:')){const d=state.drafts.find(x=>x.id===a.split(':')[1]);if(d){d.status='已发布';save();render();toast('已更新发布状态')}}else if(a.startsWith('track:')){const d=state.drafts.find(x=>x.id===a.split(':')[1]);go('tracking');if(d)setTimeout(()=>{const f=$('#mTitle');if(f)f.value=d.title},0)}return}
-    const del=e.target.closest('[data-delete]');if(del){const [key,id]=del.dataset.delete.split(':');if(confirm('删除这条本地记录？')){state[key]=state[key].filter(x=>x.id!==id);save();render();toast('已删除')}return}
-    const pub=e.target.closest('[data-copy]');if(pub){try{await navigator.clipboard.writeText(pub.dataset.copy);toast('回复已复制')}catch{toast('浏览器未开放剪贴板权限，请手动复制')}return}
-    const status=e.target.closest('[data-action^="published:"]');if(status){const id=status.dataset.action.split(':')[1],d=state.drafts.find(x=>x.id===id);if(d){d.status='已发布';save();render();toast('已更新发布状态')}return}
-    const track=e.target.closest('[data-action^="track:"]');if(track){go('tracking');const d=state.drafts.find(x=>x.id===track.dataset.action.split(':')[1]);if(d)setTimeout(()=>{const f=$('#mTitle');if(f)f.value=d.title},0);return}
-  });
-  document.addEventListener('submit',async e=>{const f=e.target;if(!(f instanceof HTMLFormElement))return;e.preventDefault();const x=getForm(f);
-    if(f.id==='job-form'){try{await api('/api/jobs',{method:'POST',body:JSON.stringify({label:x.jobLabel,url:x.jobUrl,extractor:x.extractor,repeat:x.repeat,nextRunAt:new Date(x.nextRunAt).toISOString()})});f.reset();await refreshRuntime(false);toast('WorkBuddy 回采计划已创建')}catch(error){toast(error.message)}return}
-    if(f.id==='upload-form'){const file=$('#media-file')?.files?.[0];if(!file){toast('请选择素材文件');return}try{const response=await fetch(`/api/uploads?name=${encodeURIComponent(file.name)}`,{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:file});const result=await response.json();if(!response.ok)throw new Error(result.message||'素材准备失败');runtime.lastUploadPath=result.path;render();toast('素材已复制到工作区素材目录')}catch(error){toast(error.message)}return}
-    if(f.id==='settings-form'){state.account=x.accountName||'我的账号';state.audience=x.settingsAudience;state.pillars=x.settingsPillars;state.persona=x.settingsPersona;save();render();toast('设置已保存')}
-    if(f.id==='diagnosis-form'){const scores=[0,1,2,3,4].map(i=>Number(x['score'+i]));state.audience=x.audience;state.pillars=x.pillars;state.diagnosis={scores,strength:x.strength||'待补充',weakness:x.weakness||'待补充',next:x.next||'待补充',sample:x.sample,date:today()};state.records.push({id:makeId(),type:'诊断',category:'账号',title:'账号五维诊断',summary:`优势：${state.diagnosis.strength}\n短板：${state.diagnosis.weakness}\n下一步：${state.diagnosis.next}`,date:today()});save();render();toast('诊断和知识库记录已保存')}
-    if(f.id==='research-form'){state.research.push({...x,id:makeId(),date:today()});state.records.push({id:makeId(),type:'观察',category:'模式',title:x.title||'推荐流观察',summary:`钩子：${x.hook||'—'}\n可借鉴：${x.takeaway||x.structure||'—'}`,date:today()});save();render();toast('观察已保存到本地知识库')}
-    if(f.id==='ideas-form'){const pain=x.pain||'一个常见但容易被忽略的问题',dur=x.duration||'15–30 秒';const templates=[['反差切入',`你以为${pain}只能这样？其实关键差在第一步。`,`先给一个常见误区。\n再讲一个真实场景和可验证的做法。\n最后给观众一个今天就能试的小动作。`,'你之前也这样想吗？'],['经验拆解',`我试了${pain}一周，最有用的不是你想的那个。`,`用具体经历开场。\n对比尝试前后的变化，并解释原因。\n给出一条简洁可执行的建议。`,'你还有什么更省事的方法？'],['问题共鸣',`如果你也被${pain}卡住，先别急着怪自己。`,`描述观众熟悉的场景。\n拆出造成问题的两个原因。\n分享一个小步骤，说明适用边界。`,'你现在最想解决哪一步？']];state.ideas=state.ideas||[];templates.forEach(([angle,hook,script,cta],i)=>state.ideas.push({id:makeId(),date:today(),title:`${x.direction||'内容'}：${['一个常见误区','我试过之后','先解决这个卡点'][i]}`,angle,hook,script,cta,duration:dur,bgm:['轻快节奏','克制氛围','温暖叙事'][i]}));save();render();toast('已生成 3 个本地选题草稿')}
-    if(f.id==='remix-form'){const summary=`参考链接：${x.sourceUrl||'—'}\n主题：${x.sourceTopic||'—'}\n开场方式：${x.sourceHook||'—'}\n叙事结构：${x.sourceFlow||'—'}\n互动机制：${x.sourceCta||'—'}\n原创角度：${x.newAngle||'—'}\n原创脚本：${x.newScript||'—'}`;state.records.push({id:makeId(),type:'拆解',category:'模式',title:x.sourceTopic||'爆款结构拆解',summary,date:today()});save();render();toast('拆解已沉淀到知识库')}
-    if(f.id==='publish-form'){const draft={...x,id:makeId(),date:today(),status:'待人工准备'};state.drafts.push(draft);state.records.push({id:makeId(),type:'发布准备',category:'动作',title:x.pubTitle||'发布清单',summary:`形式：${x.format}\n素材：${x.asset||'待补'}\n封面：${x.cover||'待补'}`,date:today()});save();render();toast('发布准备已保存')}
-    if(f.id==='comment-form'){const template=`${x.replyStyle==='先认同再补充'?'你说得有道理。':x.replyStyle==='温和解释'?'理解你的想法。':x.replyStyle==='直球带梗'?'我直接说：':''}${x.replyType==='用户提问'?'这个问题的关键是先看具体场景，别急着套一个答案。':x.replyType==='观点不同'?'这个角度我懂，我的看法是可以再看一个具体条件。':x.replyType==='被夸 / 闲聊'?'收到这句夸奖，今天剪片都有劲了。':'谢谢你认真聊这个，我也觉得这个细节很关键。'}${x.replyStyle==='简短自然'?' 你怎么看？':''}`;const item={id:makeId(),date:today(),comment:x.commentText,context:x.commentContext,replyType:x.replyType,reply:template};state.comments.push(item);save();render();$('#reply-output').innerHTML=`<div class="divider"></div><p class="inline-title">待你检查的回复</p><div class="output-card">${esc(template)}</div><div class="form-actions"><button class="button button-light" data-copy="${esc(template)}">复制回复</button><span class="form-hint">请确认内容后，再手动到平台发送。</span></div>`}
-    if(f.id==='metrics-form'){const m={...x,id:makeId(),date:today()};state.metrics.push(m);state.records.push({id:makeId(),type:'复盘',category:'复盘',title:x.mTitle||'视频效果回采',summary:`播放 ${x.plays||0}；完播 ${x.completion||0}%；互动 ${x.likes||0} 赞 / ${x.mComments||0} 评 / ${x.shares||0} 分享。\n下一步：${x.reflection||'待补'}`,date:today()});save();render();toast('效果数据和复盘已保存')}
-    if(f.id==='record-form'){state.records.push({id:makeId(),type:'手动记录',category:x.category,title:x.recordTitle||'未命名记录',summary:x.recordSummary||'',date:today()});save();render();toast('已保存到本地知识库')}
-  });
-  function exportData(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`douyin-ops-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href);toast('备份文件已导出')}
-  document.addEventListener('change',e=>{if(e.target.id==='import-file'){const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);if(!data||!Array.isArray(data.records)||!Array.isArray(data.drafts))throw new Error();if(confirm('导入备份会覆盖当前工作台数据，继续吗？')){state={...blank,...data};save();render();toast('备份已导入')}}catch{toast('文件格式不正确')} };reader.readAsText(file)}});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')$('.sidebar')?.classList.remove('open')});
-  render();
-  refreshRuntime(true);
-})();
+  for (const el of $$('.nav-item')) { el.classList.toggle('active', el.dataset.page === page); if (el.dataset.page === page) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current'); }
+  connectionStatus(); if (page === 'data') void dataCenter.mount();
+}
+async function refreshRuntime(checkBrowser = false) {
+  if (refreshing) return; refreshing = true;
+  try {
+    const [health, jobs, activity] = await Promise.all([request('/api/health'), request('/api/jobs'), request('/api/activity')]);
+    runtime.online = true; runtime.workbuddy = health.workbuddy || runtime.workbuddy;
+    runtime.jobs = jobs.jobs || []; runtime.activity = activity.activity || [];
+    if (checkBrowser) {
+      try { runtime.browserSkill = await request('/api/browser-skill/status', { signal: AbortSignal.timeout(25000) }); }
+      catch (error) { runtime.browserSkill = { installed: false, connected: false, message: error.message }; }
+    }
+  } catch (error) { runtime.online = false; if (page === 'live') notify(error.message); }
+  finally { refreshing = false; connectionStatus(); if (page === 'live' && !document.activeElement?.closest('form')) render(); }
+}
+async function runConnector(input, label) {
+  if (connectorBusy) { notify('上一个浏览器操作仍在执行'); return; }
+  connectorBusy = true; runtime.output = `${label}执行中…`; if ($('#connector-output')) $('#connector-output').textContent = runtime.output;
+  try {
+    const result = await request('/api/browser-skill/execute', { method: 'POST', body: JSON.stringify(input), signal: AbortSignal.timeout(45000) });
+    if (result.ok === false) throw new Error(result.message || result.stderr || '执行失败');
+    runtime.output = JSON.stringify(result.data ?? result.stdout ?? result, null, 2); notify(`${label}完成`);
+  } catch (error) { runtime.output = `${label}失败：${error.message}`; notify(runtime.output); }
+  finally { connectorBusy = false; if ($('#connector-output')) $('#connector-output').textContent = runtime.output; await refreshRuntime(true); }
+}
+function addRecord(type, category, title, summary, extra = {}) {
+  state.records.push({ id: makeId(), type, category, title, summary, date: today(), createdAt: new Date().toISOString(), ...extra });
+}
+
+document.addEventListener('click', async event => {
+  try {
+    if (await studio.handleClick(event)) return;
+    const target = event.target;
+    const nav = target.closest('[data-page]'); if (nav) { go(nav.dataset.page); return; }
+    const link = target.closest('[data-go]'); if (link) { go(link.dataset.go); return; }
+    const video = target.closest('[data-open-video]'); if (video) { studio.open(video.dataset.openVideo); return; }
+    const del = target.closest('[data-delete]'); if (del) { const [collection, id] = del.dataset.delete.split(':'); remove(collection, id); return; }
+    const copy = target.closest('[data-copy]'); if (copy) { await navigator.clipboard.writeText(copy.dataset.copy); notify('已复制'); return; }
+    const job = target.closest('[data-job-delete]');
+    if (job) { if (confirm('删除这个回采计划？')) { await request(`/api/jobs/${encodeURIComponent(job.dataset.jobDelete)}`, { method: 'DELETE' }); await refreshRuntime(); render(); notify('计划已删除'); } return; }
+    const action = target.closest('[data-action]')?.dataset.action; if (!action) return;
+    if (action.startsWith('go-')) go(action.slice(3));
+    else if (action === 'connector-page') go('live');
+    else if (action === 'connector-refresh') await refreshRuntime(true);
+    else if (action === 'connector-start') await runConnector({ action: 'start' }, '启动会话');
+    else if (action === 'connector-stop') await runConnector({ action: 'stop' }, '结束会话');
+    else if (action === 'connector-observe') await runConnector({ action: 'observe' }, '观察页面');
+    else if (action === 'open-douyin') await runConnector({ action: 'navigate', url: 'https://www.douyin.com/' }, '打开抖音');
+    else if (action === 'open-creator') await runConnector({ action: 'navigate', url: 'https://creator.douyin.com/' }, '打开创作者中心');
+    else if (action.startsWith('idea-video:')) { const idea = state.ideas.find(item => item.id === action.slice(11)); if (idea) studio.fromIdea(idea); }
+    else if (action.startsWith('save-idea:')) {
+      const idea = state.ideas.find(item => item.id === action.slice(10)); if (!idea) return;
+      if (state.records.some(item => item.sourceIdeaId === idea.id)) { notify('这个选题已在内容库中'); return; }
+      addRecord('选题', '选题', idea.title, `钩子：${idea.hook || ''}\n脚本：${idea.script || ''}\n结尾：${idea.cta || ''}`, { sourceIdeaId: idea.id }); save(); notify('选题已加入内容库');
+    } else if (action === 'export-data') { download(state, `doufeng-${localDay()}.json`); notify('已导出当前数据，不包含素材文件'); }
+    else if (action === 'sidebar-toggle') $('#sidebar').classList.toggle('open');
+  } catch (error) { notify(error.message); }
+});
+
+const formHandlers = {
+  'settings-form'(x) { if (!x.accountName.trim()) throw new Error('请输入账号名称'); Object.assign(state, { account: x.accountName.trim(), audience: x.settingsAudience, pillars: x.settingsPillars, persona: x.settingsPersona }); },
+  'diagnosis-form'(x) {
+    const scores = [0, 1, 2, 3, 4].map(i => Number(x[`score${i}`]));
+    if (scores.some(n => !Number.isInteger(n) || n < 1 || n > 5)) throw new Error('评分必须在 1–5 之间');
+    state.audience = x.audience; state.pillars = x.pillars; state.diagnosis = { scores, strength: x.strength || '待补充', weakness: x.weakness || '待补充', next: x.next || '待补充', sample: x.sample, date: today() };
+    addRecord('诊断', '账号', '账号五维诊断', `优势：${state.diagnosis.strength}\n短板：${state.diagnosis.weakness}\n下一步：${state.diagnosis.next}`);
+  },
+  'research-form'(x) {
+    if (!x.title.trim()) throw new Error('请填写主题与标题'); state.research.push({ ...x, id: makeId(), date: today() });
+    addRecord('观察', '模式', x.title, `钩子：${x.hook || '—'}\n可借鉴：${x.takeaway || x.structure || '—'}`);
+  },
+  'ideas-form'(x) {
+    const pain = x.pain.trim(); if (!pain) throw new Error('请填写本轮主题');
+    const templates = [
+      ['反差切入', `关于${pain}，你可能漏了这一步。`, '列出一个待核实的常见误区。\n补充自己的案例和可验证的做法。\n给观众一个今天就能尝试的小动作。', '你也遇到过这个问题吗？'],
+      ['经验拆解', `${pain}，我会从这几个步骤开始。`, '补充自己的真实经历。\n对比尝试前后的变化，并解释原因。\n给出一条具体建议，避免编造体验。', '你还有什么更省事的方法？'],
+      ['问题共鸣', `如果你也被${pain}卡住，可以先从这里开始。`, '描述观众熟悉的场景。\n拆出造成问题的两个原因。\n分享一个小步骤，说明适用边界。', '你现在最想解决哪一步？']
+    ];
+    for (const [angle, hook, script, cta] of templates) state.ideas.push({ id: makeId(), date: today(), title: `${x.direction || '内容'}：${pain} · ${angle}`, angle: x.angle || angle, target: x.target, tone: x.tone, hook, script: `目标观众：${x.target || '待补充'}\n表达立场：${x.angle || '待补充'}\n语气：${x.tone || '自然'}\n\n${script}`, cta, duration: x.duration, bgm: '按内容节奏选择已获授权的音乐' });
+  },
+  'remix-form'(x) { addRecord('拆解', '模式', x.sourceTopic || '爆款结构拆解', `参考链接：${x.sourceUrl || '—'}\n主题：${x.sourceTopic || '—'}\n开场：${x.sourceHook || '—'}\n结构：${x.sourceFlow || '—'}\n互动：${x.sourceCta || '—'}\n原创角度：${x.newAngle || '—'}\n原创脚本：${x.newScript || '—'}`); },
+  'comment-form'(x) {
+    if (!x.commentText.trim()) throw new Error('请填写原评论');
+    const reply = `${x.replyStyle === '温和解释' ? '理解你的想法。' : x.replyStyle === '直球带梗' ? '我直接说：' : '谢谢你分享。'}${x.replyType === '被夸 / 闲聊' ? '收到这句鼓励，今天剪片都有劲了。' : '关于你提到的问题，[补充与你的视频和这条评论相关的具体回答]。'}`;
+    state.comments.push({ id: makeId(), date: today(), comment: x.commentText, context: x.commentContext, replyType: x.replyType, reply });
+  },
+  'metrics-form'(x) {
+    validateMetric(x); state.metrics.push({ ...x, id: makeId(), date: today(), createdAt: new Date().toISOString() });
+    addRecord('复盘', '复盘', x.mTitle, `播放 ${x.plays || 0}；完播 ${x.completion || 0}%；互动 ${x.likes || 0} 赞 / ${x.mComments || 0} 评 / ${x.shares || 0} 分享。\n下一步：${x.reflection || '待补'}`, { draftId: x.draftId || '' });
+  },
+  'record-form'(x) { if (!x.recordTitle.trim()) throw new Error('请填写标题'); addRecord('手动记录', x.category, x.recordTitle, x.recordSummary || ''); }
+};
+document.addEventListener('submit', async event => {
+  if (studio.handleSubmit(event) || planner.handleSubmit(event)) return;
+  const form = event.target; if (!(form instanceof HTMLFormElement) || form.closest('dialog')) return;
+  event.preventDefault(); if (form.dataset.busy) return;
+  const values = Object.fromEntries(new FormData(form)); const button = event.submitter;
+  form.dataset.busy = 'true'; if (button) button.disabled = true;
+  try {
+    if (form.id === 'job-form') {
+      await request('/api/jobs', { method: 'POST', body: JSON.stringify({ label: values.jobLabel, url: values.jobUrl, extractor: values.extractor, repeat: values.repeat, nextRunAt: new Date(values.nextRunAt).toISOString() }) });
+      form.reset(); await refreshRuntime(); render(); notify('回采计划已创建'); return;
+    }
+    if (form.id === 'upload-form') {
+      const file = $('#media-file')?.files?.[0]; if (!file) throw new Error('请选择素材文件');
+      const response = await fetch(`/api/uploads?name=${encodeURIComponent(file.name)}`, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: file });
+      const result = await response.json(); if (!response.ok) throw new Error(result.message || '素材准备失败'); runtime.lastUploadPath = result.path; render(); notify('素材已保存到本机'); return;
+    }
+    if (!formHandlers[form.id]) return;
+    formHandlers[form.id](values); memory.clear(form); save(); render();
+    notify(form.id === 'ideas-form' ? '已创建 3 个写作模板，可在内容库继续编辑' : form.id === 'comment-form' ? '回复模板已保存，请补充具体内容' : '已记录，正在保存到本机');
+  } catch (error) { notify(error.message); }
+  finally { delete form.dataset.busy; if (button) button.disabled = false; }
+});
+document.addEventListener('change', event => {
+  if (event.target.id !== 'metric-draft') return;
+  const draft = state.drafts.find(item => item.id === event.target.value);
+  if (draft && $('#mTitle')) { $('#mTitle').value = draft.pubTitle || draft.title || ''; $('#mTitle').dispatchEvent(new Event('input', { bubbles: true })); }
+});
+document.addEventListener('keydown', event => { if (event.key === 'Escape') $('#sidebar').classList.remove('open'); });
+window.addEventListener('hashchange', () => go(location.hash.slice(1) || 'home', true));
+window.addEventListener('unhandledrejection', event => { console.error(event.reason); notify('操作未完成，请重试。未提交的内容仍可继续编辑。'); });
+if (Object.hasOwn(pages, location.hash.slice(1))) page = location.hash.slice(1);
+render(); void sync.initialize(); void refreshRuntime(page === 'live');

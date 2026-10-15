@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#101413" />
   <title>豆蜂 · 抖音运营工作台</title>
   <link rel="stylesheet" href="./app.css" />
+  <link rel="stylesheet" href="./product.css" />
 </head>
 <body>
   <div class="shell">
@@ -18,23 +19,35 @@
         <button class="nav-item" data-page="account"><span class="nav-icon">◉</span> 账号诊断</button>
         <button class="nav-item" data-page="research"><span class="nav-icon">⌕</span> 推荐流研究</button>
         <button class="nav-item" data-page="ideas"><span class="nav-icon">✳</span> 选题与脚本</button>
+        <button class="nav-item" data-page="video"><span class="nav-icon">▶</span> 视频制作台</button>
         <button class="nav-item" data-page="remix"><span class="nav-icon">↗</span> 爆款拆解</button>
         <div class="nav-caption">发布与复盘</div>
-        <button class="nav-item" data-page="publish"><span class="nav-icon">＋</span> 发布工作台</button>
+        <button class="nav-item" data-page="publish"><span class="nav-icon">＋</span> 发布计划</button>
         <button class="nav-item" data-page="comments"><span class="nav-icon">▤</span> 评论回复</button>
         <button class="nav-item" data-page="tracking"><span class="nav-icon">⌁</span> 效果追踪</button>
-        <button class="nav-item" data-page="knowledge"><span class="nav-icon">▣</span> 知识库</button>
-        <div class="nav-caption">WorkBuddy</div>
+        <button class="nav-item" data-page="knowledge"><span class="nav-icon">▣</span> 内容库</button>
+        <div class="nav-caption">工作区</div>
+        <button class="nav-item" data-page="data"><span class="nav-icon">▧</span> 数据管理</button>
+        <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span> 账号与设置</button>
         <button class="nav-item" data-page="live"><span class="nav-icon">⌘</span> 应用接入</button>
       </nav>
-      <div class="sidebar-bottom"><div class="profile-mini"><div class="avatar">蜂</div><div><b id="side-account">我的账号</b><small>运营空间</small></div><button class="icon-button" data-go="settings" aria-label="账号设置">⚙</button></div><div class="sidebar-foot">v3.0 · WorkBuddy 原生能力包</div></div>
+      <div class="sidebar-bottom"><div class="profile-mini"><div class="avatar">蜂</div><div><b id="side-account">我的账号</b><small>个人创作空间</small></div><button class="icon-button" data-go="settings" aria-label="账号设置">⚙</button></div><div class="sidebar-foot">v4.0 · 本地个人版</div></div>
     </aside>
     <main class="main">
-      <header class="topbar"><div class="crumb"><button class="icon-button mobile-menu" data-action="sidebar-toggle" aria-label="打开导航">☰</button><span>工作区</span><i>/</i><b id="page-title">总览</b></div><div class="top-actions"><span class="connection" id="connection-status"><span class="status-dot"></span>正在检查连接</span><button class="button button-dark" data-go="live">WorkBuddy 接入 <span>↗</span></button></div></header>
+      <header class="topbar"><div class="crumb"><button class="icon-button mobile-menu" data-action="sidebar-toggle" aria-label="打开导航">☰</button><span>工作区</span><i>/</i><b id="page-title">总览</b></div><div class="top-actions"><button class="button button-light global-search" data-open-search aria-label="搜索整个工作区，快捷键 Ctrl K">⌕ 搜索 <kbd>Ctrl K</kbd></button><span class="connection" id="connection-status"><span class="status-dot"></span>正在连接本地服务</span></div></header>
+      <div id="sync-status" class="sync-status">
+        <span data-sync-message role="status" aria-live="polite">正在读取工作区…</span>
+        <div class="sync-actions">
+          <button type="button" data-sync="retry" hidden>重试同步</button>
+          <button type="button" data-sync="backup" hidden>导出本页备份</button>
+          <button type="button" data-sync="recoveries" hidden>未同步备份</button>
+          <button type="button" data-sync="reload" hidden>载入最新数据</button>
+        </div>
+      </div>
       <section id="view" class="view" tabindex="-1"></section>
     </main>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="./app.js"></script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
