@@ -7,7 +7,7 @@
   "description_en": "Manage Douyin account diagnosis, research, ideas, publishing checklists, comments and performance reviews with natural language.",
   "source": "doufeng-douyin-ops",
   "type": "mcp",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "minWorkbuddyVersion": "5.0.0",
   "examples_zh": [
     "给我的账号做一次五维诊断并保存",

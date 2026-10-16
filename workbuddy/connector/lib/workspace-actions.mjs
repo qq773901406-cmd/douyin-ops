@@ -1,4 +1,4 @@
-export const collectionLabels = { ideas: '选题', videos: '视频项目', drafts: '发布草稿', research: '观察', comments: '回复草稿', metrics: '效果记录', records: '知识记录' };
+export const collectionLabels = { ideas: '选题', videos: '视频项目', drafts: '发布草稿', products: '商品资料', research: '观察', comments: '回复草稿', metrics: '效果记录', records: '知识记录' };
 export const recordTitle = item => item.pubTitle || item.mTitle || item.title || item.comment || '未命名记录';
 
 export function moveToTrash(state, collection, id) {

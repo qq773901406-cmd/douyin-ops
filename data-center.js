@@ -64,7 +64,7 @@ export function createDataCenter({ getState, getSync, save, render, notify }) {
     if (event.target.id !== 'workspace-import') return;
     const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
     try {
-      if (file.size > 2 * 1024 * 1024) throw new Error('当前导入上限为 2MB，请拆分过大的工作区或保留文件寻求迁移。');
+      if (file.size > 8 * 1024 * 1024) throw new Error('当前导入上限为 8MB，请拆分过大的工作区或保留文件寻求迁移。');
       const parsed = JSON.parse(await file.text());
       if (parsed.format && (parsed.format !== 'doufeng-workspace' || parsed.version !== 1)) throw new Error('不支持这个备份版本。');
       const state = parsed.format ? parsed.state : parsed;

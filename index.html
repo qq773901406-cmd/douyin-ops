@@ -7,6 +7,7 @@
   <title>豆蜂 · 抖音运营工作台</title>
   <link rel="stylesheet" href="./app.css" />
   <link rel="stylesheet" href="./product.css" />
+  <link rel="stylesheet" href="./shop.css" />
 </head>
 <body>
   <div class="shell">
@@ -15,6 +16,7 @@
       <div class="workspace-label">工作区 <span class="online-dot"></span> 本地模式</div>
       <nav id="nav" aria-label="主导航">
         <button class="nav-item active" data-page="home"><span class="nav-icon">⌂</span> 总览</button>
+        <button class="nav-item" data-page="shop"><span class="nav-icon">▧</span> 电商选品 <small class="nav-new">NEW</small></button>
         <div class="nav-caption">内容运营</div>
         <button class="nav-item" data-page="account"><span class="nav-icon">◉</span> 账号诊断</button>
         <button class="nav-item" data-page="research"><span class="nav-icon">⌕</span> 推荐流研究</button>
@@ -31,7 +33,7 @@
         <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span> 账号与设置</button>
         <button class="nav-item" data-page="live"><span class="nav-icon">⌘</span> 应用接入</button>
       </nav>
-      <div class="sidebar-bottom"><div class="profile-mini"><div class="avatar">蜂</div><div><b id="side-account">我的账号</b><small>个人创作空间</small></div><button class="icon-button" data-go="settings" aria-label="账号设置">⚙</button></div><div class="sidebar-foot">v4.0 · 本地个人版</div></div>
+      <div class="sidebar-bottom"><div class="profile-mini"><div class="avatar">蜂</div><div><b id="side-account">我的账号</b><small>个人创作空间</small></div><button class="icon-button" data-go="settings" aria-label="账号设置">⚙</button></div><div class="sidebar-foot">v4.1.1 · 内容与电商工作台</div></div>
     </aside>
     <main class="main">
       <header class="topbar"><div class="crumb"><button class="icon-button mobile-menu" data-action="sidebar-toggle" aria-label="打开导航">☰</button><span>工作区</span><i>/</i><b id="page-title">总览</b></div><div class="top-actions"><button class="button button-light global-search" data-open-search aria-label="搜索整个工作区，快捷键 Ctrl K">⌕ 搜索 <kbd>Ctrl K</kbd></button><span class="connection" id="connection-status"><span class="status-dot"></span>正在连接本地服务</span></div></header>

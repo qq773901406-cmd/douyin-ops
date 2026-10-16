@@ -13,7 +13,7 @@ function readEditor() {
     const p = saved?.project;
     if (saved?.version !== 1 || !p || !Array.isArray(p.shots) || p.shots.length < 1 || p.shots.length > 12) return null;
     const project = newVideo();
-    for (const key of [...fields, 'id', 'createdAt', 'updatedAt']) if (typeof p[key] === 'string') project[key] = p[key];
+    for (const key of [...fields, 'id', 'createdAt', 'updatedAt', 'sourceProductId']) if (typeof p[key] === 'string') project[key] = p[key];
     project.shots = p.shots.map(shot => ({ seconds: Number(shot?.seconds) || '', action: String(shot?.action || ''), camera: String(shot?.camera || '') }));
     return { project, savedAt: saved.savedAt };
   } catch { return null; }
@@ -292,7 +292,7 @@ export function createVideoStudio({ getState, save, go, openDraft, notify, esc }
         if (!canReplaceEditor()) return true;
         let draft = state.drafts.find(d => d.sourceVideoId === project.id);
         if (!draft) {
-          draft = { id: crypto.randomUUID(), sourceVideoId: project.id, pubTitle: project.title, format: '视频', asset: project.asset, caption: '', hashtags: '', cover: '', status: '待人工准备', date: new Date().toLocaleDateString('zh-CN') };
+          draft = { id: crypto.randomUUID(), sourceVideoId: project.id, sourceProductId: project.sourceProductId || '', platform: 'douyin', pubTitle: project.title, format: '视频', asset: project.asset, caption: '', hashtags: '', cover: '', status: '待人工准备', date: new Date().toLocaleDateString('zh-CN') };
           state.drafts.push(draft);
           state.records.push({ id: crypto.randomUUID(), type: '发布准备', category: '动作', title: project.title, summary: `来自视频制作台。成片：${project.asset}`, date: new Date().toLocaleDateString('zh-CN') }); save();
         }

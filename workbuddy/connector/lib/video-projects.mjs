@@ -51,7 +51,7 @@ export function validateVideo(input) {
   });
   if (project.status === 'blocked' && !project.blocker) throw new Error('请记录遇到的问题，方便下次继续。');
   if (project.status === 'completed' && !project.asset) throw new Error('标记完成前，请填写成片文件路径或链接。');
-  for (const key of ['id', 'createdAt', 'updatedAt']) if (input[key]) project[key] = short(input[key], 100);
+  for (const key of ['id', 'createdAt', 'updatedAt', 'sourceProductId']) if (input[key]) project[key] = short(input[key], 100);
   return project;
 }
 

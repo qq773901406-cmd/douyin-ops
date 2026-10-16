@@ -30,7 +30,7 @@ function tracking(){
   }
 
 function live(){const c=runtime.browserSkill||{};const connected=c.installed&&c.connected;return `${head('WORKBUDDY INTEGRATION','WorkBuddy 接入','Skill、MCP Connector 与腾讯 BrowserSkill 已拆分成可安装的 WorkBuddy 能力包。',btn('刷新状态','connector-refresh','button-light'))}
-  <div class="grid grid-3"><div>${metric('Buddy 应用',runtime.workbuddy?.packageReady?'就绪':'待生成','配置草案','WB')}</div><div>${metric('MCP 工具','16','工作区读写','⌘')}</div><div>${metric('浏览器',connected?'已连接':c.installed?'待连接':'未安装','腾讯 BrowserSkill','◎')}</div></div>
+  <div class="grid grid-3"><div>${metric('Buddy 应用',runtime.workbuddy?.packageReady?'就绪':'待生成','配置草案','WB')}</div><div>${metric('MCP 工具','已接入','内容与商品读写','⌘')}</div><div>${metric('浏览器',connected?'已连接':c.installed?'待连接':'未安装','腾讯 BrowserSkill','◎')}</div></div>
   <div class="notice ${connected?'green':'orange'}" style="margin:15px 0"><span>${connected?'✓':'!'}</span><span><b>${connected?'BrowserSkill 已连接':c.installed?'BrowserSkill 已安装，浏览器扩展尚未连接':'未检测到 BrowserSkill'}</b><br>${esc(c.message||'安装 bsk CLI 与浏览器扩展后运行 bsk doctor。')}</span></div>
   <div class="grid grid-2"><div>${card('浏览器会话（只读预览）',`<div class="form-actions">${btn('启动会话','connector-start','button-green')}${btn('打开抖音','open-douyin','button-light')}${btn('打开创作者中心','open-creator','button-light')}${btn('观察当前页面','connector-observe','button-light')}${btn('结束会话','connector-stop','button-light')}</div><p class="form-hint">本页仅提供导航和页面观察。输入、上传、评论与发布由 WorkBuddy 调用 BrowserSkill，并按 Skill 规则先确认。</p>`)}</div>
   <div>${card('最近执行结果',`<pre id="connector-output" class="output-card console-output">${esc(runtime.output||'等待操作。')}</pre>`)}</div></div>

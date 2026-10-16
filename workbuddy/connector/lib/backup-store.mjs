@@ -29,8 +29,9 @@ export class BackupStore {
     return { id, createdAt: data.createdAt, kind, label: data.label };
   }
   async read(id) {
+    const path = this.path(id);
     let data;
-    try { data = JSON.parse(await readFile(this.path(id), 'utf8')); }
+    try { data = JSON.parse(await readFile(path, 'utf8')); }
     catch (error) { if (error.code === 'ENOENT') throw Object.assign(new Error('备份不存在。'), { status: 404 }); throw new Error('备份无法读取，请保留原文件并检查内容。'); }
     if (data.format !== 'doufeng-workspace' || data.version !== 1 || !data.state || typeof data.state !== 'object' || Array.isArray(data.state)) throw new Error('不支持此备份格式。');
     return { ...data, state: normalizeState(data.state) };

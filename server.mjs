@@ -9,6 +9,7 @@ import { normalizeState } from './workbuddy/connector/lib/workspace-model.mjs';
 import { BackupStore } from './workbuddy/connector/lib/backup-store.mjs';
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)));
+const { version } = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 const runtimeDir = resolve(process.env.DOUFENG_DATA_DIR || join(root, 'runtime'));
 const uploadDir = join(runtimeDir, 'uploads');
 const stateFile = join(runtimeDir, 'workbench.json');
@@ -18,6 +19,9 @@ const workbuddyConfig = join(root, 'workbuddy', 'connector', 'connector-meta.jso
 const host = process.env.HOST || '127.0.0.1';
 const port = Number(process.env.PORT || 4174);
 if (!['127.0.0.1', 'localhost', '::1'].includes(host) || !Number.isInteger(port) || port < 1 || port > 65535) throw new Error('个人版本仅支持本机地址，PORT 必须是 1–65535 的整数。');
+const address = `http://${host === '::1' ? '[::1]' : host}:${port}`;
+const localHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`]);
+const localOrigins = new Set([...localHosts].map(value => `http://${value}`));
 const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml' };
 const stateStore = new JsonStore(stateFile, normalizeState(), normalizeState, { snapshots: true });
 const backups = new BackupStore(join(runtimeDir, 'backups'));
@@ -26,18 +30,20 @@ const jobsStore = new JsonStore(jobsFile, [], validateList);
 const activityStore = new JsonStore(activityFile, [], validateList);
 const publicFiles = new Set(['index.html', 'app.css', 'app.js', 'state-sync.js', 'video-studio.js', 'workbuddy/connector/lib/workspace-model.mjs', 'workbuddy/connector/lib/video-projects.mjs']);
 for (const file of ['product.css', 'workspace-ui.js', 'content-library.js', 'publish-planner.js', 'data-center.js', 'dashboard.js', 'legacy-pages.js', 'workbuddy/connector/lib/workspace-actions.mjs']) publicFiles.add(file);
+for (const file of ['shop-workspace.js', 'shop-import.js', 'shop-cards.js', 'shop.css', 'workbuddy/connector/lib/shop-products.mjs']) publicFiles.add(file);
 
 await mkdir(uploadDir, { recursive: true });
 
 async function exists(path) { try { await access(path); return true; } catch { return false; } }
 function sendJson(res, status, value) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); res.end(JSON.stringify(value)); }
-async function bodyJson(req, maxBytes = 2 * 1024 * 1024) {
+async function bodyJson(req, maxBytes = 8 * 1024 * 1024) {
   const chunks = []; let size = 0;
   for await (const chunk of req) { size += chunk.length; if (size > maxBytes) throw Object.assign(new Error('请求内容过大。'), { status: 413 }); chunks.push(chunk); }
   const value = Buffer.concat(chunks).toString('utf8');
-  return value ? JSON.parse(value) : {};
+  try { return value ? JSON.parse(value) : {}; }
+  catch { throw Object.assign(new Error('JSON 格式不正确。'), { status: 400 }); }
 }
-function sameOrigin(req) { const origin = req.headers.origin; return !origin || origin === `http://${host}:${port}` || origin === `http://localhost:${port}`; }
+function sameOrigin(req) { return !req.headers.origin || localOrigins.has(req.headers.origin); }
 async function addActivity(entry) {
   await activityStore.update(activity => {
     activity.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, at: new Date().toISOString(), ...entry });
@@ -46,14 +52,14 @@ async function addActivity(entry) {
 }
 
 const server = createServer(async (req, res) => {
-  if (!new Set([`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`]).has(req.headers.host)) { sendJson(res, 403, { ok: false, message: '仅允许通过本机工作台地址访问。' }); return; }
+  if (!localHosts.has(req.headers.host)) { sendJson(res, 403, { ok: false, message: '仅允许通过本机工作台地址访问。' }); return; }
   let url;
-  try { url = new URL(req.url || '/', `http://${host}:${port}`); } catch { sendJson(res, 400, { ok: false, message: '请求地址无效。' }); return; }
+  try { url = new URL(req.url || '/', address); } catch { sendJson(res, 400, { ok: false, message: '请求地址无效。' }); return; }
   if (url.pathname.startsWith('/api/')) {
     if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, message: '请求来源不受信任。' }); return; }
     try {
       if (req.method === 'GET' && ['/api/health', '/api/system'].includes(url.pathname)) {
-        sendJson(res, 200, { ok: true, service: 'douyin-ops-workbuddy-workbench', version: '4.0.0', root, dataDir: runtimeDir, node: process.version, pid: process.pid, uptime: Math.floor(process.uptime()), workbuddy: { packageReady: await exists(workbuddyConfig), connectorPath: 'workbuddy/connector', skillPath: 'SKILL.md' }, now: new Date().toISOString() });
+        sendJson(res, 200, { ok: true, service: 'douyin-ops-workbuddy-workbench', version, root, dataDir: runtimeDir, node: process.version, pid: process.pid, uptime: Math.floor(process.uptime()), workbuddy: { packageReady: await exists(workbuddyConfig), connectorPath: 'workbuddy/connector', skillPath: 'SKILL.md' }, now: new Date().toISOString() });
         return;
       }
       if (req.method === 'GET' && url.pathname === '/api/browser-skill/status') { sendJson(res, 200, await browserSkillStatus()); return; }
@@ -67,8 +73,10 @@ const server = createServer(async (req, res) => {
         const revision = req.headers['if-match'];
         if (typeof revision !== 'string') throw Object.assign(new Error('恢复前需要读取工作区版本。'), { status: 428 });
         const input = await bodyJson(req);
-        const value = input.id ? (await backups.read(String(input.id))).state : normalizeState(input.state);
         if (!input.id && (!input.state || typeof input.state !== 'object')) throw Object.assign(new Error('缺少待导入的数据。'), { status: 400 });
+        let value;
+        if (input.id) value = (await backups.read(String(input.id))).state;
+        else { try { value = normalizeState(input.state); } catch (error) { error.status = 400; throw error; } }
         const saved = await stateStore.update(async current => {
           await backups.create(current, 'restore', '恢复或导入前的工作区');
           for (const key of Object.keys(current)) delete current[key];
@@ -130,7 +138,7 @@ const server = createServer(async (req, res) => {
 });
 
 server.on('error', error => { if (error.code === 'EADDRINUSE') { console.error(`端口 ${port} 已被占用。请关闭旧服务，或设置其他端口后重新运行。`); process.exitCode = 1; return; } throw error; });
-server.listen(port, host, () => console.log(`豆蜂 WorkBuddy 运营工作台已就绪：http://${host}:${port}`));
+server.listen(port, host, () => console.log(`豆蜂 WorkBuddy 运营工作台已就绪：${address}`));
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
   server.close(() => { process.exitCode = 0; });
   server.closeIdleConnections();

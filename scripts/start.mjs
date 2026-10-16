@@ -1,11 +1,12 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { mkdir, open, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+const { version } = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 const dataDir = resolve(process.env.DOUFENG_DATA_DIR || join(root, 'runtime'));
 const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
 if (nodeMajor < 20 || (nodeMajor === 20 && nodeMinor < 11)) throw new Error('需要 Node.js 20.11 或更新版本。');
@@ -30,7 +31,10 @@ async function main() {
 let selected;
 for (const port of ports) {
   const existing = await status(port);
-  if (existing?.service === 'douyin-ops-workbuddy-workbench' && resolve(existing.dataDir || '') === dataDir && resolve(existing.root || '') === resolve(root)) { show(port); return; }
+  if (existing?.service === 'douyin-ops-workbuddy-workbench' && resolve(existing.dataDir || '') === dataDir && resolve(existing.root || '') === resolve(root)) {
+    if (existing.version !== version) throw new Error(`当前仍在运行 v${existing.version || '未知'}，源码为 v${version}。请先保存页面内容，关闭旧服务（PID ${existing.pid}）后重新启动。`);
+    show(port); return;
+  }
   if (selected === undefined && await available(port)) selected = port;
 }
 if (!selected) throw new Error('可用端口已被占用。请设置 PORT 后重新启动。');

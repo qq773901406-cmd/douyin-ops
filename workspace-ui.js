@@ -25,7 +25,8 @@ export function csv(rows, filename) {
 export function dialog(title, body, { wide = false, guard = false } = {}) {
   const el = document.createElement('dialog'); el.className = `app-dialog ${wide ? 'wide' : ''}`;
   el.innerHTML = `<header class="dialog-head"><h2>${esc(title)}</h2><button type="button" class="icon-button" data-dialog-close aria-label="关闭">✕</button></header>${body}`;
-  let dirty = false; el.addEventListener('input', () => { dirty = true; });
+  let dirty = false;
+  for (const event of ['input', 'change', 'editor-change']) el.addEventListener(event, () => { dirty = true; });
   const canClose = () => !guard || !dirty || confirm('放弃尚未保存的编辑？');
   el.querySelector('[data-dialog-close]').onclick = () => { if (canClose()) el.close(); };
   el.addEventListener('cancel', event => { if (!canClose()) event.preventDefault(); });

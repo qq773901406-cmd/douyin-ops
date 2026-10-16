@@ -18,6 +18,8 @@ export async function receiveMedia(req, uploadDir, original) {
   if (!Object.hasOwn(mediaTypes, extension)) throw fail('仅支持 MP4、MOV、WebM、PNG、JPG 和 WebP。', 400);
   const length = Number(req.headers['content-length']);
   if (!Number.isSafeInteger(length) || length <= 0 || length > maxUploadBytes) throw fail('文件为空或超过 4GB。', 413);
+  const isImage = mediaTypes[extension].startsWith('image/');
+  if (isImage && length > 20 * 1024 * 1024) throw fail('图片不得超过 20MB。', 413);
   const name = basename(original, extname(original)).replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]+/g, '-').slice(0, 80) || 'upload';
   const target = join(uploadDir, `${randomUUID()}-${name}${extension}`);
   let received = 0;
@@ -34,6 +36,14 @@ export async function receiveMedia(req, uploadDir, original) {
   try {
     await pipeline(req, limit, output);
     if (received !== length) throw fail('上传未完成，请重新选择文件。', 400);
+    if (isImage) {
+      const file = await open(target, 'r'); const header = Buffer.alloc(12);
+      try { await file.read(header, 0, header.length, 0); } finally { await file.close(); }
+      const valid = extension === '.png' ? header.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+        : extension === '.webp' ? header.toString('ascii', 0, 4) === 'RIFF' && header.toString('ascii', 8, 12) === 'WEBP'
+          : header[0] === 255 && header[1] === 216 && header[2] === 255;
+      if (!valid) throw fail('图片内容与扩展名不符，请重新选择有效的图片。', 400);
+    }
     return { path: target, size: received };
   } catch (error) {
     if (created) await unlink(target).catch(() => {});

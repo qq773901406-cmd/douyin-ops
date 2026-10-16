@@ -5,6 +5,7 @@ import { createVideoStudio } from './video-studio.js';
 import { createPublishPlanner } from './publish-planner.js';
 import { createContentLibrary } from './content-library.js';
 import { createDataCenter } from './data-center.js';
+import { createShopWorkspace } from './shop-workspace.js';
 import { dashboard } from './dashboard.js';
 import { renderLegacyPage } from './legacy-pages.js';
 import { esc, request, download, localDay, createFormMemory } from './workspace-ui.js';
@@ -43,10 +44,11 @@ function track(id) {
 
 const studio = createVideoStudio({ getState: () => state, save, go, openDraft: id => planner.open(id), notify, esc });
 const planner = createPublishPlanner({ getState: () => state, save, render, notify, go, remove, track });
-const library = createContentLibrary({ getState: () => state, save, render, notify, openVideo: id => studio.open(id), openDraft: id => planner.open(id), remove });
+const shop = createShopWorkspace({ getState: () => state, save, render, notify, go, openDraft: id => planner.open(id), openVideo: id => studio.open(id), remove });
+const library = createContentLibrary({ getState: () => state, save, render, notify, openVideo: id => studio.open(id), openDraft: id => planner.open(id), openProduct: id => shop.edit(id), remove });
 const dataCenter = createDataCenter({ getState: () => state, getSync: () => sync, save, render, notify });
 const sync = createStateSync({ getState: () => state, setState(value, { initial = false } = {}) {
-  state = value; studio.reset({ preserveEditor: initial }); planner.reset({ preserveEditor: initial });
+  state = value; studio.reset({ preserveEditor: initial }); planner.reset({ preserveEditor: initial }); shop.reset({ preserveEditor: initial });
   if (!initial) memory.reset();
 }, render, notify });
 
@@ -61,7 +63,8 @@ function field(label, name, placeholder = '', type = 'text', value = '', cls = '
   return `<div class="field ${cls}"><label for="${name}">${label}</label>${type === 'textarea' ? `<textarea id="${name}" name="${name}" placeholder="${esc(placeholder)}" maxlength="20000" ${required}>${esc(value)}</textarea>` : `<input id="${name}" name="${name}" type="${type}" placeholder="${esc(placeholder)}" value="${esc(value)}" maxlength="2000" ${required} ${bounds}>`}</div>`;
 }
 const navNames = { home: '总览', account: '账号诊断', research: '推荐流研究', ideas: '选题与脚本', video: '视频制作台', remix: '爆款拆解', publish: '发布计划', comments: '评论回复', tracking: '效果追踪', knowledge: '内容库', data: '数据管理', live: '应用接入', settings: '账号与设置' };
-const pages = { home: () => dashboard(state), video: studio.render, publish: planner.render, knowledge: library.render, data: dataCenter.render };
+navNames.shop = '电商选品';
+const pages = { home: () => dashboard(state), video: studio.render, publish: planner.render, knowledge: library.render, data: dataCenter.render, shop: shop.render };
 for (const name of ['account', 'research', 'ideas', 'remix', 'comments', 'tracking', 'live', 'settings']) pages[name] = () => renderLegacyPage(name, { state, runtime, head, card, btn, field, metric, empty });
 
 function connectionStatus() {

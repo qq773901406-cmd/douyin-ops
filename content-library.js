@@ -9,7 +9,7 @@ const specs = {
   metrics: [['mTitle', '视频标题'], ['plays', '播放量', 'number'], ['likes', '点赞', 'number'], ['mComments', '评论', 'number'], ['shares', '分享', 'number'], ['completion', '完播率（%）', 'number'], ['reflection', '复盘结论', 'textarea']]
 };
 
-export function createContentLibrary({ getState, save, render, notify, openVideo, openDraft, remove }) {
+export function createContentLibrary({ getState, save, render, notify, openVideo, openDraft, openProduct, remove }) {
   let collection = 'records', query = '', category = '', page = 1;
   const perPage = 12;
   function matches(item, term) { return JSON.stringify(item).normalize('NFKC').toLocaleLowerCase().includes(term.normalize('NFKC').toLocaleLowerCase().trim()); }
@@ -24,6 +24,7 @@ export function createContentLibrary({ getState, save, render, notify, openVideo
       <div class="library-toolbar"><div class="field"><label for="library-type">内容类型</label><select id="library-type">${Object.keys(specs).map(key => `<option value="${key}" ${key === collection ? 'selected' : ''}>${collectionLabels[key]}</option>`).join('')}</select></div><div class="field grow"><label for="library-query">搜索内容</label><input type="search" id="library-query" value="${esc(query)}" placeholder="输入标题、正文或关键词"></div>${collection === 'records' ? `<div class="field"><label for="library-category">分类</label><select id="library-category"><option value="">全部分类</option>${[...new Set(getState().records.map(r => r.category).filter(Boolean))].map(c => `<option ${category === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>` : ''}</div><section id="library-results">${results()}</section>`;
   }
   function edit(key, id) {
+    if (key === 'products') { openProduct(id); return; }
     if (key === 'videos') { openVideo(id); return; }
     if (key === 'drafts') { openDraft(id); return; }
     if (!specs[key]) return;
