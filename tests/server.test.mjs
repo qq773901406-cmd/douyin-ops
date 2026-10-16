@@ -72,6 +72,16 @@ test('错误的 JSON 与导入数据返回 400', async () => {
   assert.equal((await json('/api/backups/restore', { method: 'POST', headers: { 'If-Match': revision }, body: JSON.stringify({ state: { products: 'bad' } }) })).status, 400);
   assert.equal((await json('/api/backups/restore', { method: 'POST', headers: { 'If-Match': revision }, body: '{}' })).status, 400);
 });
+
+test('JSON 非对象和非法回采链接返回 400，不产生服务器错误', async () => {
+  for (const path of ['/api/backups', '/api/backups/restore', '/api/jobs', '/api/browser-skill/execute']) {
+    for (const body of ['null', '[]', '"bad"', '12']) {
+      const result = await json(path, { method: 'POST', headers: { 'If-Match': 'missing' }, body });
+      assert.equal(result.status, 400, `${path}: ${body}`);
+    }
+  }
+  assert.equal((await json('/api/jobs', { method: 'POST', body: JSON.stringify({ url: 'bad-url', nextRunAt: new Date().toISOString(), extractor: 'account' }) })).status, 400);
+});
 test('图片上传、范围预览和路径隔离', async () => {
   const bytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLttAAAAABJRU5ErkJggg==', 'base64');
   const uploaded = await json('/api/uploads?name=sample.png', { method: 'POST', body: bytes }); assert.equal(uploaded.status, 201);

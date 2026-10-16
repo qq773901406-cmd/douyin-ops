@@ -41,3 +41,17 @@ test('failed start cancels its recoverable request', async () => {
   assert.ok(calls.at(-1).includes('--cancel'));
   assert.equal(calls.at(-1)[2], calls[1][calls[1].indexOf('--request-id') + 1]);
 });
+
+test('导航超时同时传给 BrowserSkill CLI，外层超时留出收尾时间', async () => {
+  const publisher = new DouyinPublisher(), calls = [];
+  publisher.session = async (_browser, action) => action('fake-session');
+  publisher.command = async (args, timeout) => { calls.push({ args, timeout }); return {}; };
+  publisher.waitPage = async () => ({ accountIds: ['test-account'], upload: 'button' });
+  await publisher.inspectAccount('fake-browser');
+  const navigations = calls.filter(c => c.args[0] === 'navigate');
+  assert.equal(navigations.length, 2);
+  for (const call of navigations) {
+    assert.equal(call.args[call.args.indexOf('--timeout') + 1], '60s');
+    assert.ok(call.timeout > 60000);
+  }
+});

@@ -45,7 +45,8 @@
 
 ## git 推送须知（2026-10-16 踩坑）
 - 本机直连 github.com 被限制（端口 443 超时），git 默认不读系统代理，**必须显式走 Clash 代理**才能 push。
-- Clash Verge 的 Mixed Port 在本机实际是 **61471**（非默认 7890）；推送前先设：
-  `git config http.proxy http://127.0.0.1:61471` 与 `git config https.proxy http://127.0.0.1:61471`（或用 `$env:http_proxy`/`$env:https_proxy` 临时设）。
+- Clash Verge 实际端口是 **7897**（不是 61471 / 7890）；仓库本地 `.git/config` 已写死
+  `http.proxy=http://127.0.0.1:7897` 与 `https.proxy=http://127.0.0.1:7897`。换节点/改端口后重跑这两条 `git config` 即可。
+- 代理通时可从沙箱直接 push（7897 出口对 api.github.com 返 200）；沙箱仅报 `unable to write credential store: Permission denied` 属正常（不写凭据缓存），不影响推送。
 - WorkBuddy 沙箱与该机器网络隔离：沙箱内连 GitHub 始终 000（代理出口与直连都不通），**push 必须由用户在本机联网终端执行**。
 - 本仓库 `origin` = `https://github.com/qq773901406-cmd/douyin-ops.git`，分支 `main`；推送会连带之前本地未推的 4 个 `wcy` commit。
