@@ -1,6 +1,6 @@
 import { cachedState, createStateSync } from './state-sync.js';
-import { normalizeState } from './workbuddy/connector/lib/workspace-model.mjs';
-import { moveToTrash, validateMetric } from './workbuddy/connector/lib/workspace-actions.mjs';
+import { normalizeState } from '../workbuddy/connector/lib/workspace-model.mjs';
+import { moveToTrash, validateMetric } from '../workbuddy/connector/lib/workspace-actions.mjs';
 import { createVideoStudio } from './video-studio.js';
 import { createPublishPlanner } from './publish-planner.js';
 import { createContentLibrary } from './content-library.js';

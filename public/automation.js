@@ -1,5 +1,5 @@
 import { esc, dialog, download } from './workspace-ui.js';
-import { automationStatuses, editableStatuses } from './automation-model.mjs';
+import { automationStatuses, editableStatuses } from '../shared/automation-model.mjs';
 
 const when = value => value ? new Date(value).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) : '尚未排期';
 const size = bytes => `${(bytes / 1024 / 1024).toFixed(1)} MB`;

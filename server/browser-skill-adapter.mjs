@@ -1,43 +1,36 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { join, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { runBsk, parseBskJson, resolveBskBinary, BSK_TIMEOUTS } from '../lib/bsk-client.mjs';
 
-const execFileAsync = promisify(execFile);
 let activeSession = process.env.BSK_SESSION_ID || '';
 let startingSession = null;
 
-function browserSkillBinary() {
-  if (process.env.BSK_BIN) return process.env.BSK_BIN;
-  if (process.platform === 'win32') {
-    const userInstall = join(homedir(), '.local', 'bin', 'bsk.exe');
-    if (existsSync(userInstall)) return userInstall;
+// Screenshot output must stay inside the runtime directory — input.path arrives
+// from the client and was previously passed straight to the CLI's --out flag,
+// allowing a crafted path to write outside runtime (path traversal).
+// Resolve against the project root (matching the previous relative behaviour,
+// where 'runtime/browser-screenshot.png' meant <root>/runtime/...), then require
+// the result to stay within runtimeDir.
+const root = resolve(fileURLToPath(new URL('../', import.meta.url)));
+const runtimeDir = resolve(process.env.DOUFENG_DATA_DIR || join(root, 'runtime'));
+function safeRuntimeOutPath(inputPath) {
+  const fallback = 'runtime/browser-screenshot.png';
+  const resolved = resolve(root, String(inputPath || fallback));
+  if (resolved !== runtimeDir && !resolved.startsWith(runtimeDir + sep)) {
+    throw Object.assign(new Error('截图输出路径必须位于 runtime 目录内。'), { status: 400 });
   }
-  return 'bsk';
+  return resolved;
 }
 
-async function run(args, timeout = 30000) {
-  try {
-    const { stdout, stderr } = await execFileAsync(browserSkillBinary(), args, { timeout, windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
-    return { ok: true, stdout: stdout.trim(), stderr: stderr.trim() };
-  } catch (error) {
-    return { ok: false, code: error.code === 'ENOENT' ? 'BSK_NOT_FOUND' : (error.code || 'BSK_ERROR'), message: error.code === 'ENOENT' ? '未检测到 BrowserSkill CLI。请安装腾讯 BrowserSkill，并在 Chrome 或 Edge 扩展中启用本地连接。' : (error.stderr || error.message || 'BrowserSkill 调用失败。').trim(), stdout: String(error.stdout || '').trim(), stderr: String(error.stderr || '').trim() };
-  }
-}
-
-function parseJson(value) {
-  if (!value) return null;
-  try { return JSON.parse(value); } catch {}
-  const line = value.split(/\r?\n/).reverse().find(item => item.trim().startsWith('{'));
-  try { return line ? JSON.parse(line) : null; } catch { return null; }
+async function run(args, timeout = BSK_TIMEOUTS.DEFAULT_MS) {
+  return runBsk(args, { timeout });
 }
 
 export async function browserSkillStatus() {
-  const version = await run(['--version'], 5000);
+  const version = await run(['--version'], BSK_TIMEOUTS.STATUS_MS);
   if (!version.ok) return { installed: false, connected: false, message: version.message, sessionId: activeSession || null };
-  const doctor = await run(['doctor'], 15000);
+  const doctor = await run(['doctor'], BSK_TIMEOUTS.DOCTOR_MS);
   const output = `${doctor.stdout || ''}\n${doctor.stderr || ''}`.trim();
   const connected = doctor.ok && !/failed|not connected|disconnected|未连接|失败/i.test(output);
   return { installed: true, connected, version: version.stdout || '已安装', sessionId: activeSession || null, message: connected ? 'BrowserSkill CLI 与浏览器扩展已连接。' : (output || 'BrowserSkill 已安装，请在浏览器扩展中启用本地连接。') };
@@ -52,11 +45,11 @@ function assertDouyinUrl(value) {
 
 // Injectable command runner keeps session protocol tests entirely offline.
 export async function startBrowserSkillSession(browserId, invoke = run) {
-  const token = `${Date.now() + 5 * 60000}:${randomUUID()}`;
+  const token = `${Date.now() + BSK_TIMEOUTS.TOKEN_TTL_MS}:${randomUUID()}`;
   let sessionId, prepared = false;
-  const json = async (args, timeout = 15000) => {
+  const json = async (args, timeout = BSK_TIMEOUTS.SESSION_REQUEST_MS) => {
     const result = await invoke([...args, '--json'], timeout);
-    const payload = parseJson(result.stdout);
+    const payload = parseBskJson(result.stdout);
     if (!result.ok || !payload || payload.ok === false || payload.error || payload.success === false) throw new Error(result.message || payload?.message || 'BrowserSkill 未完成请求，请检查扩展连接。');
     return payload;
   };
@@ -68,7 +61,7 @@ export async function startBrowserSkillSession(browserId, invoke = run) {
     const selected = candidates[0].instance_id;
     prepared = true;
     await json(['session', 'request', '--prepare', token]);
-    const started = await json(['session', 'start', '--browser', selected, '--request-id', token, '--no-focus', '--name', '豆蜂浏览器查看'], 70000);
+    const started = await json(['session', 'start', '--browser', selected, '--request-id', token, '--no-focus', '--name', '豆蜂浏览器查看'], BSK_TIMEOUTS.SESSION_START_ADAPTER_MS);
     sessionId = started.session_id;
     if (!sessionId || started.browser_instance_id !== selected) throw new Error('浏览器会话与所选实例不一致。');
     const claimed = await json(['session', 'request', token, '--claim']);
@@ -76,7 +69,7 @@ export async function startBrowserSkillSession(browserId, invoke = run) {
     return { ok: true, sessionId, data: started, message: '浏览器会话已准备并领取。' };
   } catch (error) {
     const cleanup = sessionId ? ['session', 'stop', sessionId, '--json'] : prepared ? ['session', 'request', token, '--cancel', '--json'] : null;
-    if (cleanup) await invoke(cleanup, 15000).catch(() => {});
+    if (cleanup) await invoke(cleanup, BSK_TIMEOUTS.SESSION_STOP_MS).catch(() => {});
     return { ok: false, code: 'SESSION_START_FAILED', message: error.message, sessionId: null };
   }
 }
@@ -89,7 +82,7 @@ export async function executeBrowserSkill(input = {}) {
     if (startingSession) return startingSession;
     startingSession = (async () => {
       if (activeSession) {
-        const listed = await run(['session', 'list', '--json'], 15000), sessions = parseJson(listed.stdout);
+        const listed = await run(['session', 'list', '--json'], BSK_TIMEOUTS.SESSION_REQUEST_MS), sessions = parseBskJson(listed.stdout);
         if (!listed.ok || !Array.isArray(sessions)) return { ok: false, code: 'SESSION_CHECK_FAILED', message: '无法确认原会话状态，请检查浏览器连接后重试。' };
         if (sessions.some(s => s.session_id === activeSession)) return { ok: true, sessionId: activeSession, message: '继续使用当前浏览器会话。' };
         activeSession = '';
@@ -102,9 +95,9 @@ export async function executeBrowserSkill(input = {}) {
   }
   const sessionId = String(input.sessionId || activeSession || '');
   if (!sessionId) return { ok: false, code: 'SESSION_REQUIRED', message: '请先启动 BrowserSkill 会话。' };
-  if (action === 'navigate') return run(['navigate', assertDouyinUrl(input.url), '--session', sessionId, '--timeout', '60s'], 70000);
+  if (action === 'navigate') return run(['navigate', assertDouyinUrl(input.url), '--session', sessionId, '--timeout', '60s'], BSK_TIMEOUTS.NAVIGATE_ADAPTER_MS);
   if (action === 'observe') return run(['observe', '--session', sessionId]);
-  if (action === 'screenshot') return run(['screenshot', '--session', sessionId, '--out', String(input.path || 'runtime/browser-screenshot.png')]);
+  if (action === 'screenshot') return run(['screenshot', '--session', sessionId, '--out', safeRuntimeOutPath(input.path)]);
   if (action === 'stop') { const result = await run(['session', 'stop', sessionId]); if (result.ok && sessionId === activeSession) activeSession = ''; return result; }
   return { ok: false, code: 'ACTION_NOT_ALLOWED', message: '本地工作台只开放会话、导航、观察和截图；输入、点击、上传与发布由 WorkBuddy 调用 BrowserSkill，并在执行前确认。' };
 }

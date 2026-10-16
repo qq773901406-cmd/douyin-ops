@@ -5,7 +5,7 @@ import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { BilibiliWorkflow } from '../bilibili-workflow.mjs';
+import { BilibiliWorkflow } from '../server/bilibili-workflow.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const temporaryRoot = join(root, '.codex_tmp');

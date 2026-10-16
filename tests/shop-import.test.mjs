@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { prepareShopImport } from '../shop-import.js';
+import { prepareShopImport } from '../public/shop-import.js';
 
 const file = (path, content = '', size = new TextEncoder().encode(content).length) => ({ name: path.split('/').at(-1), webkitRelativePath: path, size, text: async () => content });
 test('日报导入按商品目录分组，保留报告、日期和中英文文案', async () => {

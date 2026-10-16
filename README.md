@@ -149,40 +149,43 @@ output/
 
 ```text
 D:\ai
-├─ index.html / app.css / app.js     可视化工作台
-├─ product.css / dashboard.js        个人版界面与待办总览
-├─ shop-workspace.js / shop.css       商品管理、成本估算与内容流转
-├─ shop-import.js / shop-cards.js     日报目录导入与本地 PNG 卡片
-├─ integrations/shop-dropshipping/   上游版本信息与整合说明
-├─ content-library.js                内容检索、编辑、全局搜索
-├─ publish-planner.js                草稿编辑与发布月历
-├─ automation.js / automation.css    本地视频审批、每日队列和执行记录
-├─ automation-model.mjs              队列模型与北京时间排期
-├─ automation-service.mjs            持久化审批、调度与重复提交防护
-├─ douyin-publisher.mjs              已登录浏览器的抖音视频发布适配
-├─ bilibili-workflow.mjs             B 站素材副本、单次提交与回执记录
-├─ scripts/bilibili-workflow.mjs      B 站流程本地命令（不执行网页发布）
-├─ data-center.js                    备份、导入预览与回收站
-├─ workspace-ui.js / legacy-pages.js  共用组件与专用业务表单
-├─ start.cmd / scripts/              一键启动与静态检查
-├─ video-studio.js                   视频制作项目与分镜编辑
-├─ state-sync.js                     保存队列、冲突提示与浏览器恢复
-├─ media-service.mjs                 素材上传与支持拖动进度的视频预览
-├─ server.mjs                        本地服务与持久化 API
-├─ browser-skill-adapter.mjs         腾讯 BrowserSkill 本地状态与只读预览
-├─ SKILL.md                          WorkBuddy 运营 Skill
-├─ references/                       运营和浏览器参考资料
-├─ runtime/                          工作区数据与素材（不提交 Git）
-└─ workbuddy/
-   ├─ buddy-app.preview.json         Buddy 应用录入与预览草案
-   └─ connector/
-      ├─ connector-meta.json
-      ├─ mcp.json
-      ├─ mcp-server.mjs
-      ├─ lib/                        网页与 MCP 共用的数据模型和原子存储
-      ├─ icon.svg
-      └─ skills/douyin-ops/
+├─ start.cmd / server.mjs           一键启动与兼容命令入口
+├─ package.json / README.md         项目配置与使用说明
+├─ public/                         前端页面、样式与交互
+│  ├─ index.html / app.js           页面入口与导航
+│  ├─ daily-production.js          每日生产页面
+│  ├─ automation.js                视频审批与每日发布队列
+│  ├─ shop-*.js / shop.css          选品、日报导入与商品卡片
+│  └─ 其他 *.js / *.css            制作台、发布计划、数据管理等
+├─ server/                         本地服务与后台业务
+│  ├─ server.mjs                   HTTP API 与静态资源映射
+│  ├─ daily-production.mjs         每日选品、制作与发布调度
+│  ├─ product-source.mjs           日报和商品图片导入
+│  ├─ product-video.mjs            本地合成器调用
+│  ├─ automation-service.mjs       审批队列、调度与重复提交保护
+│  ├─ douyin-publisher.mjs          抖音网页发布适配
+│  ├─ bilibili-workflow.mjs         B 站素材清单与回执
+│  ├─ browser-skill-adapter.mjs     浏览器状态与只读操作
+│  └─ media-service.mjs            素材上传与视频预览
+├─ shared/                         前后端共用的发布模型
+├─ lib/                            Node 通用工具（BrowserSkill 客户端等）
+├─ scripts/                        启动、语法检查与 B 站流程命令
+├─ tools/                          Python 视频合成及辅助工具
+├─ tests/                          自动化测试源码
+├─ docs/                           设计说明与验收清单
+├─ integrations/shop-dropshipping/ 上游版本信息与整合说明
+├─ workbuddy/                      Buddy 应用与独立 MCP 能力包
+│  └─ connector/lib/               网页与 MCP 共用的数据模型和原子存储
+├─ SKILL.md / persona.md            运营 Skill 入口与人设
+├─ references/ / examples/         Skill 参考资料与使用示例
+├─ runtime/                        本机工作区、素材、回执和日志
+├─ knowledge-base/                 本机知识记录与目录模板
+└─ dist/ / .codex_tmp/              已有发布产物与本机临时工作目录
 ```
+
+开发时修改 `public/` 中的界面、`server/` 中的后台逻辑；命令继续从项目根目录执行。`node server.mjs`、`npm start`、`start.cmd` 与原页面 URL 保持兼容。HTTP 服务只映射明确允许的静态文件，不公开 `server/` 和运行数据。
+
+`workbuddy/connector/lib/` 同时供网页、后台和独立 MCP 能力包使用，暂保留在能力包内，避免打包时缺少依赖。`runtime/` 和 `knowledge-base/` 中的个人数据沿用原位置；这次整理未迁移账号、视频或发布回执。设计文档见 [设计说明](docs/设计说明.md)，人工验收步骤见 [验收清单](docs/testcase.md)。
 
 ## 启动可视化工作台
 

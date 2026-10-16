@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DouyinPublisher } from '../douyin-publisher.mjs';
+import { DouyinPublisher } from '../server/douyin-publisher.mjs';
 
 function publisherWith(commands, fail = '') {
   const publisher = new DouyinPublisher();

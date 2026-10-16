@@ -2,8 +2,8 @@ import { mkdir, readdir, readFile, stat, realpath, copyFile, open, unlink } from
 import { constants, createReadStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { basename, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { JsonStore } from './workbuddy/connector/lib/json-store.mjs';
-import { defaultAutomation, normalizeAutomation, nextSlot, shanghaiDay, validatePublishText, editableStatuses } from './automation-model.mjs';
+import { JsonStore } from '../workbuddy/connector/lib/json-store.mjs';
+import { defaultAutomation, normalizeAutomation, nextSlot, shanghaiDay, validatePublishText, editableStatuses } from '../shared/automation-model.mjs';
 import { DouyinPublisher } from './douyin-publisher.mjs';
 
 const error = (message, status = 400) => Object.assign(new Error(message), { status });

@@ -1,5 +1,5 @@
 import { esc, dialog, dateTime, csv } from './workspace-ui.js';
-import { collectionLabels, recordTitle, validateMetric } from './workbuddy/connector/lib/workspace-actions.mjs';
+import { collectionLabels, recordTitle, validateMetric } from '../workbuddy/connector/lib/workspace-actions.mjs';
 
 const specs = {
   records: [['title', '标题'], ['category', '分类'], ['summary', '内容', 'textarea']],

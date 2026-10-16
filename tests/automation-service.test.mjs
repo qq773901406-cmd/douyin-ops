@@ -4,8 +4,8 @@ import { mkdir, mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import { AutomationService } from '../automation-service.mjs';
-import { defaultAutomation } from '../automation-model.mjs';
+import { AutomationService } from '../server/automation-service.mjs';
+import { defaultAutomation } from '../shared/automation-model.mjs';
 
 const temporaryRoot = fileURLToPath(new URL('../.codex_tmp/', import.meta.url));
 async function fixture(t) {

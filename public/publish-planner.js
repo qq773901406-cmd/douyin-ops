@@ -1,5 +1,5 @@
 import { esc, localDay, localInput, dateTime, csv } from './workspace-ui.js';
-import { shopPlatforms } from './workbuddy/connector/lib/shop-products.mjs';
+import { shopPlatforms } from '../workbuddy/connector/lib/shop-products.mjs';
 
 const statuses = ['待人工准备', '待检查', '可发布', '已发布'];
 const cacheKey = 'doufeng.publish-editor.v1';

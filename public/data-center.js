@@ -1,6 +1,6 @@
 import { esc, dialog, request, dateTime, download, localDay } from './workspace-ui.js';
-import { normalizeState, collections } from './workbuddy/connector/lib/workspace-model.mjs';
-import { restoreTrash, collectionLabels, recordTitle } from './workbuddy/connector/lib/workspace-actions.mjs';
+import { normalizeState, collections } from '../workbuddy/connector/lib/workspace-model.mjs';
+import { restoreTrash, collectionLabels, recordTitle } from '../workbuddy/connector/lib/workspace-actions.mjs';
 
 export function createDataCenter({ getState, getSync, save, render, notify }) {
   let backups = [], system = null, error = '', loading = false, loadedAt = 0;

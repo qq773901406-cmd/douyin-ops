@@ -2,7 +2,7 @@ import { copyFile, mkdir, readFile, realpath, rmdir, stat, unlink } from 'node:f
 import { constants, createReadStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { basename, extname, isAbsolute, join, resolve } from 'node:path';
-import { JsonStore } from './workbuddy/connector/lib/json-store.mjs';
+import { JsonStore } from '../workbuddy/connector/lib/json-store.mjs';
 
 const statuses = new Set(['prepared', 'submitting', 'submitted', 'published', 'uncertain', 'abandoned', 'not_submitted']);
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');

@@ -1,5 +1,5 @@
 import { esc, dialog, localDay } from './workspace-ui.js';
-import { parseProductReports, reportNames } from './workbuddy/connector/lib/shop-products.mjs';
+import { parseProductReports, reportNames } from '../workbuddy/connector/lib/shop-products.mjs';
 
 export async function uploadShopImage(file, name = file.name) {
   if (!/\.(png|jpe?g|webp)$/i.test(name) || !file.size || file.size > 20 * 1024 * 1024) throw new Error('请选择非空的 PNG / JPG / WebP 图片，单张不超过 20MB。');

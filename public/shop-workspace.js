@@ -1,5 +1,5 @@
 import { esc, localDay, dialog, csv, download } from './workspace-ui.js';
-import { newProduct, validateProduct, productProfit, productStatuses, shopPlatforms, reportNames, productBrief, findProductImageDraft } from './workbuddy/connector/lib/shop-products.mjs';
+import { newProduct, validateProduct, productProfit, productStatuses, shopPlatforms, reportNames, productBrief, findProductImageDraft } from '../workbuddy/connector/lib/shop-products.mjs';
 import { importShopFolder, uploadShopImage } from './shop-import.js';
 import { productCard, coverCard, canvasBlob } from './shop-cards.js';
 

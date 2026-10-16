@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startBrowserSkillSession, executeBrowserSkill } from '../browser-skill-adapter.mjs';
+import { startBrowserSkillSession, executeBrowserSkill } from '../server/browser-skill-adapter.mjs';
 
 function fixture({ browsers = [{ instance_id: 'selected' }], claim = true } = {}) {
   const calls = [];

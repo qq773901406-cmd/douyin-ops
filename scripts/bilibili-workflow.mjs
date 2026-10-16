@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { BilibiliWorkflow, readJson } from '../bilibili-workflow.mjs';
+import { BilibiliWorkflow, readJson } from '../server/bilibili-workflow.mjs';
 
 const help = `B 站发布流程记录（仅本地操作，不会打开浏览器、批准或发布视频）
 

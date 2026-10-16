@@ -1,4 +1,4 @@
-import { productProfit } from './workbuddy/connector/lib/shop-products.mjs';
+import { productProfit } from '../workbuddy/connector/lib/shop-products.mjs';
 
 const colors = { bg: '#0d1421', panel: '#172337', ink: '#f4f7fa', muted: '#9baec5', accent: '#b7f36c', blue: '#7acfff' };
 function base() {

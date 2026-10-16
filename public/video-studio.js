@@ -1,5 +1,5 @@
-import { newVideo, copyVideo, validateVideo, videoPrompt, videoStatuses, videoRatios } from './workbuddy/connector/lib/video-projects.mjs';
-import { moveToTrash } from './workbuddy/connector/lib/workspace-actions.mjs';
+import { newVideo, copyVideo, validateVideo, videoPrompt, videoStatuses, videoRatios } from '../workbuddy/connector/lib/video-projects.mjs';
+import { moveToTrash } from '../workbuddy/connector/lib/workspace-actions.mjs';
 
 const EDITOR_KEY = 'doufeng.video-editor.v1';
 const fields = ['title', 'subject', 'setting', 'style', 'ratio', 'budget', 'provider', 'cost', 'status', 'asset', 'blocker', 'notes'];

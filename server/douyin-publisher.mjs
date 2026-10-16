@@ -1,12 +1,7 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
+import { runBsk, parseBskJson, BSK_TIMEOUTS } from '../lib/bsk-client.mjs';
 
-const execFileAsync = promisify(execFile);
 const creatorHome = 'https://creator.douyin.com/creator-micro/home';
 const videoUpload = 'https://creator.douyin.com/creator-micro/content/upload';
 const cleanText = text => String(text || '').replace(/\r\n/g, '\n').replace(/\u00a0/g, ' ').trim();
@@ -52,48 +47,42 @@ function inspectCreatorDOM() {
 }
 
 export class DouyinPublisher {
-  binary() {
-    if (process.env.BSK_BIN) return process.env.BSK_BIN;
-    const installed = join(homedir(), '.local', 'bin', 'bsk.exe');
-    return process.platform === 'win32' && existsSync(installed) ? installed : 'bsk';
-  }
-  async command(args, timeout = 30000) {
-    let stdout;
-    try { ({ stdout } = await execFileAsync(this.binary(), [...args, '--json'], { timeout, windowsHide: true, maxBuffer: 2 * 1024 * 1024 })); }
-    catch (problem) {
+  async command(args, timeout = BSK_TIMEOUTS.DEFAULT_MS) {
+    const result = await runBsk(args, { timeout });
+    if (!result.ok) {
       // Do not expose command lines containing captions, file names or page dumps.
-      if (problem.code === 'ENOENT') throw new Error('未找到 BrowserSkill，请在应用接入中完成安装和浏览器扩展连接。');
-      throw new Error(`浏览器步骤 ${args[0]} 未完成（${problem.killed ? '超时' : '连接或操作失败'}）。请检查扩展、登录状态和页面；系统不会盲目重试。`);
+      if (result.code === 'BSK_NOT_FOUND') throw new Error('未找到 BrowserSkill，请在应用接入中完成安装和浏览器扩展连接。');
+      throw new Error(`浏览器步骤 ${args[0]} 未完成（${result.message}）。请检查扩展、登录状态和页面；系统不会盲目重试。`);
     }
-    let result; try { result = JSON.parse(stdout.trim()); } catch { throw new Error('浏览器工具返回格式无法识别，请更新 BrowserSkill 后重新检查。'); }
-    if (result?.ok === false || result?.error || result?.success === false) throw new Error(`浏览器步骤 ${args[0]} 被拒绝或未完成，请在浏览器中检查。`);
-    return result;
+    const parsed = parseBskJson(result.stdout);
+    if (!parsed || parsed.ok === false || parsed.error || parsed.success === false) throw new Error(`浏览器步骤 ${args[0]} 被拒绝或未完成，请在浏览器中检查。`);
+    return parsed;
   }
   async browsers() {
-    const result = await this.command(['browsers'], 15000);
+    const result = await this.command(['browsers'], BSK_TIMEOUTS.SESSION_REQUEST_MS);
     if (!Array.isArray(result)) throw new Error('无法读取浏览器列表，请检查 BrowserSkill 版本。');
     return result.filter(item => item.instance_id && !item.unresponsive).map(item => ({ id: item.instance_id, name: [item.label, item.browser_name, item.instance_id].filter(Boolean).join(' · ') }));
   }
   async session(browserId, action) {
     if (!browserId) throw new Error('未选择发布用浏览器。');
-    const token = `${Date.now() + 2 * 60000}:${randomUUID()}`;
+    const token = `${Date.now() + BSK_TIMEOUTS.TOKEN_TTL_MS}:${randomUUID()}`;
     let sessionId;
     try {
       // Tracked requests must be prepared and claimed; extension permissions still apply.
-      await this.command(['session', 'request', '--prepare', token], 15000);
-      const started = await this.command(['session', 'start', '--browser', browserId, '--no-focus', '--request-id', token, '--name', '豆蜂已审批视频发布'], 60000);
+      await this.command(['session', 'request', '--prepare', token], BSK_TIMEOUTS.SESSION_REQUEST_MS);
+      const started = await this.command(['session', 'start', '--browser', browserId, '--no-focus', '--request-id', token, '--name', '豆蜂已审批视频发布'], BSK_TIMEOUTS.SESSION_START_PUBLISHER_MS);
       sessionId = started.session_id;
       if (!sessionId || started.browser_instance_id !== browserId) throw new Error('浏览器实例与审批绑定不一致，请重新检查连接。');
-      const claimed = await this.command(['session', 'request', token, '--claim'], 15000);
+      const claimed = await this.command(['session', 'request', token, '--claim'], BSK_TIMEOUTS.SESSION_REQUEST_MS);
       if (claimed.state !== 'active' || claimed.session?.session_id !== sessionId) throw new Error('浏览器会话未能完成领取，请重新检查连接。');
       return await action(sessionId);
     } finally {
-      if (sessionId) await this.command(['session', 'stop', sessionId], 15000).catch(() => {});
-      else await this.command(['session', 'request', token, '--cancel'], 10000).catch(() => {});
+      if (sessionId) await this.command(['session', 'stop', sessionId], BSK_TIMEOUTS.SESSION_STOP_MS).catch(error => console.warn('浏览器会话清理失败：', error?.message || error));
+      else await this.command(['session', 'request', token, '--cancel'], BSK_TIMEOUTS.CANCEL_MS).catch(error => console.warn('浏览器会话请求取消失败：', error?.message || error));
     }
   }
   async page(session) {
-    const result = await this.command(['evaluate', `(${inspectCreatorDOM.toString()})()`, '--session', session, '--timeout', '10s'], 20000);
+    const result = await this.command(['evaluate', `(${inspectCreatorDOM.toString()})()`, '--session', session, '--timeout', '10s'], BSK_TIMEOUTS.EVALUATE_MS);
     const value = result.value;
     if (!value || typeof value.url !== 'string') throw new Error('无法观察抖音页面，请检查浏览器连接。');
     let url; try { url = new URL(value.url); } catch {}
@@ -101,7 +90,7 @@ export class DouyinPublisher {
     if (value.needsHuman) throw new Error('抖音需要登录、验证码或额外确认，请在浏览器中完成后重新检查。');
     return value;
   }
-  async waitPage(session, condition, guard = async () => {}, timeout = 30000) {
+  async waitPage(session, condition, guard = async () => {}, timeout = BSK_TIMEOUTS.WAIT_PAGE_MS) {
     const deadline = Date.now() + timeout;
     do {
       await guard(); const page = await this.page(session);
@@ -112,14 +101,14 @@ export class DouyinPublisher {
     throw new Error('抖音页面未在预期时间内就绪，请检查页面或素材要求。');
   }
   async accountInSession(session) {
-    await this.command(['navigate', creatorHome, '--session', session, '--timeout', '60s'], 70000);
+    await this.command(['navigate', creatorHome, '--session', session, '--timeout', '60s'], BSK_TIMEOUTS.NAVIGATE_PUBLISHER_MS);
     const page = await this.waitPage(session, value => value.accountIds.length === 1);
     return { accountId: page.accountIds[0] };
   }
   async inspectAccount(browserId) {
     return this.session(browserId, async session => {
       const account = await this.accountInSession(session);
-      await this.command(['navigate', videoUpload, '--session', session, '--timeout', '60s'], 70000);
+      await this.command(['navigate', videoUpload, '--session', session, '--timeout', '60s'], BSK_TIMEOUTS.NAVIGATE_PUBLISHER_MS);
       await this.waitPage(session, page => !!page.upload);
       return account;
     });
@@ -130,11 +119,11 @@ export class DouyinPublisher {
       await guard();
       const account = await this.accountInSession(session);
       if (account.accountId !== approval.accountId) throw new Error('当前登录抖音号与审批账号不同，已停止。');
-      await this.command(['navigate', videoUpload, '--session', session, '--timeout', '60s'], 70000);
+      await this.command(['navigate', videoUpload, '--session', session, '--timeout', '60s'], BSK_TIMEOUTS.NAVIGATE_PUBLISHER_MS);
       const uploadPage = await this.waitPage(session, page => !!page.upload, guard);
       await guard();
-      await this.command(['upload', '--selector', uploadPage.upload, '--file', approval.asset, '--session', session, '--timeout', '10m'], 620000);
-      let page = await this.waitPage(session, page => isVideoEditor(page.url) && page.uploaded && !page.uploading && page.title && page.caption, guard, 10 * 60000);
+      await this.command(['upload', '--selector', uploadPage.upload, '--file', approval.asset, '--session', session, '--timeout', '10m'], BSK_TIMEOUTS.UPLOAD_MS);
+      let page = await this.waitPage(session, page => isVideoEditor(page.url) && page.uploaded && !page.uploading && page.title && page.caption, guard, BSK_TIMEOUTS.WAIT_UPLOAD_MS);
       await guard();
       await this.command(['fill', '--selector', page.title.selector, '--value', approval.title, '--session', session]);
       page = await this.page(session);
@@ -145,7 +134,7 @@ export class DouyinPublisher {
       // catches via needsHuman / login redirection. Re-checking the account in a
       // second controlled session (as before) risked stealing this session's upload
       // form, so we validate the account on the current editor page instead.
-      page = await this.waitPage(session, page => !!page.publish && page.uploaded && !page.uploading, guard, 30000);
+      page = await this.waitPage(session, page => !!page.publish && page.uploaded && !page.uploading, guard, BSK_TIMEOUTS.WAIT_PAGE_MS);
       const validateSubmission = page => {
         if (!isVideoEditor(page.url) || !page.publish || !page.uploaded || page.uploading || cleanText(page.title?.value) !== cleanText(approval.title) || cleanText(page.caption?.value) !== cleanText(approval.caption)) throw new Error('页面视频标题、文案或上传状态与审批内容不一致，已停止。');
         if (page.accountIds.length && !page.accountIds.includes(approval.accountId)) throw new Error('发布页面账号与审批记录不符。');
@@ -156,8 +145,8 @@ export class DouyinPublisher {
       await beforeSubmit();
       page = await this.page(session); validateSubmission(page); await guard();
       // One submission only. Any failure from here is reconciled by the user.
-      await this.command(['click', '--selector', page.publish, '--session', session], 30000);
-      const result = await this.waitPage(session, page => !!page.success, async () => {}, 45000);
+      await this.command(['click', '--selector', page.publish, '--session', session], BSK_TIMEOUTS.CLICK_MS);
+      const result = await this.waitPage(session, page => !!page.success, async () => {}, BSK_TIMEOUTS.SUCCESS_MS);
       return { message: '抖音页面已显示提交成功，仍需等待平台审核；可在队列中记录最终作品链接。', evidence: { kind: 'platform-message', text: result.success, url: result.url, checkedAt: new Date().toISOString() } };
     });
   }

@@ -4,7 +4,7 @@ import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const directories = ['', 'scripts', 'tests', 'workbuddy/connector', 'workbuddy/connector/lib'];
+const directories = ['', 'public', 'server', 'shared', 'lib', 'scripts', 'tests', 'workbuddy/connector', 'workbuddy/connector/lib'];
 let count = 0;
 for (const directory of directories) {
   for (const item of await readdir(resolve(root, directory), { withFileTypes: true })) {

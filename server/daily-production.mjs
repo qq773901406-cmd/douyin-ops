@@ -2,11 +2,11 @@ import { realpath, mkdir, stat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { join, relative, isAbsolute, sep, resolve } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
-import { JsonStore } from './workbuddy/connector/lib/json-store.mjs';
+import { JsonStore } from '../workbuddy/connector/lib/json-store.mjs';
 import { renderProductVideo } from './product-video.mjs';
-import { shanghaiDay } from './automation-model.mjs';
+import { shanghaiDay } from '../shared/automation-model.mjs';
 import { syncProductReports } from './product-source.mjs';
-import { newVideo } from './workbuddy/connector/lib/video-projects.mjs';
+import { newVideo } from '../workbuddy/connector/lib/video-projects.mjs';
 
 const timestamp = () => new Date().toISOString();
 const fail = message => Object.assign(new Error(message), { status: 409 });

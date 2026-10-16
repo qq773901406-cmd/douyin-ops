@@ -1,7 +1,7 @@
 import { readdir, readFile, realpath, stat, mkdir, writeFile, unlink } from 'node:fs/promises';
 import { basename, join, relative, isAbsolute, sep } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { parseProductReports, reportNames } from './workbuddy/connector/lib/shop-products.mjs';
+import { parseProductReports, reportNames } from '../workbuddy/connector/lib/shop-products.mjs';
 
 const inside = (root, path) => { const part = relative(root, path); return part !== '..' && !part.startsWith('..' + sep) && !isAbsolute(part); };
 const imageType = bytes => bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) ? '.png' : bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255 ? '.jpg' : bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP' ? '.webp' : '';

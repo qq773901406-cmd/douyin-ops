@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 
 const execute = promisify(execFile);
-const script = fileURLToPath(new URL('./tools/product_video/render.py', import.meta.url));
+const script = fileURLToPath(new URL('../tools/product_video/render.py', import.meta.url));
 export function productVideoPython() {
   if (process.env.DOUFENG_PYTHON) return process.env.DOUFENG_PYTHON;
   const bundled = join(homedir(), '.workbuddy', 'binaries', 'python', 'envs', 'default', 'Scripts', 'python.exe');

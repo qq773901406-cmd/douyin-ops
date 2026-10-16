@@ -1,4 +1,4 @@
-import { normalizeState } from './workbuddy/connector/lib/workspace-model.mjs';
+import { normalizeState } from '../workbuddy/connector/lib/workspace-model.mjs';
 
 const KEY = 'douyinOpsWorkbench.v1';
 const PENDING = `${KEY}.pending`;
