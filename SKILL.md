@@ -1,6 +1,6 @@
 ---
 name: douyin-ops
-description: "面向 WorkBuddy 的抖音内容运营技能，覆盖账号诊断、推荐流研究、原创选题、脚本、发布前检查、评论回复草稿、效果复盘与知识沉淀。需要网页读取或操作时调用腾讯 BrowserSkill；账号登录、验证码、发布、评论发送和其他会改变外部状态的动作必须由用户确认。"
+description: "面向 WorkBuddy 的内容运营技能，覆盖抖音运营、本地视频的 B 站发布与投稿恢复、选题脚本、发布检查和效果复盘。网页操作使用腾讯 BrowserSkill；发布须有用户针对本条内容和账号的明确授权。"
 version: 1.2.0
 ---
 
@@ -37,7 +37,7 @@ version: 1.2.0
 
 ### 腾讯 BrowserSkill
 
-网页任务遵循 `start session → navigate → observe → interact → observe → stop session`。只在 `douyin.com` 与 `creator.douyin.com` 内操作。
+网页任务遵循 `prepare request → start session → claim request → navigate → observe → interact → observe → stop session`。抖音任务在 `douyin.com` 与 `creator.douyin.com` 内操作；B 站投稿按下方专用流程访问 B 站站点。
 
 - 阅读、搜索、截图和提取公开或当前账号可见数据，可以直接执行。
 - 借用已有标签页、登录、扫码和验证码需要用户参与。
@@ -76,10 +76,14 @@ version: 1.2.0
 
 ### 发布
 
+用户要求发布到 B 站、继续 B 站投稿或核实 B 站发布结果时，先阅读 [B 站发布流程](references/bilibili-publish-flow.md)。使用项目 `scripts/bilibili-workflow.mjs` 保存清单、视频副本、单次提交记录和结果证据。已获用户针对本条视频、账号和动作的明确授权时继续执行，不重复索要相同确认；流程固化、已有清单和历史案例不等于新视频的发布授权。
+
+抖音发布沿用以下步骤：
+
 1. 调用 `draft_add` 保存发布清单。
 2. 检查素材权利、标题准确性、话题相关性、封面可读性和敏感信息。
-3. 需要网页操作时调用 BrowserSkill，上传并填写后停在最终提交前。
-4. 展示标题、文案、素材、发布时间和目标账号，取得明确确认后才点击发布。
+3. 需要网页操作时调用 BrowserSkill，上传并填写后核对最终提交内容。
+4. 明确标题、文案、素材、发布时间和目标账号；若当前任务尚无对应授权，再请求确认。已有明确授权时直接继续。
 5. 发布结果用 BrowserSkill 再次观察确认；失败时保留草稿和错误信息。
 
 ### 评论回复
