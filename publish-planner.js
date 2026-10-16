@@ -18,6 +18,7 @@ export function createPublishPlanner({ getState, save, render, notify, go, remov
   async function enqueue(id) {
     const draft = getState().drafts.find(d => d.id === id);
     if (!draft) { notify('草稿已不存在'); return; }
+    if (draft.sourceProductionId) { notify('此成片由每日自动生产管理，请在那里查看发布结果。'); go('production'); return; }
     if (!draft.asset) { notify('该草稿还没有素材路径，无法加入自动发布。'); return; }
     try {
       const snap = await fetch('/api/automation').then(r => r.json());
@@ -39,7 +40,7 @@ export function createPublishPlanner({ getState, save, render, notify, go, remov
     go('publish'); return true;
   }
   function list() {
-    return filtered().map(d => `<article class="publish-item"><div><div class="chip-list"><span class="pill ${d.status === '已发布' ? 'green' : isLate(d) ? 'orange' : ''}">${esc(d.status)}</span>${isLate(d) ? '<span class="pill orange">计划已逾期</span>' : ''}</div><h3>${esc(d.pubTitle || d.title)}</h3><span class="pill blue">${esc(shopPlatforms[d.platform || 'douyin'] || d.platform)}</span><p>${d.status === '已发布' ? '发布记录' : '计划时间'}：${esc(dateTime(stamp(d)))}</p><small>${esc(d.asset || '素材待补充')}</small></div><div class="row-actions">${d.asset ? `<button type="button" class="button button-green" data-plan="enqueue" data-id="${esc(d.id)}">加入自动发布</button>` : ''}<button type="button" class="button button-light" data-plan="edit" data-id="${esc(d.id)}">编辑</button>${d.status === '已发布' ? `<button type="button" class="button button-light" data-plan="track" data-id="${esc(d.id)}">记录效果</button>` : ''}<button type="button" class="text-link" data-plan="delete" data-id="${esc(d.id)}">移入回收站</button></div></article>`).join('') || '<div class="empty"><b>暂无符合条件的草稿</b><p>新建草稿，或从视频制作台转入成片。</p></div>';
+    return filtered().map(d => `<article class="publish-item"><div><div class="chip-list"><span class="pill ${d.status === '已发布' ? 'green' : isLate(d) ? 'orange' : ''}">${esc(d.status)}</span>${isLate(d) ? '<span class="pill orange">计划已逾期</span>' : ''}</div><h3>${esc(d.pubTitle || d.title)}</h3><span class="pill blue">${esc(shopPlatforms[d.platform || 'douyin'] || d.platform)}</span><p>${d.status === '已发布' ? '发布记录' : '计划时间'}：${esc(dateTime(stamp(d)))}</p><small>${esc(d.asset || '素材待补充')}</small></div><div class="row-actions">${d.sourceProductionId ? `<button type="button" class="button button-light" data-go="production">查看每日生产</button>` : d.asset ? `<button type="button" class="button button-green" data-plan="enqueue" data-id="${esc(d.id)}">加入自动发布</button>` : ''}<button type="button" class="button button-light" data-plan="edit" data-id="${esc(d.id)}">编辑</button>${d.status === '已发布' ? `<button type="button" class="button button-light" data-plan="track" data-id="${esc(d.id)}">记录效果</button>` : ''}<button type="button" class="text-link" data-plan="delete" data-id="${esc(d.id)}">移入回收站</button></div></article>`).join('') || '<div class="empty"><b>暂无符合条件的草稿</b><p>新建草稿，或从视频制作台转入成片。</p></div>';
   }
   function calendar() {
     const first = new Date(month.getFullYear(), month.getMonth(), 1); first.setDate(first.getDate() - (first.getDay() + 6) % 7);

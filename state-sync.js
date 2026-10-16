@@ -197,6 +197,16 @@ export function createStateSync({ getState, setState, render, notify }) {
   return {
     save, initialize,
     inspect: () => ({ dirty, sending, reloading, initialized, revision }),
+    async refreshSaved() {
+      if (!initialized || dirty || sending || reloading || conflict) return;
+      const version = sequence;
+      const remote = await request('GET');
+      if (dirty || sending || reloading || conflict || sequence !== version || remote.revision === revision) return;
+      // Keep locally edited forms while refreshing server-generated collections.
+      setState(normalizeState(remote.state || {}), { initial: true });
+      revision = remote.revision; clearPending();
+      status = '已同步后台生成的内容'; show();
+    },
     async transaction(operation) {
       if (!initialized || revision === null || dirty || sending || reloading) throw new Error('请等待当前修改同步完成；有冲突时先处理顶部提示。');
       reloading = true; document.querySelector('.shell').inert = true;

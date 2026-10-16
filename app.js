@@ -7,6 +7,7 @@ import { createContentLibrary } from './content-library.js';
 import { createDataCenter } from './data-center.js';
 import { createShopWorkspace } from './shop-workspace.js';
 import { createAutomationWorkspace } from './automation.js';
+import { createDailyProduction } from './daily-production.js';
 import { dashboard } from './dashboard.js';
 import { renderLegacyPage } from './legacy-pages.js';
 import { esc, request, download, localDay, createFormMemory } from './workspace-ui.js';
@@ -49,6 +50,7 @@ const shop = createShopWorkspace({ getState: () => state, save, render, notify, 
 const library = createContentLibrary({ getState: () => state, save, render, notify, openVideo: id => studio.open(id), openDraft: id => planner.open(id), openProduct: id => shop.edit(id), remove });
 const dataCenter = createDataCenter({ getState: () => state, getSync: () => sync, save, render, notify });
 const automation = createAutomationWorkspace({ notify });
+const dailyProduction = createDailyProduction({ notify, refreshWorkspace: () => sync.refreshSaved() });
 const sync = createStateSync({ getState: () => state, setState(value, { initial = false } = {}) {
   state = value; studio.reset({ preserveEditor: initial }); planner.reset({ preserveEditor: initial }); shop.reset({ preserveEditor: initial });
   if (!initial) memory.reset();
@@ -67,8 +69,10 @@ function field(label, name, placeholder = '', type = 'text', value = '', cls = '
 const navNames = { home: '总览', account: '账号诊断', research: '推荐流研究', ideas: '选题与脚本', video: '视频制作台', remix: '爆款拆解', publish: '发布计划', comments: '评论回复', tracking: '效果追踪', knowledge: '内容库', data: '数据管理', live: '应用接入', settings: '账号与设置' };
 navNames.shop = '电商选品';
 navNames.automation = '每日自动发布';
+navNames.production = '每日自动生产';
 const pages = { home: () => dashboard(state), video: studio.render, publish: planner.render, knowledge: library.render, data: dataCenter.render, shop: shop.render };
 pages.automation = automation.render;
+pages.production = dailyProduction.render;
 for (const name of ['account', 'research', 'ideas', 'remix', 'comments', 'tracking', 'live', 'settings']) pages[name] = () => renderLegacyPage(name, { state, runtime, head, card, btn, field, metric, empty });
 
 function connectionStatus() {
@@ -85,6 +89,7 @@ function render() {
   for (const el of $$('.nav-item')) { el.classList.toggle('active', el.dataset.page === page); if (el.dataset.page === page) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current'); }
   connectionStatus(); if (page === 'data') void dataCenter.mount();
   if (page === 'automation') void automation.mount();
+  if (page === 'production') void dailyProduction.mount();
 }
 async function refreshRuntime(checkBrowser = false) {
   if (refreshing) return; refreshing = true;

@@ -8,6 +8,7 @@ import { JsonStore } from './workbuddy/connector/lib/json-store.mjs';
 import { normalizeState } from './workbuddy/connector/lib/workspace-model.mjs';
 import { BackupStore } from './workbuddy/connector/lib/backup-store.mjs';
 import { AutomationService } from './automation-service.mjs';
+import { DailyProduction } from './daily-production.mjs';
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)));
 const { version } = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
@@ -30,10 +31,12 @@ const validateList = value => { if (!Array.isArray(value)) throw new Error('数�
 const jobsStore = new JsonStore(jobsFile, [], validateList);
 const activityStore = new JsonStore(activityFile, [], validateList);
 const automation = new AutomationService(runtimeDir);
+const dailyProduction = new DailyProduction(runtimeDir, stateStore, automation);
 const publicFiles = new Set(['index.html', 'app.css', 'app.js', 'state-sync.js', 'video-studio.js', 'workbuddy/connector/lib/workspace-model.mjs', 'workbuddy/connector/lib/video-projects.mjs']);
 for (const file of ['product.css', 'workspace-ui.js', 'content-library.js', 'publish-planner.js', 'data-center.js', 'dashboard.js', 'legacy-pages.js', 'workbuddy/connector/lib/workspace-actions.mjs']) publicFiles.add(file);
 for (const file of ['shop-workspace.js', 'shop-import.js', 'shop-cards.js', 'shop.css', 'workbuddy/connector/lib/shop-products.mjs']) publicFiles.add(file);
 for (const file of ['automation.js', 'automation.css', 'automation-model.mjs']) publicFiles.add(file);
+publicFiles.add('daily-production.js');
 
 await mkdir(uploadDir, { recursive: true });
 
@@ -64,6 +67,19 @@ const server = createServer(async (req, res) => {
   if (url.pathname.startsWith('/api/')) {
     if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, message: '请求来源不受信任。' }); return; }
     try {
+      if (url.pathname.startsWith('/api/daily-production')) {
+        const route = url.pathname.slice('/api/daily-production'.length);
+        if (req.method === 'GET' && route === '') { sendJson(res, 200, { ok: true, ...(await dailyProduction.snapshot()) }); return; }
+        if (req.method === 'GET' && route === '/browsers') { sendJson(res, 200, { browsers: await automation.browsers() }); return; }
+        if (['GET', 'HEAD'].includes(req.method) && route === '/media') { const media = await dailyProduction.media(String(url.searchParams.get('id') || '')); await serveMedia(req, res, media.directory, media.path); return; }
+        if (req.method === 'POST' && ['/toggle', '/preview', '/source', '/sync', '/connect', '/reconcile'].includes(route)) {
+          const input = await bodyJson(req, 4096), revision = req.headers['if-match'];
+          if (['/preview', '/sync'].includes(route)) await dailyProduction[route.slice(1)](revision);
+          else await dailyProduction[route.slice(1)](input, revision);
+          sendJson(res, 200, { ok: true, ...(await dailyProduction.snapshot()) }); return;
+        }
+        sendJson(res, 404, { ok: false, message: '每日生产接口不存在。' }); return;
+      }
       if (url.pathname.startsWith('/api/automation')) {
         const route = url.pathname.slice('/api/automation'.length);
         if (req.method === 'GET' && route === '') { sendJson(res, 200, { ok: true, ...(await automation.snapshot()) }); return; }
@@ -84,6 +100,7 @@ const server = createServer(async (req, res) => {
               const wb = await stateStore.read();
               const draft = wb.value?.drafts?.find(d => d.id === draftId);
               if (!draft) throw Object.assign(new Error('工作台草稿不存在。'), { status: 404 });
+              if (draft.sourceProductionId) throw Object.assign(new Error('此成片由每日生产管理，请到每日自动生产查看，不能重复加入另一条发布队列。'), { status: 409 });
               result = await automation.importDraft({ draftId, asset: draft.asset, title: draft.pubTitle || draft.title, caption: draft.caption, tags: draft.hashtags || draft.topics }, revision);
             }
             else {
@@ -144,6 +161,8 @@ const server = createServer(async (req, res) => {
         sendJson(res, 201, { ok: true, ...uploaded, ...(warning ? { warning } : {}) }); return;
       }
       if (['GET', 'HEAD'].includes(req.method) && url.pathname === '/api/media') {
+        const generated = await dailyProduction.mediaByPath(url.searchParams.get('path'));
+        if (generated) { await serveMedia(req, res, generated.directory, generated.path); return; }
         await serveMedia(req, res, uploadDir, url.searchParams.get('path')); return;
       }
       if (req.method === 'GET' && url.pathname === '/api/jobs') { sendJson(res, 200, { ok: true, jobs: (await jobsStore.read()).value }); return; }
@@ -181,9 +200,11 @@ server.on('error', error => { if (error.code === 'EADDRINUSE') { console.error(`
 server.listen(port, host, () => {
   console.log(`豆蜂 WorkBuddy 运营工作台已就绪：${address}`);
   void automation.start().catch(error => { automation.lastError = error.message; console.error('自动发布调度未启动：' + error.message); });
+  void dailyProduction.start().catch(error => { dailyProduction.error = error.message; console.error('每日生产调度未启动：' + error.message); });
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
   automation.stop();
+  dailyProduction.stop();
   server.close(() => { process.exitCode = 0; });
   server.closeIdleConnections();
 });

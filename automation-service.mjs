@@ -189,6 +189,7 @@ export class AutomationService {
   async toggle(enabled, revision) {
     if (typeof enabled !== 'boolean') throw error('开关值无效。');
     if (enabled && (!this.timer || this.stopping)) throw error('本地调度服务尚未就绪，请先处理页面错误并重新启动豆蜂。', 503);
+    if (enabled) await this.checkDailyProduction();
     await this.update(revision, state => {
       if (enabled && (!state.config.accountId || !state.config.browserId || !state.items.some(i => i.status === 'approved' && Date.parse(i.scheduledAt) > Date.now()))) throw error('请先识别账号，并批准至少一条未来的视频排期。');
       if (enabled && state.items.some(i => ['running', 'uncertain'].includes(i.status))) throw error('请先处理正在执行或结果待核实的任务。');
@@ -228,6 +229,13 @@ export class AutomationService {
     }).catch(async problem => { if (file) { await file.close(); await unlink(path); } throw problem; });
     return async () => { await file.close(); await unlink(path); };
   }
+  async checkDailyProduction(accountId = '') {
+    let daily;
+    try { daily = JSON.parse(await readFile(join(this.directory, '..', 'daily-production', 'state.json'), 'utf8')); }
+    catch (problem) { if (problem.code === 'ENOENT') return; throw error('每日生产记录无法读取，请检查后再发布。'); }
+    if (daily?.version !== 1 || !Array.isArray(daily.runs)) throw error('每日生产记录格式异常，已停止发布。');
+    if (daily.config?.enabled || daily.runs.some(run => !run.previewOnly && (!accountId || run.binding?.accountId === accountId) && (['selecting', 'rendering', 'publishing', 'uncertain'].includes(run.status) || ['submitted', 'published'].includes(run.status) && run.day === shanghaiDay(Date.now())))) throw error('每日生产正在启用、结果待核实，或今天已提交视频，请先在每日生产页面查看。');
+  }
   async start() {
     if (this.timer) return;
     this.stopping = false;
@@ -257,6 +265,7 @@ export class AutomationService {
       const read = await this.store.read(), now = Date.now();
       if (!read.value.config.enabled || !read.value.items.some(i => i.status === 'approved' && Date.parse(i.scheduledAt) <= now)) return;
       release = await this.lease();
+      await this.checkDailyProduction(read.value.config.accountId);
       await this.store.update(state => {
         if (!state.config.enabled) return;
         for (const item of state.items.filter(i => i.status === 'approved' && now - Date.parse(i.scheduledAt) > 10 * 60000)) { item.status = 'missed'; item.message = '超过排期 10 分钟，已跳过。请重新审批安排下次时间。'; log(state, item.id, item.message); }
@@ -270,6 +279,7 @@ export class AutomationService {
       const asset = await realpath(target.approval.asset);
       if (!inside(await realpath(this.mediaDir), asset) || await fileHash(asset) !== target.approval.sha256) throw error('已批准的视频副本发生变化，已停止。');
       const guard = async () => {
+        await this.checkDailyProduction(target.approval.accountId);
         const { value } = await this.store.read(), item = value.items.find(i => i.id === target.id);
         if (this.stopping || !value.config.enabled || item?.status !== 'running' || JSON.stringify(item.approval) !== JSON.stringify(target.approval) || value.config.accountId !== target.approval.accountId || value.config.browserId !== target.approval.browserId) throw error('自动发布已暂停或审批内容变化。');
         const scheduled = Date.parse(target.scheduledAt);
