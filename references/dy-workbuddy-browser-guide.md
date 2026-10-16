@@ -4,7 +4,7 @@
 
 - WorkBuddy 负责理解任务、调用 Skill、MCP 工具和安全确认。
 - 豆蜂 MCP Connector 负责读写运营数据。
-- 腾讯 BrowserSkill（`bsk` CLI + Chrome/Edge 扩展）负责使用用户已登录的浏览器访问抖音。
+- 腾讯 BrowserSkill（`bsk` CLI + Chrome/Edge 扩展）负责使用用户已登录的浏览器访问目标平台。B 站投稿先读取 [专用流程](bilibili-publish-flow.md)。
 
 ## 安装与检查
 
@@ -21,7 +21,9 @@ bsk doctor
 ## 会话流程
 
 ```text
-bsk session start --no-focus --json
+bsk session request --prepare <过期毫秒时间戳:UUID> --json
+bsk session start --browser <实例ID> --request-id <同一token> --no-focus --json
+bsk session request <同一token> --claim --json
 bsk navigate https://www.douyin.com --session <session_id>
 bsk observe --session <session_id>
 ...由 browser-skill 按观察结果执行交互...
@@ -29,7 +31,7 @@ bsk observe --session <session_id>
 bsk session stop <session_id>
 ```
 
-多浏览器环境先运行 `bsk browsers`，启动会话时用 `--browser` 指定用户选择的实例。任务结束或失败都要停止会话。
+先运行 `bsk browsers`，启动会话时用 `--browser` 指定用户选择的实例。核对 claim 的 active 状态和会话 ID；token 使用当前时间生成且有效期不超过 10 分钟。任务结束或失败只停止自己的会话，启动失败时取消自己的 request。
 
 ## 读取
 
@@ -41,7 +43,7 @@ bsk session stop <session_id>
 
 ## 写操作
 
-以下动作必须先向用户展示目标账号、最终内容和动作，再获得本次确认：
+以下动作必须有用户针对目标账号、内容和动作的授权。当前任务已明确授权时继续执行；没有对应授权时先准备完整内容，再请求确认：
 
 - 发布或删除作品
 - 发送评论、回复或私信

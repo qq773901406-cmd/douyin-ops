@@ -1,0 +1,12 @@
+{
+  "videoPath": "D:\\视频待发布\\成片.mp4",
+  "accountName": "填写当前 B 站账号昵称",
+  "accountUid": "",
+  "browserId": "填写 bsk browsers 返回的实例 ID",
+  "title": "填写本条视频标题",
+  "description": "填写本条视频简介；AI 视频应明确说明画面由 AI 生成。",
+  "tags": ["AI生成", "萌宠"],
+  "aiGenerated": true,
+  "category": "人工智能",
+  "coverFrameSeconds": null
+}

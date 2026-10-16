@@ -37,9 +37,21 @@
 - 队列位于 `runtime/automation/queue.json`，审批副本位于 `runtime/automation/media/`，不通过 MCP 草稿工具或工作区 JSON 导入自动生成审批。历史副本会保留，请留足磁盘空间。迁移前关闭服务，复制整个 runtime，目录或浏览器变化后重新配置和审批。
 - 执行锁在确认原进程已退出后自动恢复；若提示锁格式异常或队列写入锁持续占用，先关闭使用同一数据目录的全部豆蜂服务，备份目录并确认锁内 PID 已退出，再移除对应 `.lock`。不要在发布进行中手工删锁。
 
-**当前验证范围：**本版完成静态语法检查与代码检查，没有使用真实账号上传或发布。BrowserSkill 操作依赖抖音当前页面结构，首次连接和首条实发仍需实机验证；识别不完整时会停止并保留错误，不把未完成的提交记为成功。
+**抖音自动发布验证范围：**已完成静态检查和账号/上传入口检查；完整定时提交链路仍需实机验证。BrowserSkill 操作依赖当前页面结构；识别不完整时会停止并保留错误，不把未完成的提交记为成功。下方 B 站案例验证的是独立的 Agent 发布流程。
 
 实现参考：[BrowserSkill 官方仓库](https://github.com/Tencent/BrowserSkill)。抖音另有要求应用权限和用户授权的[官方视频创建接口](https://open.douyin.com/platform/resource/docs/openapi/video-management/douyin/create/create-video/)，本版使用用户选择的本机浏览器登录态，不采集 Cookie 或密码。
+
+## B 站发布流程（Agent 执行）
+
+已将一次实际发布中走通的步骤固化到 [B 站发布流程](references/bilibili-publish-flow.md)，项目和 WorkBuddy 技能均可按此执行。下次可以说：**“把这个视频发到 B 站：完整路径，标题是……，使用我的……账号。”** 明确授权后，Agent 会恢复或上传视频、填写内容、调整两种封面、单次提交并核实结果。
+
+- 本地命令 `node scripts/bilibili-workflow.mjs --help`；准备清单参考 [JSON 示例](references/bilibili-publish-manifest.example.json)。
+- `prepare` 保存视频副本、文案与 SHA-256；`begin-submit` 在最终点击前保存提交意图并拒绝并发/重复提交；`finish` 记录审核中、已发布或结果不明。
+- 已提交、已发布、结果不明的相同视频会阻止再次准备。中断后先核实平台；没有自动超时解锁或盲目重试。
+- 已发布历史可用 `import-receipt --file <已核实回执.json>` 归档，默认存入 `runtime/bilibili-publish/`。备份时复制整个目录，工作区 JSON 导出不包含它。
+- 本地工具只管理流程记录，不会自行上传、批准、点击投稿或识别审核结果。网页操作仍由 Agent 观察执行，现有每日队列只支持抖音。
+
+**实发范围：**2026-10-16 已完成一条本地 AI 萌宠视频的 B 站上传、封面调整、AI 声明、投稿和“已发布”核实。当前页面结构和浏览器实例可能变化，流程不固定账号、会话 ID 或按钮坐标；本地流程工具在本次固化后未做功能测试。
 
 ## v4.1：整合电商选品项目
 
@@ -112,6 +124,8 @@ D:\ai
 ├─ automation-model.mjs              队列模型与北京时间排期
 ├─ automation-service.mjs            持久化审批、调度与重复提交防护
 ├─ douyin-publisher.mjs              已登录浏览器的抖音视频发布适配
+├─ bilibili-workflow.mjs             B 站素材副本、单次提交与回执记录
+├─ scripts/bilibili-workflow.mjs      B 站流程本地命令（不执行网页发布）
 ├─ data-center.js                    备份、导入预览与回收站
 ├─ workspace-ui.js / legacy-pages.js  共用组件与专用业务表单
 ├─ start.cmd / scripts/              一键启动与静态检查

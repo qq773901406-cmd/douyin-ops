@@ -1,5 +1,14 @@
 # D:\ai 抖音运营工作台 — 长期记忆
 
+## B 站发布流程（2026-10-16 固化）
+
+- 用户要求“发到 B 站”“继续 B 站投稿”时，先读 `D:/ai/references/bilibili-publish-flow.md`；不要套用下面的抖音每日队列。项目 `AGENTS.md` 和两个运营技能入口均已链接该流程。
+- 本地辅助命令：`node scripts/bilibili-workflow.mjs --help`。依次使用 list/prepare、最终点击前 begin-submit、平台核实后 finish；它只管理记录，不自行点击发布。
+- 默认记录 `runtime/bilibili-publish/jobs.json`，保存视频副本、清单摘要、单次提交意图和截图。相同账号相同视频已有有效记录就先核实，submitting/uncertain 不自动重试。
+- 当前任务对具体视频、账号、发布动作已有明确授权时继续执行，不重复询问；本流程本身不是对将来所有视频的授权。
+- 已归档 B 站实发：账号 Omni_Orange，标题“橘猫捡到发夹跳喵阿里嘎多”，作品 `https://www.bilibili.com/video/BV1z4JD6xEcj/`，平台后台已显示“已发布”。相同成片不再次投稿。历史账号名不能代替当前登录账号检查，浏览器实例每次重新取得。
+- 本机实发遇到的恢复与封面细节以流程文档为准。每日无人值守 B 站发布尚未接入，抖音调度与该记录分开。
+
 ## 项目定位
 本地抖音运营工作台（豆蜂·WorkBuddy）。发布引擎 = 本地 `server.mjs`（端口 4174）+ `AutomationService` + `douyin-publisher.mjs`（用 BrowserSkill `bsk` 真连 `creator.douyin.com` 上传并提交）。数据：`runtime/workbench.json`；发布收件箱：`runtime/automation-inbox/`。
 
@@ -33,3 +42,10 @@
 
 ## 上次发布（2026-10-16）
 `cat-clip-final.mp4`（橘猫捡发夹·喵阿里嘎多）用户手动发布成功；自动发布在 bsk fill 闪退，条目已 cancel 清理回 pending。
+
+## git 推送须知（2026-10-16 踩坑）
+- 本机直连 github.com 被限制（端口 443 超时），git 默认不读系统代理，**必须显式走 Clash 代理**才能 push。
+- Clash Verge 的 Mixed Port 在本机实际是 **61471**（非默认 7890）；推送前先设：
+  `git config http.proxy http://127.0.0.1:61471` 与 `git config https.proxy http://127.0.0.1:61471`（或用 `$env:http_proxy`/`$env:https_proxy` 临时设）。
+- WorkBuddy 沙箱与该机器网络隔离：沙箱内连 GitHub 始终 000（代理出口与直连都不通），**push 必须由用户在本机联网终端执行**。
+- 本仓库 `origin` = `https://github.com/qq773901406-cmd/douyin-ops.git`，分支 `main`；推送会连带之前本地未推的 4 个 `wcy` commit。
