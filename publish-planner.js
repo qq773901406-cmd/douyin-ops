@@ -15,6 +15,19 @@ export function createPublishPlanner({ getState, save, render, notify, go, remov
   const stamp = draft => draft.status === '已发布' && draft.publishedAt ? draft.publishedAt : draft.scheduledAt;
   const isLate = draft => draft.status !== '已发布' && draft.scheduledAt && Date.parse(draft.scheduledAt) < Date.now();
   const filtered = () => [...getState().drafts].filter(d => (!status || d.status === status) && (!query || `${d.pubTitle || d.title} ${d.caption || ''} ${shopPlatforms[d.platform || 'douyin'] || d.platform}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())) && (!day || (stamp(d) && localDay(new Date(stamp(d))) === day))).sort((a, b) => (Date.parse(stamp(a)) || Infinity) - (Date.parse(stamp(b)) || Infinity));
+  async function enqueue(id) {
+    const draft = getState().drafts.find(d => d.id === id);
+    if (!draft) { notify('草稿已不存在'); return; }
+    if (!draft.asset) { notify('该草稿还没有素材路径，无法加入自动发布。'); return; }
+    try {
+      const snap = await fetch('/api/automation').then(r => r.json());
+      if (!snap.ok && !snap.revision) throw new Error(snap.message || '无法读取自动发布状态。');
+      const res = await fetch('/api/automation/import-draft', { method: 'POST', headers: { 'Content-Type': 'application/json', 'If-Match': snap.revision || 'missing' }, body: JSON.stringify({ draftId: id }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || '加入自动发布失败。');
+      notify('已加入自动发布队列，请到「每日自动发布」预览并审批排期。');
+    } catch (error) { notify(error.message); }
+  }
   function open(id) {
     if (dirty && !confirm('放弃尚未保存的发布草稿编辑？')) return false;
     reset();
@@ -26,7 +39,7 @@ export function createPublishPlanner({ getState, save, render, notify, go, remov
     go('publish'); return true;
   }
   function list() {
-    return filtered().map(d => `<article class="publish-item"><div><div class="chip-list"><span class="pill ${d.status === '已发布' ? 'green' : isLate(d) ? 'orange' : ''}">${esc(d.status)}</span>${isLate(d) ? '<span class="pill orange">计划已逾期</span>' : ''}</div><h3>${esc(d.pubTitle || d.title)}</h3><span class="pill blue">${esc(shopPlatforms[d.platform || 'douyin'] || d.platform)}</span><p>${d.status === '已发布' ? '发布记录' : '计划时间'}：${esc(dateTime(stamp(d)))}</p><small>${esc(d.asset || '素材待补充')}</small></div><div class="row-actions"><button type="button" class="button button-light" data-plan="edit" data-id="${esc(d.id)}">编辑</button>${d.status === '已发布' ? `<button type="button" class="button button-light" data-plan="track" data-id="${esc(d.id)}">记录效果</button>` : ''}<button type="button" class="text-link" data-plan="delete" data-id="${esc(d.id)}">移入回收站</button></div></article>`).join('') || '<div class="empty"><b>暂无符合条件的草稿</b><p>新建草稿，或从视频制作台转入成片。</p></div>';
+    return filtered().map(d => `<article class="publish-item"><div><div class="chip-list"><span class="pill ${d.status === '已发布' ? 'green' : isLate(d) ? 'orange' : ''}">${esc(d.status)}</span>${isLate(d) ? '<span class="pill orange">计划已逾期</span>' : ''}</div><h3>${esc(d.pubTitle || d.title)}</h3><span class="pill blue">${esc(shopPlatforms[d.platform || 'douyin'] || d.platform)}</span><p>${d.status === '已发布' ? '发布记录' : '计划时间'}：${esc(dateTime(stamp(d)))}</p><small>${esc(d.asset || '素材待补充')}</small></div><div class="row-actions">${d.asset ? `<button type="button" class="button button-green" data-plan="enqueue" data-id="${esc(d.id)}">加入自动发布</button>` : ''}<button type="button" class="button button-light" data-plan="edit" data-id="${esc(d.id)}">编辑</button>${d.status === '已发布' ? `<button type="button" class="button button-light" data-plan="track" data-id="${esc(d.id)}">记录效果</button>` : ''}<button type="button" class="text-link" data-plan="delete" data-id="${esc(d.id)}">移入回收站</button></div></article>`).join('') || '<div class="empty"><b>暂无符合条件的草稿</b><p>新建草稿，或从视频制作台转入成片。</p></div>';
   }
   function calendar() {
     const first = new Date(month.getFullYear(), month.getMonth(), 1); first.setDate(first.getDate() - (first.getDay() + 6) % 7);
@@ -75,6 +88,7 @@ export function createPublishPlanner({ getState, save, render, notify, go, remov
     try {
       if (action === 'new') open();
       if (action === 'edit') open(id);
+      if (action === 'enqueue') { void enqueue(id); return; }
       if (action === 'delete' && remove('drafts', id)) { if (selected === id) reset(); render(); }
       if (action === 'track') track(id);
       if (action === 'save-new') { capture(document.querySelector('#planner-form')); commit(true); }

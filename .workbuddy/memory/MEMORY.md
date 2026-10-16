@@ -28,6 +28,10 @@
 5. `POST /items/<id>/approve`（`reviewed:true, accountId:138528608, scheduledAt=<建议时间>`）。
 6. `POST /toggle`（`enabled:true`）→ 调度器到点自动上传+填文案+点发布。
 
+**捷径：工作台草稿直推队列（2026-10-16 新增）**：发布计划页（publish-planner）草稿列表里点「加入自动发布」即可——后端 `POST /api/automation/import-draft` 会把草稿视频拷入 `config.folder`（inbox）并生成待审批队列项（标题/文案/话题自动带入，按 sourceDraftId 防重复）。之后照常去「每日自动发布」预览审批即可，**不必再手动把文件丢进 inbox**。
+
+**#3 修复（2026-10-16）**：`douyin-publisher.mjs` 的 `publish()` 已删除提交前开"第二个受控会话复核账号"的逻辑（同浏览器实例双会话会抢走上传表单），改复用当前会话；账号变更由 `page()` 的 needsHuman/登录检测捕获。自动发布尾部仍可能因 bsk fill 闪退失败，兜底仍是让用户手动点最后一下发布。
+
 **默认标题/文案/话题**（用户未另给时用）：
 - 标题：橘猫捡到发夹跳喵阿里嘎多
 - 文案：谁家小猫捡到发夹直接跳起喵阿里嘎多～戴上就停不下来，猫爪一抬整个上头。你家的主子也会这样吗？

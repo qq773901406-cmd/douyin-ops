@@ -43,8 +43,11 @@ async function bodyJson(req, maxBytes = 8 * 1024 * 1024) {
   const chunks = []; let size = 0;
   for await (const chunk of req) { size += chunk.length; if (size > maxBytes) throw Object.assign(new Error('请求内容过大。'), { status: 413 }); chunks.push(chunk); }
   const value = Buffer.concat(chunks).toString('utf8');
-  try { return value ? JSON.parse(value) : {}; }
+  let parsed;
+  try { parsed = value ? JSON.parse(value) : {}; }
   catch { throw Object.assign(new Error('JSON 格式不正确。'), { status: 400 }); }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw Object.assign(new Error('请求必须是 JSON 对象。'), { status: 400 });
+  return parsed;
 }
 function sameOrigin(req) { return !req.headers.origin || localOrigins.has(req.headers.origin); }
 async function addActivity(entry) {
@@ -72,11 +75,18 @@ const server = createServer(async (req, res) => {
           const input = await bodyJson(req, 32 * 1024), revision = req.headers['if-match'];
           if (!input || typeof input !== 'object' || Array.isArray(input)) throw Object.assign(new Error('请求必须是 JSON 对象。'), { status: 400 });
           let result;
-          if (route === '/settings') await automation.settings(input, revision);
-          else if (route === '/scan') result = await automation.scan(revision);
-          else if (route === '/connect') result = await automation.connect(revision);
-          else if (route === '/toggle') await automation.toggle(input.enabled, revision);
-          else {
+            if (route === '/settings') await automation.settings(input, revision);
+            else if (route === '/scan') result = await automation.scan(revision);
+            else if (route === '/connect') await automation.connect(revision);
+            else if (route === '/toggle') await automation.toggle(input.enabled, revision);
+            else if (route === '/import-draft') {
+              const draftId = String(input.draftId || '');
+              const wb = await stateStore.read();
+              const draft = wb.value?.drafts?.find(d => d.id === draftId);
+              if (!draft) throw Object.assign(new Error('工作台草稿不存在。'), { status: 404 });
+              result = await automation.importDraft({ draftId, asset: draft.asset, title: draft.pubTitle || draft.title, caption: draft.caption, tags: draft.hashtags || draft.topics }, revision);
+            }
+            else {
             const match = /^\/items\/([a-f0-9-]{36})\/(edit|approve|cancel|reconcile)$/.exec(route);
             if (!match) { sendJson(res, 404, { ok: false, message: '自动发布接口不存在。' }); return; }
             if (match[2] === 'cancel') await automation.cancel(match[1], revision);
@@ -138,7 +148,10 @@ const server = createServer(async (req, res) => {
       }
       if (req.method === 'GET' && url.pathname === '/api/jobs') { sendJson(res, 200, { ok: true, jobs: (await jobsStore.read()).value }); return; }
       if (req.method === 'POST' && url.pathname === '/api/jobs') {
-        const input = await bodyJson(req, 128 * 1024); const next = new Date(input.nextRunAt); const target = new URL(String(input.url || ''));
+        const input = await bodyJson(req, 128 * 1024); const next = new Date(input.nextRunAt);
+        let target;
+        try { target = new URL(String(input.url || '')); }
+        catch { throw Object.assign(new Error('请填写有效的抖音 HTTPS 链接。'), { status: 400 }); }
         if (!['www.douyin.com', 'douyin.com', 'creator.douyin.com'].includes(target.hostname) || target.protocol !== 'https:') throw Object.assign(new Error('任务只允许读取抖音页面。'), { status: 400 });
         if (!['currentVideo', 'creatorMetrics', 'account'].includes(input.extractor)) throw Object.assign(new Error('不支持该回采类型。'), { status: 400 });
         if (Number.isNaN(next.getTime())) throw Object.assign(new Error('执行时间无效。'), { status: 400 });

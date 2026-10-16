@@ -15,7 +15,7 @@ node scripts/bilibili-workflow.mjs confirm-not-submitted --id <任务ID> --autho
 node scripts/bilibili-workflow.mjs import-receipt --file <已核实回执.json>
 
 可选：--account-uid <可见UID>；--data-dir <记录目录>。
-默认记录目录：runtime/bilibili-publish。submitting / uncertain 不自动回退或重试。
+默认记录目录：runtime/bilibili-publish；设置 DOUFENG_DATA_DIR 时使用其下的 bilibili-publish，--data-dir 优先。submitting / uncertain 不自动回退或重试。
 先阅读 references/bilibili-publish-flow.md；填写授权说明不代表用户已授权。`;
 
 try {
@@ -27,7 +27,8 @@ try {
   else {
     if (positionals.length !== 1) throw new Error('仅接受一个子命令。路径和文字参数请使用引号。');
     const root = fileURLToPath(new URL('../', import.meta.url));
-    const workflow = new BilibiliWorkflow(v['data-dir'] ? resolve(v['data-dir']) : resolve(root, 'runtime/bilibili-publish'));
+    const runtimeDir = resolve(process.env.DOUFENG_DATA_DIR || resolve(root, 'runtime'));
+    const workflow = new BilibiliWorkflow(v['data-dir'] ? resolve(v['data-dir']) : resolve(runtimeDir, 'bilibili-publish'));
     let result;
     if (command === 'prepare') result = await workflow.prepare(await readJson(v.manifest || ''));
     else if (command === 'list') result = await workflow.list();

@@ -3,9 +3,11 @@ import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 const execFileAsync = promisify(execFile);
 let activeSession = process.env.BSK_SESSION_ID || '';
+let startingSession = null;
 
 function browserSkillBinary() {
   if (process.env.BSK_BIN) return process.env.BSK_BIN;
@@ -42,25 +44,67 @@ export async function browserSkillStatus() {
 }
 
 function assertDouyinUrl(value) {
-  const url = new URL(String(value || ''));
-  if (url.protocol !== 'https:' || !new Set(['douyin.com', 'www.douyin.com', 'creator.douyin.com']).has(url.hostname)) throw new Error('仅允许打开抖音和抖音创作者中心的 HTTPS 地址。');
+  let url;
+  try { url = new URL(String(value || '')); } catch {}
+  if (!url || url.protocol !== 'https:' || url.username || url.password || !new Set(['douyin.com', 'www.douyin.com', 'creator.douyin.com']).has(url.hostname)) throw Object.assign(new Error('仅允许打开抖音和抖音创作者中心的 HTTPS 地址。'), { status: 400 });
   return url.href;
 }
 
+// Injectable command runner keeps session protocol tests entirely offline.
+export async function startBrowserSkillSession(browserId, invoke = run) {
+  const token = `${Date.now() + 5 * 60000}:${randomUUID()}`;
+  let sessionId, prepared = false;
+  const json = async (args, timeout = 15000) => {
+    const result = await invoke([...args, '--json'], timeout);
+    const payload = parseJson(result.stdout);
+    if (!result.ok || !payload || payload.ok === false || payload.error || payload.success === false) throw new Error(result.message || payload?.message || 'BrowserSkill 未完成请求，请检查扩展连接。');
+    return payload;
+  };
+  try {
+    const browsers = await json(['browsers']);
+    if (!Array.isArray(browsers)) throw new Error('无法读取浏览器列表，请检查 BrowserSkill 版本。');
+    const candidates = browsers.filter(b => b.instance_id && !b.unresponsive && (!browserId || b.instance_id === browserId));
+    if (candidates.length !== 1) throw new Error(candidates.length ? '连接了多个浏览器，请为本次操作选择一个浏览器，或暂时关闭其他浏览器的扩展连接。' : '没有找到可用浏览器，请启用所选浏览器的 BrowserSkill 扩展连接。');
+    const selected = candidates[0].instance_id;
+    prepared = true;
+    await json(['session', 'request', '--prepare', token]);
+    const started = await json(['session', 'start', '--browser', selected, '--request-id', token, '--no-focus', '--name', '豆蜂浏览器查看'], 70000);
+    sessionId = started.session_id;
+    if (!sessionId || started.browser_instance_id !== selected) throw new Error('浏览器会话与所选实例不一致。');
+    const claimed = await json(['session', 'request', token, '--claim']);
+    if (claimed.state !== 'active' || claimed.session?.session_id !== sessionId) throw new Error('浏览器会话未领取成功，请检查扩展中的请求。');
+    return { ok: true, sessionId, data: started, message: '浏览器会话已准备并领取。' };
+  } catch (error) {
+    const cleanup = sessionId ? ['session', 'stop', sessionId, '--json'] : prepared ? ['session', 'request', token, '--cancel', '--json'] : null;
+    if (cleanup) await invoke(cleanup, 15000).catch(() => {});
+    return { ok: false, code: 'SESSION_START_FAILED', message: error.message, sessionId: null };
+  }
+}
+
 export async function executeBrowserSkill(input = {}) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw Object.assign(new Error('请求必须是 JSON 对象。'), { status: 400 });
   const action = String(input.action || 'status');
   if (action === 'status') return browserSkillStatus();
   if (action === 'start') {
-    const result = await run(['session', 'start', '--no-focus', '--json']);
-    const payload = parseJson(result.stdout);
-    if (result.ok) activeSession = String(payload?.session_id || payload?.sessionId || '');
-    return { ...result, sessionId: activeSession || null, data: payload };
+    if (startingSession) return startingSession;
+    startingSession = (async () => {
+      if (activeSession) {
+        const listed = await run(['session', 'list', '--json'], 15000), sessions = parseJson(listed.stdout);
+        if (!listed.ok || !Array.isArray(sessions)) return { ok: false, code: 'SESSION_CHECK_FAILED', message: '无法确认原会话状态，请检查浏览器连接后重试。' };
+        if (sessions.some(s => s.session_id === activeSession)) return { ok: true, sessionId: activeSession, message: '继续使用当前浏览器会话。' };
+        activeSession = '';
+      }
+      const result = await startBrowserSkillSession(input.browserId);
+      if (result.ok) activeSession = result.sessionId;
+      return result;
+    })();
+    try { return await startingSession; } finally { startingSession = null; }
   }
   const sessionId = String(input.sessionId || activeSession || '');
   if (!sessionId) return { ok: false, code: 'SESSION_REQUIRED', message: '请先启动 BrowserSkill 会话。' };
-  if (action === 'navigate') return run(['navigate', assertDouyinUrl(input.url), '--session', sessionId]);
+  if (action === 'navigate') return run(['navigate', assertDouyinUrl(input.url), '--session', sessionId, '--timeout', '60s'], 70000);
   if (action === 'observe') return run(['observe', '--session', sessionId]);
   if (action === 'screenshot') return run(['screenshot', '--session', sessionId, '--out', String(input.path || 'runtime/browser-screenshot.png')]);
-  if (action === 'stop') { const result = await run(['session', 'stop', sessionId]); if (result.ok) activeSession = ''; return result; }
+  if (action === 'stop') { const result = await run(['session', 'stop', sessionId]); if (result.ok && sessionId === activeSession) activeSession = ''; return result; }
   return { ok: false, code: 'ACTION_NOT_ALLOWED', message: '本地工作台只开放会话、导航、观察和截图；输入、点击、上传与发布由 WorkBuddy 调用 BrowserSkill，并在执行前确认。' };
 }

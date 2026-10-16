@@ -88,6 +88,37 @@ export class AutomationService {
     });
     return { added, found: entries.length };
   }
+  async importDraft(input, revision) {
+    const { value, revision: actual } = await this.store.read();
+    if (revision !== actual) throw error('队列已有更新，请刷新后导入。', 409);
+    if (!value.config.folder) throw error('请先在自动发布中设置视频文件夹。');
+    const draftId = String(input?.draftId || '');
+    const asset = String(input?.asset || '').trim();
+    if (!asset || !isAbsolute(asset)) throw error('草稿缺少有效的素材路径。');
+    const ext = extname(asset).toLowerCase();
+    if (!videoExtensions.has(ext)) throw error('草稿素材不是受支持的视频文件（MP4 / MOV / WebM）。');
+    const source = await realpath(asset).catch(() => { throw error('草稿素材不存在或无法读取。'); });
+    const info = await stat(source).catch(() => { throw error('草稿素材不存在或无法读取。'); });
+    if (!info.isFile() || !info.size || info.size > 4 * 1024 ** 3) throw error('草稿素材无效或过大。');
+    const title = String(input?.title || '').trim().slice(0, 30) || basename(source, ext).slice(0, 30);
+    const captionRaw = String(input?.caption || '').trim();
+    const tags = String(input?.tags || '').trim();
+    const caption = captionRaw && tags && !captionRaw.includes(tags) ? `${captionRaw}\n\n${tags}` : (captionRaw || tags);
+    const content = validatePublishText(title, caption);
+    const folder = await realpath(value.config.folder);
+    const target = join(folder, `${randomUUID()}${ext}`);
+    await copyFile(source, target, constants.COPYFILE_EXCL);
+    let added = false;
+    const incoming = { id: randomUUID(), sourceDraftId: draftId, sourcePath: target, fileName: basename(target), sourceSize: info.size, sourceMtime: info.mtimeMs, title: content.title, caption: content.caption, status: 'pending', scheduledAt: '', approval: null, createdAt: stamp(), message: '已从工作台草稿导入，请预览并审批。' };
+    await this.update(revision, state => {
+      if (draftId && state.items.some(i => i.sourceDraftId === draftId)) throw error('该草稿已在自动发布队列中。', 409);
+      if (state.items.length > 2000) throw error('队列已达到 2000 条，请先归档历史记录。');
+      state.items.push(incoming); added = true;
+      log(state, incoming.id, `已从工作台草稿导入「${content.title}」，请在每日自动发布中预览并审批。`);
+    });
+    if (!added) throw error('该草稿已在自动发布队列中。', 409);
+    return { added: true, id: incoming.id };
+  }
   async sourceFile(item, folder) {
     if (!folder) throw error('请先设置视频文件夹。');
     const root = await realpath(folder), file = await realpath(item.sourcePath).catch(() => { throw error('原视频已移动或删除，请重新扫描。'); });
@@ -198,19 +229,22 @@ export class AutomationService {
     return async () => { await file.close(); await unlink(path); };
   }
   async start() {
+    if (this.timer) return;
+    this.stopping = false;
     const { value } = await this.store.read();
     if (value.items.some(i => i.status === 'running')) {
-      let owner;
-      try { owner = JSON.parse(await readFile(join(this.directory, 'runner.lock'), 'utf8')); } catch {}
-      if (Number.isInteger(owner?.pid) && owner.pid > 0) {
-        let active = true;
-        try { process.kill(owner.pid, 0); } catch (problem) { active = problem.code !== 'ESRCH'; }
-        if (active) throw error('已有豆蜂服务正在发布，请使用原服务的页面或等待执行结束后重新启动。', 503);
+      // Hold the same lease as tick(); a separate check followed by a write can
+      // otherwise mark another server's newly started publication as interrupted.
+      const release = await this.lease();
+      try {
+        await this.store.update(state => {
+          if (!state.items.some(i => i.status === 'running')) return;
+          state.config.enabled = false;
+          for (const item of state.items.filter(i => i.status === 'running')) { item.status = 'uncertain'; item.message = '上次服务在执行期间中断，请到抖音核实，系统不会重复提交。'; log(state, item.id, item.message); }
+        });
+      } finally {
+        await release();
       }
-      await this.store.update(state => {
-        state.config.enabled = false;
-        for (const item of state.items.filter(i => i.status === 'running')) { item.status = 'uncertain'; item.message = '上次服务在执行期间中断，请到抖音核实，系统不会重复提交。'; log(state, item.id, item.message); }
-      });
     }
     this.timer = setInterval(() => { void this.tick().catch(problem => { this.lastError = problem.message; }); }, 15000);
     this.timer.unref();

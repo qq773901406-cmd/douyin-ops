@@ -100,7 +100,7 @@ node scripts/bilibili-workflow.mjs finish --id <任务ID> --status published --u
 ## 7. 收尾与存储
 
 - 结果和截图保存后 `bsk session stop <自己的会话ID> --json`；启动未成功但有 request token 时取消自己的 request。不停止其他任务的会话。
-- `runtime/bilibili-publish/jobs.json` 保存清单、视频摘要、状态与事件；`assets/` 保存素材副本；`evidence/` 保存截图。原子写入和文件锁保护同时执行；备份/迁移时复制整个目录。
+- `runtime/bilibili-publish/jobs.json` 保存清单、视频摘要、状态与事件；`assets/` 保存素材副本；`evidence/` 保存截图。设置 `DOUFENG_DATA_DIR` 时使用其下的 `bilibili-publish/`，命令行 `--data-dir` 可指定完整记录目录并优先于环境变量。原子写入和文件锁保护同时执行；备份/迁移时复制整个目录。
 - JSON 记录是本地执行约定，不是防篡改凭证；截图和状态由执行者核实，工具不会自行判断平台审核结果。
 - 首次归档已有回执：`node scripts/bilibili-workflow.mjs import-receipt --file "<已核实回执.json>"`。旧格式要求 `platform`、`status`、`accountName`、`title`、`sha256`、`videoUrl`、`screenshot`、`evidence`；本机已有的发布验证回执可直接使用。归档只写本地，不再次发视频。
 - 用户最终得到平台、账号、准确状态和可点击链接；审核中不能表述为已经公开。当前只实发验证过一次 AI 萌宠短片，平台改版需重新观察。

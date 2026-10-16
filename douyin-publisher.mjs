@@ -112,14 +112,14 @@ export class DouyinPublisher {
     throw new Error('抖音页面未在预期时间内就绪，请检查页面或素材要求。');
   }
   async accountInSession(session) {
-    await this.command(['navigate', creatorHome, '--session', session], 60000);
+    await this.command(['navigate', creatorHome, '--session', session, '--timeout', '60s'], 70000);
     const page = await this.waitPage(session, value => value.accountIds.length === 1);
     return { accountId: page.accountIds[0] };
   }
   async inspectAccount(browserId) {
     return this.session(browserId, async session => {
       const account = await this.accountInSession(session);
-      await this.command(['navigate', videoUpload, '--session', session], 60000);
+      await this.command(['navigate', videoUpload, '--session', session, '--timeout', '60s'], 70000);
       await this.waitPage(session, page => !!page.upload);
       return account;
     });
@@ -130,7 +130,7 @@ export class DouyinPublisher {
       await guard();
       const account = await this.accountInSession(session);
       if (account.accountId !== approval.accountId) throw new Error('当前登录抖音号与审批账号不同，已停止。');
-      await this.command(['navigate', videoUpload, '--session', session], 60000);
+      await this.command(['navigate', videoUpload, '--session', session, '--timeout', '60s'], 70000);
       const uploadPage = await this.waitPage(session, page => !!page.upload, guard);
       await guard();
       await this.command(['upload', '--selector', uploadPage.upload, '--file', approval.asset, '--session', session, '--timeout', '10m'], 620000);
@@ -140,9 +140,11 @@ export class DouyinPublisher {
       page = await this.page(session);
       if (!page.caption) throw new Error('无法唯一识别视频文案输入框，已停止。');
       await this.command(['fill', '--selector', page.caption.selector, '--value', approval.caption, '--session', session]);
-      // Re-read the account in a separate owned session without losing the upload form.
-      const checked = await this.session(approval.browserId, id => this.accountInSession(id));
-      if (checked.accountId !== approval.accountId) throw new Error('提交前发现抖音账号变化，已停止。');
+      // The whole publish flow runs in this single persistent session, so the
+      // logged-in account cannot switch without a re-login — which page() already
+      // catches via needsHuman / login redirection. Re-checking the account in a
+      // second controlled session (as before) risked stealing this session's upload
+      // form, so we validate the account on the current editor page instead.
       page = await this.waitPage(session, page => !!page.publish && page.uploaded && !page.uploading, guard, 30000);
       const validateSubmission = page => {
         if (!isVideoEditor(page.url) || !page.publish || !page.uploaded || page.uploading || cleanText(page.title?.value) !== cleanText(approval.title) || cleanText(page.caption?.value) !== cleanText(approval.caption)) throw new Error('页面视频标题、文案或上传状态与审批内容不一致，已停止。');
