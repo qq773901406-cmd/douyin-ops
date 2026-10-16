@@ -7,6 +7,7 @@ import { browserSkillStatus, executeBrowserSkill } from './browser-skill-adapter
 import { JsonStore } from './workbuddy/connector/lib/json-store.mjs';
 import { normalizeState } from './workbuddy/connector/lib/workspace-model.mjs';
 import { BackupStore } from './workbuddy/connector/lib/backup-store.mjs';
+import { AutomationService } from './automation-service.mjs';
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)));
 const { version } = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
@@ -28,9 +29,11 @@ const backups = new BackupStore(join(runtimeDir, 'backups'));
 const validateList = value => { if (!Array.isArray(value)) throw new Error('数据文件必须是列表。'); return value; };
 const jobsStore = new JsonStore(jobsFile, [], validateList);
 const activityStore = new JsonStore(activityFile, [], validateList);
+const automation = new AutomationService(runtimeDir);
 const publicFiles = new Set(['index.html', 'app.css', 'app.js', 'state-sync.js', 'video-studio.js', 'workbuddy/connector/lib/workspace-model.mjs', 'workbuddy/connector/lib/video-projects.mjs']);
 for (const file of ['product.css', 'workspace-ui.js', 'content-library.js', 'publish-planner.js', 'data-center.js', 'dashboard.js', 'legacy-pages.js', 'workbuddy/connector/lib/workspace-actions.mjs']) publicFiles.add(file);
 for (const file of ['shop-workspace.js', 'shop-import.js', 'shop-cards.js', 'shop.css', 'workbuddy/connector/lib/shop-products.mjs']) publicFiles.add(file);
+for (const file of ['automation.js', 'automation.css', 'automation-model.mjs']) publicFiles.add(file);
 
 await mkdir(uploadDir, { recursive: true });
 
@@ -58,6 +61,30 @@ const server = createServer(async (req, res) => {
   if (url.pathname.startsWith('/api/')) {
     if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, message: '请求来源不受信任。' }); return; }
     try {
+      if (url.pathname.startsWith('/api/automation')) {
+        const route = url.pathname.slice('/api/automation'.length);
+        if (req.method === 'GET' && route === '') { sendJson(res, 200, { ok: true, ...(await automation.snapshot()) }); return; }
+        if (req.method === 'GET' && route === '/browsers') { sendJson(res, 200, { ok: true, browsers: await automation.browsers() }); return; }
+        if (['GET', 'HEAD'].includes(req.method) && route === '/media') {
+          const file = await automation.preview(String(url.searchParams.get('id') || '')); await serveMedia(req, res, file.directory, file.path); return;
+        }
+        if (req.method === 'POST') {
+          const input = await bodyJson(req, 32 * 1024), revision = req.headers['if-match'];
+          if (!input || typeof input !== 'object' || Array.isArray(input)) throw Object.assign(new Error('请求必须是 JSON 对象。'), { status: 400 });
+          let result;
+          if (route === '/settings') await automation.settings(input, revision);
+          else if (route === '/scan') result = await automation.scan(revision);
+          else if (route === '/connect') result = await automation.connect(revision);
+          else if (route === '/toggle') await automation.toggle(input.enabled, revision);
+          else {
+            const match = /^\/items\/([a-f0-9-]{36})\/(edit|approve|cancel|reconcile)$/.exec(route);
+            if (!match) { sendJson(res, 404, { ok: false, message: '自动发布接口不存在。' }); return; }
+            if (match[2] === 'cancel') await automation.cancel(match[1], revision);
+            else await automation[match[2]](match[1], input, revision);
+          }
+          sendJson(res, 200, { ok: true, result, ...(await automation.snapshot()) }); return;
+        }
+      }
       if (req.method === 'GET' && ['/api/health', '/api/system'].includes(url.pathname)) {
         sendJson(res, 200, { ok: true, service: 'douyin-ops-workbuddy-workbench', version, root, dataDir: runtimeDir, node: process.version, pid: process.pid, uptime: Math.floor(process.uptime()), workbuddy: { packageReady: await exists(workbuddyConfig), connectorPath: 'workbuddy/connector', skillPath: 'SKILL.md' }, now: new Date().toISOString() });
         return;
@@ -138,8 +165,12 @@ const server = createServer(async (req, res) => {
 });
 
 server.on('error', error => { if (error.code === 'EADDRINUSE') { console.error(`端口 ${port} 已被占用。请关闭旧服务，或设置其他端口后重新运行。`); process.exitCode = 1; return; } throw error; });
-server.listen(port, host, () => console.log(`豆蜂 WorkBuddy 运营工作台已就绪：${address}`));
+server.listen(port, host, () => {
+  console.log(`豆蜂 WorkBuddy 运营工作台已就绪：${address}`);
+  void automation.start().catch(error => { automation.lastError = error.message; console.error('自动发布调度未启动：' + error.message); });
+});
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
+  automation.stop();
   server.close(() => { process.exitCode = 0; });
   server.closeIdleConnections();
 });

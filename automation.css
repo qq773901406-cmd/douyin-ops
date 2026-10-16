@@ -1,0 +1,26 @@
+.automation-intro { display:flex; gap:20px; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.automation-intro p { margin:8px 0 0; }
+.automation-layout { display:grid; grid-template-columns:minmax(280px,340px) minmax(0,1fr); gap:20px; align-items:start; }
+.automation-settings .field { margin-bottom:16px; }
+.automation-account { background:var(--bg,#f7f8f5); border:1px solid var(--border,#e6e9e3); padding:14px; border-radius:12px; margin:16px 0; overflow-wrap:anywhere; }
+.automation-account b { display:block; margin-bottom:8px; }
+.automation-steps { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 20px; color:var(--muted,#697466); font-size:13px; }
+.automation-item { padding:20px 0; border-bottom:1px solid var(--border,#e6e9e3); }
+.automation-item:first-child { padding-top:0; }
+.automation-item h3 { margin:10px 0 5px; overflow-wrap:anywhere; }
+.automation-item p { margin:8px 0; font-size:13px; overflow-wrap:anywhere; }
+.automation-item small { display:block; color:var(--muted,#697466); overflow-wrap:anywhere; }
+.automation-item .row-actions { margin-top:14px; }
+.automation-pause { border-color:#bc543c; color:#a34430; }
+.automation-review-video { width:100%; max-height:320px; border-radius:12px; background:#111; margin-bottom:16px; }
+.automation-review-details { background:#f1f7e8; padding:16px; border-radius:12px; margin:16px 0; }
+.automation-review-details p { margin:6px 0; overflow-wrap:anywhere; }
+.automation-status { margin-bottom:16px; }
+.automation-log { margin-top:20px; }
+.automation-log article { border-bottom:1px solid var(--border,#e6e9e3); padding:10px 0; }
+.automation-log small { color:var(--muted,#697466); display:block; margin-bottom:4px; }
+.automation-log p { margin:0; font-size:13px; overflow-wrap:anywhere; }
+.automation-empty { padding:36px 16px; text-align:center; color:var(--muted,#697466); }
+.automation-empty b { display:block; color:var(--text,#18211a); font-size:18px; margin-bottom:12px; }
+.automation-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+@media(max-width:1000px) { .automation-layout { grid-template-columns:1fr; } .automation-intro { align-items:flex-start; flex-direction:column; } }
