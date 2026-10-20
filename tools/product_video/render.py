@@ -4,12 +4,36 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import imageio_ffmpeg
 
 WIDTH, HEIGHT = 720, 1280
+MAX_IMAGE_PIXELS = 40_000_000
+
+
+def load_product_image(path):
+    with Image.open(path) as source:
+        if source.width * source.height > MAX_IMAGE_PIXELS:
+            raise ValueError("商品图片分辨率过大。")
+        # Decode all pixels and apply the same conversion used by rendering.
+        return ImageOps.exif_transpose(source).convert("RGB")
+
+
+def check_images(paths):
+    if not isinstance(paths, list) or len(paths) > 20 or any(not isinstance(path, str) for path in paths):
+        raise ValueError("图片检查需要不超过 20 个本地图片路径。")
+    results = []
+    for path in paths:
+        try:
+            with load_product_image(path):
+                pass
+            results.append({"ok": True})
+        except (OSError, ValueError, SyntaxError, Image.DecompressionBombError) as error:
+            results.append({"ok": False, "error": f"图片无法解码或不符合尺寸要求：{error}"[:300]})
+    return {"images": results}
 
 
 def font_path():
@@ -70,10 +94,8 @@ def render(config, destination):
             draw.text((48, 38), "每日好物 · 商品介绍", font=small, fill="#b6e5c9")
             for row, line in enumerate(title_lines):
                 draw.text((48, 88 + row * 49), line, font=heading, fill="white")
-            with Image.open(pictures[index % len(pictures)]) as source:
-                if source.width * source.height > 40_000_000:
-                    raise ValueError("商品图片分辨率过大。")
-                picture = ImageOps.contain(ImageOps.exif_transpose(source).convert("RGB"), (624, 620))
+            with load_product_image(pictures[index % len(pictures)]) as source:
+                picture = ImageOps.contain(source, (624, 620))
                 canvas.paste(picture, ((WIDTH - picture.width) // 2, 285 + (620 - picture.height) // 2))
             draw.rounded_rectangle((32, 940, 688, 1180), radius=20, fill="#203c31")
             for row, line in enumerate(pages[index % len(pages)]):
@@ -103,7 +125,19 @@ def render(config, destination):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", required=True)
-    parser.add_argument("--out", required=True)
+    parser.add_argument("--check", action="store_true")
+    parser.add_argument("--check-images", action="store_true")
+    parser.add_argument("--config")
+    parser.add_argument("--out")
     args = parser.parse_args()
-    print(json.dumps(render(json.loads(Path(args.config).read_text(encoding="utf-8-sig")), args.out), ensure_ascii=False))
+    if args.check:
+        ImageFont.truetype(font_path(), 32)
+        subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-version"],
+                       check=True, timeout=10, capture_output=True)
+        print(json.dumps({"ok": True}))
+    elif args.check_images:
+        print(json.dumps(check_images(json.load(sys.stdin)), ensure_ascii=False))
+    else:
+        if not args.config or not args.out:
+            parser.error("需要 --config 和 --out，或使用 --check 检查环境。")
+        print(json.dumps(render(json.loads(Path(args.config).read_text(encoding="utf-8-sig")), args.out), ensure_ascii=False))

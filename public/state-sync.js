@@ -23,6 +23,7 @@ export function createStateSync({ getState, setState, render, notify }) {
   let revision = restored?.revision ?? null;
   let dirty = !!restored;
   let sequence = 0;
+  let refreshSequence = 0;
   let sending = false;
   let conflict = false;
   let initialized = false;
@@ -199,9 +200,9 @@ export function createStateSync({ getState, setState, render, notify }) {
     inspect: () => ({ dirty, sending, reloading, initialized, revision }),
     async refreshSaved() {
       if (!initialized || dirty || sending || reloading || conflict) return;
-      const version = sequence;
+      const version = sequence, baseRevision = revision, refresh = ++refreshSequence;
       const remote = await request('GET');
-      if (dirty || sending || reloading || conflict || sequence !== version || remote.revision === revision) return;
+      if (dirty || sending || reloading || conflict || sequence !== version || refresh !== refreshSequence || revision !== baseRevision || remote.revision === revision) return;
       // Keep locally edited forms while refreshing server-generated collections.
       setState(normalizeState(remote.state || {}), { initial: true });
       revision = remote.revision; clearPending();

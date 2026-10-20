@@ -1,8 +1,12 @@
-import { newVideo, copyVideo, validateVideo, videoPrompt, videoStatuses, videoRatios } from '../workbuddy/connector/lib/video-projects.mjs';
+import { newVideo, newShot, copyVideo, validateVideo, videoPrompt, videoQuality, videoStatuses, videoRatios, videoReviewStatuses } from '../workbuddy/connector/lib/video-projects.mjs';
 import { moveToTrash } from '../workbuddy/connector/lib/workspace-actions.mjs';
 
 const EDITOR_KEY = 'doufeng.video-editor.v1';
-const fields = ['title', 'subject', 'setting', 'style', 'ratio', 'budget', 'provider', 'cost', 'status', 'asset', 'blocker', 'notes'];
+const fields = ['title', 'subject', 'setting', 'style', 'referenceVideo', 'characterReference', 'visualIdentity', 'ratio', 'budget', 'provider', 'cost', 'status', 'asset', 'blocker', 'notes'];
+const shotFields = ['action', 'camera', 'referenceImage', 'startState', 'endState', 'asset', 'reviewStatus', 'reviewNotes'];
+const visualFields = ['subject', 'setting', 'style', 'characterReference', 'visualIdentity', 'ratio'];
+const shotVisualFields = ['seconds', 'action', 'camera', 'referenceImage', 'startState', 'endState', 'asset'];
+const comparable = (key, value) => key === 'seconds' ? Number(value) : String(value ?? '').replace(/\r\n/gu, '\n').trim();
 const totalSeconds = project => project.shots.reduce((sum, shot) => sum + (Number(shot.seconds) || 0), 0);
 const dateValue = project => Date.parse(project.updatedAt || project.createdAt) || 0;
 const searchText = value => String(value || '').normalize('NFKC').toLocaleLowerCase().trim();
@@ -14,7 +18,11 @@ function readEditor() {
     if (saved?.version !== 1 || !p || !Array.isArray(p.shots) || p.shots.length < 1 || p.shots.length > 12) return null;
     const project = newVideo();
     for (const key of [...fields, 'id', 'createdAt', 'updatedAt', 'sourceProductId']) if (typeof p[key] === 'string') project[key] = p[key];
-    project.shots = p.shots.map(shot => ({ seconds: Number(shot?.seconds) || '', action: String(shot?.action || ''), camera: String(shot?.camera || '') }));
+    project.shots = p.shots.map((shot, index) => {
+      const restored = newShot({ id: typeof shot?.id === 'string' && shot.id ? shot.id : `legacy-shot-${index + 1}`, seconds: Number(shot?.seconds) || '' });
+      for (const key of shotFields) if (typeof shot?.[key] === 'string') restored[key] = shot[key];
+      return restored;
+    });
     return { project, savedAt: saved.savedAt };
   } catch { return null; }
 }
@@ -30,18 +38,71 @@ export function createVideoStudio({ getState, save, go, openDraft, notify, esc }
   let sort = 'updated';
   let draftTimer;
   let upload = null;
+  let referencesOpen = !recovered;
+  let openShotDetails = new Set();
   const $ = selector => document.querySelector(selector);
   const button = (label, action, extra = '') => `<button type="button" class="button button-light" data-video="${action}" ${extra}>${label}</button>`;
   const field = (label, name, value, multiline = false, attrs = '') => `<div class="field"><label for="video-${name}">${label}</label>${multiline ? `<textarea id="video-${name}" name="${name}" maxlength="5000" ${attrs}>${esc(value)}</textarea>` : `<input id="video-${name}" name="${name}" value="${esc(value)}" ${attrs}>`}</div>`;
   const options = (values, selected) => Object.entries(values).map(([value, label]) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`).join('');
   const select = (label, name, values, value) => `<div class="field"><label for="video-${name}">${label}</label><select id="video-${name}" name="${name}">${options(values, value)}</select></div>`;
+  const shotField = (label, key, shot, index, multiline = false, placeholder = '') => {
+    const id = `shot-${key}-${index}`;
+    const attrs = `id="${id}" data-shot-field="${key}" maxlength="${key === 'reviewNotes' ? 5000 : 2000}" placeholder="${esc(placeholder)}"`;
+    return `<div class="field"><label for="${id}">${label}</label>${multiline ? `<textarea ${attrs}>${esc(shot[key] || '')}</textarea>` : `<input ${attrs} value="${esc(shot[key] || '')}">`}</div>`;
+  };
+
+  function shotStage(shot) {
+    if (shot.reviewStatus === 'rejected') return { key: 'rejected', label: '退回', color: 'orange' };
+    if (!String(shot.asset || '').trim()) return { key: 'unproduced', label: '待生成', color: '' };
+    if (shot.reviewStatus === 'approved') return { key: 'approved', label: '通过', color: 'green' };
+    return { key: 'pending', label: '待验收', color: 'blue' };
+  }
+
+  function qualityMarkup() {
+    const counts = { unproduced: 0, pending: 0, approved: 0, rejected: 0 };
+    for (const shot of editing.shots) counts[shotStage(shot).key]++;
+    const quality = videoQuality(editing);
+    return `<div class="chip-list" aria-label="当前项目分镜进度"><span class="pill">待生成 ${counts.unproduced}</span><span class="pill blue">待验收 ${counts.pending}</span><span class="pill green">通过 ${counts.approved}</span><span class="pill orange">退回 ${counts.rejected}</span></div>
+      <p class="form-hint">${quality.readyForAssembly ? '制作记录已满足合成检查条件。合成前仍需打开实际素材，检查连续性、动作与声音。' : '逐镜生成、逐镜验收，通过后再合成。参考图和素材路径只作记录，填入路径不代表文件已生成或校验。'}</p>
+      ${quality.issues.length ? `<details data-quality-issues><summary class="form-hint">查看 ${quality.issues.length} 项制作检查提示</summary><ul class="form-hint">${quality.issues.map(issue => `<li>${esc(issue.message)}</li>`).join('')}</ul></details>` : ''}`;
+  }
+
+  function updateQuality() {
+    const panel = $('#video-quality-summary');
+    if (panel) {
+      const expanded = !!panel.querySelector('[data-quality-issues]')?.open;
+      panel.innerHTML = qualityMarkup();
+      if (expanded && panel.querySelector('[data-quality-issues]')) panel.querySelector('[data-quality-issues]').open = true;
+    }
+    document.querySelectorAll('[data-shot-stage]').forEach((el, index) => {
+      if (!editing.shots[index]) return;
+      const stage = shotStage(editing.shots[index]);
+      el.textContent = stage.label; el.className = `pill ${stage.color}`;
+    });
+  }
 
   function capture() {
     const form = $('#video-form');
     if (!form) return;
     const data = Object.fromEntries(new FormData(form));
+    const visualChanged = visualFields.some(key => comparable(key, editing[key]) !== comparable(key, data[key]));
     for (const key of fields) editing[key] = data[key] ?? '';
-    editing.shots = [...form.querySelectorAll('[data-shot]')].map(row => ({ seconds: row.querySelector('[data-shot-seconds]').value, action: row.querySelector('[data-shot-action]').value, camera: row.querySelector('[data-shot-camera]').value }));
+    referencesOpen = !!form.querySelector('[data-video-references]')?.open;
+    openShotDetails = new Set();
+    const invalidated = [];
+    editing.shots = [...form.querySelectorAll('[data-shot]')].map((row, index) => {
+      const previous = editing.shots[index];
+      const shot = { ...previous, seconds: row.querySelector('[data-shot-seconds]').value, action: row.querySelector('[data-shot-action]').value, camera: row.querySelector('[data-shot-camera]').value };
+      for (const input of row.querySelectorAll('[data-shot-field]')) shot[input.dataset.shotField] = input.value;
+      if (previous.reviewStatus === 'approved' && shot.reviewStatus === 'approved' && (visualChanged || shotVisualFields.some(key => comparable(key, previous[key]) !== comparable(key, shot[key])))) {
+        shot.reviewStatus = 'pending';
+        row.querySelector('[data-shot-field="reviewStatus"]').value = 'pending';
+        invalidated.push(index + 1);
+      }
+      if (row.querySelector('[data-shot-details]')?.open) openShotDetails.add(shot.id);
+      return shot;
+    });
+    if (invalidated.length) notify(`镜头 ${invalidated.join('、')} 的设定或素材已修改，已转为待验收；原验收备注保留`);
   }
 
   function staleMessage() {
@@ -88,6 +149,7 @@ export function createVideoStudio({ getState, save, go, openDraft, notify, esc }
     if ($('#video-duration')) $('#video-duration').textContent = `${totalSeconds(editing)} 秒 · ${editing.shots.length} 个镜头`;
     let elapsed = 0;
     document.querySelectorAll('[data-shot-time]').forEach((el, index) => { const start = elapsed; elapsed += Number(editing.shots[index]?.seconds) || 0; el.textContent = `${start}–${elapsed} 秒`; });
+    updateQuality();
   }
 
   function cancelUpload() {
@@ -103,6 +165,9 @@ export function createVideoStudio({ getState, save, go, openDraft, notify, esc }
 
   function setEditor(project, isChanged) {
     clearEditorDraft(); editing = structuredClone(project); changed = isChanged;
+    editing.shots = editing.shots.map((shot, index) => newShot({ ...shot, id: shot.id || `legacy-shot-${index + 1}` }));
+    referencesOpen = !editing.characterReference || !editing.visualIdentity;
+    openShotDetails = new Set();
     if (changed) persistEditor();
   }
 
@@ -199,7 +264,7 @@ export function createVideoStudio({ getState, save, go, openDraft, notify, esc }
     const projects = getState().videos;
     let elapsed = 0;
     return `<div class="page-head"><div><p class="eyebrow">VIDEO STUDIO</p><h1>把一个想法，做成一条视频。</h1><p>整理分镜与制作说明，记录进度，成片后接着准备发布。</p></div><div class="page-actions">${button('＋ 空白项目', 'new')}${button('小猫跳舞模板', 'kitten')}</div></div>
-      <div class="studio-summary"><span><b>${projects.length}</b> 个制作项目</span><span><b>${projects.filter(p => p.status === 'producing').length}</b> 制作中</span><span><b>${projects.filter(p => p.status === 'completed').length}</b> 已完成</span><p>这里管理制作计划；生成和剪辑在你选择的工具中完成。</p></div>
+      <div class="studio-summary"><span><b>${projects.length}</b> 个制作项目</span><span><b>${projects.filter(p => p.status === 'producing').length}</b> 制作中</span><span><b>${projects.filter(p => p.status === 'completed').length}</b> 已完成</span><p>制作单交给 Agent 或选用的工具执行，逐镜验收后合成。</p></div>
       <div class="studio-layout"><section class="card studio-editor"><div class="card-title"><h3>${editing.id ? '编辑制作项目' : '新建制作项目'}</h3><span id="video-edit-status" class="pill" role="status">${editorStatus()}</span></div>
       <p class="form-hint">未提交的编辑会暂存于当前标签页，刷新后可继续。保存项目：Ctrl / ⌘ + S。</p>
       ${staleMessage() ? `<div class="notice orange">${esc(staleMessage())}</div>` : ''}
@@ -207,10 +272,27 @@ export function createVideoStudio({ getState, save, go, openDraft, notify, esc }
       <div class="full">${field('视频名称', 'title', editing.title, false, 'required maxlength="120" placeholder="例如：小猫捡到发夹后跳舞"')}</div>
       ${field('主角与外观', 'subject', editing.subject, true)}${field('场景', 'setting', editing.setting, true)}
       ${field('画面风格', 'style', editing.style)}${select('画幅', 'ratio', Object.fromEntries(videoRatios.map(x => [x, x])), editing.ratio)}
-      </div><div class="section-row"><h2>分镜脚本</h2><span class="pill" id="video-duration">${totalSeconds(editing)} 秒 · ${editing.shots.length} 个镜头</span></div>
+      </div><div class="divider"></div>
+      <details data-video-references ${referencesOpen ? 'open' : ''}><summary><b>角色参考与视觉约束</b></summary>
+      <p class="form-hint">先确定角色与场景，再制作各镜头。参考路径只作记录；实际生成时由 Agent 或所选工具读取可访问的素材。</p>
+      <div class="form-grid">${field('角色参考图路径或链接', 'characterReference', editing.characterReference || '', false, 'maxlength="2000" placeholder="统一使用的角色参考图"')}${field('参考视频 URL', 'referenceVideo', editing.referenceVideo || '', false, 'maxlength="2000" placeholder="用于参考节奏、动作或构图的视频链接"')}
+      <div class="full">${field('全片视觉约束', 'visualIdentity', editing.visualIdentity || '', true, 'placeholder="例如：固定毛色、脸型、体型和木地板场景；发夹戴上后持续保留；只出现猫爪"')}</div></div></details>
+      <div class="section-row"><h2>分镜脚本与验收</h2><span class="pill" id="video-duration">${totalSeconds(editing)} 秒 · ${editing.shots.length} 个镜头</span></div>
+      <div id="video-quality-summary" class="media-panel" role="status" aria-live="polite">${qualityMarkup()}</div>
       <div class="shot-list">${editing.shots.map((shot, index) => {
         const start = elapsed; elapsed += Number(shot.seconds) || 0;
-        return `<section class="shot" data-shot="${index}"><div class="shot-heading"><b>镜头 ${String(index + 1).padStart(2, '0')} <small data-shot-time>${start}–${elapsed} 秒</small></b><label>时长 <input type="number" data-shot-seconds min="1" max="120" step="1" required value="${esc(shot.seconds)}" aria-label="镜头 ${index + 1} 时长"> 秒</label></div><div class="field"><label for="shot-action-${index}">画面与动作</label><textarea id="shot-action-${index}" data-shot-action required maxlength="5000" placeholder="描述这个镜头中发生什么">${esc(shot.action)}</textarea></div><div class="field"><label for="shot-camera-${index}">镜头与构图</label><input id="shot-camera-${index}" data-shot-camera maxlength="1000" value="${esc(shot.camera)}"></div><div class="shot-actions">${button('↑ 上移', 'move-up', `data-index="${index}" ${index === 0 ? 'disabled' : ''}`)}${button('↓ 下移', 'move-down', `data-index="${index}" ${index === editing.shots.length - 1 ? 'disabled' : ''}`)}${button('复制分镜', 'copy-shot', `data-index="${index}" ${editing.shots.length >= 12 ? 'disabled' : ''}`)}${button('移除', 'remove-shot', `data-index="${index}" ${editing.shots.length === 1 ? 'disabled' : ''}`)}</div></section>`;
+        const stage = shotStage(shot);
+        return `<section class="shot" data-shot="${index}"><div class="shot-heading"><b>镜头 ${String(index + 1).padStart(2, '0')} <small data-shot-time>${start}–${elapsed} 秒</small></b><span data-shot-stage class="pill ${stage.color}">${stage.label}</span><label>时长 <input type="number" data-shot-seconds min="1" max="120" step="1" required value="${esc(shot.seconds)}" aria-label="镜头 ${index + 1} 时长"> 秒</label></div>
+        <div class="field"><label for="shot-action-${index}">画面与动作</label><textarea id="shot-action-${index}" data-shot-action required maxlength="5000" placeholder="每镜优先安排一个清晰动作">${esc(shot.action)}</textarea></div>
+        <div class="field"><label for="shot-camera-${index}">镜头与构图</label><input id="shot-camera-${index}" data-shot-camera maxlength="1000" value="${esc(shot.camera)}"></div>
+        <details data-shot-details ${openShotDetails.has(shot.id) ? 'open' : ''}><summary>参考、起止状态与验收</summary>
+        <p class="form-hint">对照相邻镜头，记录角色、道具、场景与姿态。看过实际素材后再验收；设定或素材修改后，已通过的镜头会转回待验收。</p>
+        <div class="form-grid"><div class="full">${shotField('本镜参考图路径或链接', 'referenceImage', shot, index, false, '该镜头的起始画面；未填写时参考全片角色图')}</div>
+        ${shotField('起始状态', 'startState', shot, index, true, '例如：小猫站在木地板上，粉色发夹在右前爪旁')}${shotField('结束状态', 'endState', shot, index, true, '例如：同一只小猫低头看发夹，发夹位置不变')}
+        <div class="full">${shotField('本镜素材路径或链接', 'asset', shot, index, false, '生成成功后填回实际素材路径')}</div>
+        <div class="field"><label for="shot-reviewStatus-${index}">验收状态</label><select id="shot-reviewStatus-${index}" data-shot-field="reviewStatus">${options(videoReviewStatuses, shot.reviewStatus || 'pending')}</select></div>
+        <div class="full">${shotField('验收问题 / 修改备注', 'reviewNotes', shot, index, true, '例如：第 2 秒发夹消失，退回重做；或记录已核对的动作与衔接')}</div></div></details>
+        <div class="shot-actions">${button('↑ 上移', 'move-up', `data-index="${index}" ${index === 0 ? 'disabled' : ''}`)}${button('↓ 下移', 'move-down', `data-index="${index}" ${index === editing.shots.length - 1 ? 'disabled' : ''}`)}${button('复制分镜', 'copy-shot', `data-index="${index}" ${editing.shots.length >= 12 ? 'disabled' : ''}`)}${button('移除', 'remove-shot', `data-index="${index}" ${editing.shots.length === 1 ? 'disabled' : ''}`)}</div></section>`;
       }).join('')}</div>
       <div class="form-actions">${button('＋ 添加分镜', 'add-shot', editing.shots.length >= 12 ? 'disabled' : '')}<span class="form-hint">每个镜头 1–120 秒，最多 12 个。</span></div>
       <div class="divider"></div><div class="form-grid">
@@ -223,10 +305,10 @@ export function createVideoStudio({ getState, save, go, openDraft, notify, esc }
       <aside class="studio-projects"><div class="section-row"><h2>我的制作项目</h2></div>
       <div class="project-filters"><div class="field"><label for="video-search">搜索项目</label><input id="video-search" type="search" value="${esc(query)}" placeholder="名称、角色、场景或制作工具"></div><div class="project-filter-row"><div class="field"><label for="video-filter">制作状态</label><select id="video-filter">${options({ all: '全部状态', ...videoStatuses }, filter)}</select></div><div class="field"><label for="video-sort">排列方式</label><select id="video-sort">${options({ updated: '最近更新', title: '名称顺序', duration: '时长从短到长' }, sort)}</select></div></div></div>
       <div id="video-project-list">${projectList()}</div>
-      <div class="notice green"><span>↗</span><span><b>接着完成制作</b><br>复制提示词到你选用的生成工具，拿到成片后上传或填回路径，标记完成并转入发布准备。价格和免费额度以工具实际显示为准。</span></div></aside></div>`;
+      <div class="notice green"><span>↗</span><span><b>接着完成制作</b><br>把完整制作单交给 Agent 或选用的工具执行；生成后填回每镜素材、记录验收，再合成并上传成片。这里的参考路径与验收状态均为制作记录。价格和免费额度以工具实际显示为准。</span></div></aside></div>`;
   }
 
-  function showPrompt(text, message = '核对内容后，复制到你选择的生成或剪辑工具。') {
+  function showPrompt(text, message = '核对角色参考、分镜起止状态与验收要求后，把制作单交给 Agent 或你选择的生成、剪辑工具执行。') {
     $('#video-prompt-dialog')?.remove();
     const dialog = document.createElement('dialog'); dialog.id = 'video-prompt-dialog'; dialog.className = 'recovery-dialog prompt-dialog';
     dialog.innerHTML = `<h2>制作提示词</h2><p>${esc(message)}</p><label class="sr-only" for="video-prompt-text">完整制作提示词</label><textarea id="video-prompt-text" readonly></textarea><div class="form-actions">${button('选中全部', 'select-prompt')}${button('导出 TXT', 'export')}${button('关闭', 'close-prompt')}</div>`;
@@ -259,15 +341,19 @@ export function createVideoStudio({ getState, save, go, openDraft, notify, esc }
         if (!canReplaceEditor()) return true;
         setEditor(action === 'edit' ? project : action === 'duplicate' ? copyVideo(project) : newVideo(action === 'kitten' ? 'kitten' : 'blank'), ['kitten', 'duplicate'].includes(action));
         repaint('#video-title');
-        if (action === 'duplicate') notify('副本已载入编辑区，保存后创建新项目；制作状态、成片和费用已重置');
+        if (action === 'duplicate') notify('副本已载入编辑区，保存后创建新项目；制作状态、成片、逐镜素材与验收、费用已重置');
       } else if (action === 'add-shot') {
-        if (editing.shots.length < 12) { editing.shots.push({ seconds: 5, action: '', camera: '' }); markChanged(true); repaint(`#shot-action-${editing.shots.length - 1}`); }
+        if (editing.shots.length < 12) { editing.shots.push(newShot()); markChanged(true); repaint(`#shot-action-${editing.shots.length - 1}`); }
       } else if (['remove-shot', 'move-up', 'move-down', 'copy-shot'].includes(action)) {
         const index = Number(target.dataset.index);
         if (!Number.isInteger(index) || !editing.shots[index]) return true;
         let next = index;
         if (action === 'remove-shot' && editing.shots.length > 1) { editing.shots.splice(index, 1); next = Math.min(index, editing.shots.length - 1); }
-        if (action === 'copy-shot' && editing.shots.length < 12) { editing.shots.splice(index + 1, 0, structuredClone(editing.shots[index])); next = index + 1; }
+        if (action === 'copy-shot' && editing.shots.length < 12) {
+          editing.shots.splice(index + 1, 0, newShot({ ...structuredClone(editing.shots[index]), id: undefined, asset: '', reviewStatus: 'pending', reviewNotes: '' }));
+          next = index + 1;
+          notify('分镜设定已复制；副本需重新制作并验收，素材和验收记录已重置');
+        }
         if (action.startsWith('move-')) { next = index + (action === 'move-up' ? -1 : 1); if (next < 0 || next >= editing.shots.length) return true; [editing.shots[index], editing.shots[next]] = [editing.shots[next], editing.shots[index]]; }
         markChanged(true); repaint(`#shot-action-${next}`);
       } else if (action === 'choose-media') $('#video-media-file')?.click();
@@ -341,9 +427,9 @@ export function createVideoStudio({ getState, save, go, openDraft, notify, esc }
     fromIdea(idea) {
       if (!canReplaceEditor()) return;
       setEditor({ ...newVideo(), title: idea.title, notes: idea.bgm || '', shots: [
-        { seconds: 3, action: idea.hook || '开场展示主题', camera: '近景' },
-        { seconds: 9, action: idea.script || '展开主题', camera: '中景' },
-        { seconds: 3, action: idea.cta || '收尾定格', camera: '中景' }
+        newShot({ seconds: 3, action: idea.hook || '开场展示主题', camera: '近景' }),
+        newShot({ seconds: 9, action: idea.script || '展开主题', camera: '中景' }),
+        newShot({ seconds: 3, action: idea.cta || '收尾定格', camera: '中景' })
       ] }, true); go('video');
     }
   };

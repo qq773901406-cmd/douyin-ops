@@ -9,6 +9,7 @@ import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { normalizeState } from '../workbuddy/connector/lib/workspace-model.mjs';
+import { newVideo } from '../workbuddy/connector/lib/video-projects.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const temporaryRoot = join(root, '.codex_tmp');
@@ -71,6 +72,37 @@ test('错误的 JSON 与导入数据返回 400', async () => {
   const revision = (await json('/api/state')).data.revision;
   assert.equal((await json('/api/backups/restore', { method: 'POST', headers: { 'If-Match': revision }, body: JSON.stringify({ state: { products: 'bad' } }) })).status, 400);
   assert.equal((await json('/api/backups/restore', { method: 'POST', headers: { 'If-Match': revision }, body: '{}' })).status, 400);
+});
+
+test('视频参考、分镜素材与验收记录经 HTTP 保存及备份恢复后完整保留', async () => {
+  const current = await json('/api/state');
+  const project = {
+    ...newVideo('kitten'), id: 'quality-http-project',
+    referenceVideo: 'https://example.com/reference-video',
+    characterReference: 'D:/reference/cat.png',
+    visualIdentity: '同一只橘白猫，粉色发夹始终在左耳',
+  };
+  project.shots[0] = {
+    ...project.shots[0], referenceImage: 'D:/reference/shot-1.png',
+    asset: 'D:/renders/shot-1.mp4', reviewStatus: 'rejected', reviewNotes: '第 2 秒发夹消失',
+  };
+  const state = normalizeState({ ...current.data.state, videos: [project] });
+  const saved = await put(state, current.data.revision);
+  assert.equal(saved.status, 200);
+  const loaded = await json('/api/state');
+  assert.deepEqual(loaded.data.state.videos[0], project);
+  const backup = await json('/api/backups', { method: 'POST', body: JSON.stringify({ label: '镜头质量记录' }) });
+  assert.equal(backup.status, 201);
+  const modified = structuredClone(state);
+  modified.videos[0].shots[0].reviewNotes = '修改后的备注';
+  const newer = await put(modified, loaded.data.revision);
+  assert.equal(newer.status, 200);
+  const restored = await json('/api/backups/restore', {
+    method: 'POST', headers: { 'If-Match': newer.data.revision },
+    body: JSON.stringify({ id: backup.data.backup.id }),
+  });
+  assert.equal(restored.status, 200);
+  assert.deepEqual(restored.data.state.videos[0], project);
 });
 
 test('JSON 非对象和非法回采链接返回 400，不产生服务器错误', async () => {

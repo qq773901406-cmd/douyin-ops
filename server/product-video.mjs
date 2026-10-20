@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { existsSync } from 'node:fs';
-import { mkdir, writeFile, stat, realpath, copyFile } from 'node:fs/promises';
+import { existsSync, constants } from 'node:fs';
+import { mkdir, writeFile, stat, realpath, copyFile, access } from 'node:fs/promises';
 import { join, extname, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +13,64 @@ export function productVideoPython() {
   if (process.env.DOUFENG_PYTHON) return process.env.DOUFENG_PYTHON;
   const bundled = join(homedir(), '.workbuddy', 'binaries', 'python', 'envs', 'default', 'Scripts', 'python.exe');
   return process.platform === 'win32' && existsSync(bundled) ? bundled : 'python';
+}
+
+export async function inspectProductVideoEnvironment() {
+  const checkedAt = new Date().toISOString();
+  try {
+    const { stdout } = await execute(productVideoPython(), [script, '--check'], { timeout: 25000, windowsHide: true, maxBuffer: 128 * 1024, env: { ...process.env, PYTHONUTF8: '1' } });
+    if (JSON.parse(stdout.trim()).ok !== true) throw new Error('合成环境返回内容不完整。');
+    return { ok: true, checkedAt, message: 'Python、图片处理库、中文字体及 FFmpeg 可用；尚未生成视频。' };
+  } catch (error) {
+    const detail = String(error.stderr || error.message || '');
+    const message = error.code === 'ENOENT' ? '未找到 Python，请设置 DOUFENG_PYTHON。'
+      : /No module named ['"]PIL/.test(detail) ? '当前 Python 缺少 Pillow，请安装到所选解释器中。'
+      : /No module named ['"]imageio_ffmpeg/.test(detail) ? '当前 Python 缺少 imageio-ffmpeg，请安装到所选解释器中。'
+      : error.killed ? '合成环境检查超时，请检查本机 Python 和 FFmpeg。'
+      : `合成环境不可用：${detail.trim().split(/\r?\n/).at(-1)?.slice(0, 300) || '请检查依赖和中文字体。'}`;
+    return { ok: false, checkedAt, message };
+  }
+}
+
+export async function usableProductImages(product) {
+  const candidates = [], images = [], warnings = [];
+  for (const image of (product.images || []).slice(0, 20)) {
+    try {
+      if (typeof image.path !== 'string' || !isAbsolute(image.path) || !/\.(png|jpe?g|webp)$/i.test(image.path)) throw new Error('不是支持的本地图片');
+      const source = await realpath(image.path), info = await stat(source);
+      if (!info.isFile() || !info.size || info.size > 20 * 1024 ** 2) throw new Error('图片为空、不是文件或超过 20MB');
+      await access(source, constants.R_OK);
+      candidates.push({ ...image, path: source });
+    } catch (error) {
+      warnings.push(`${image.name || '商品图片'}：${['ENOENT', 'ENOTDIR'].includes(error.code) ? '文件已移动或不存在' : error.code === 'EACCES' ? '无法读取文件' : error.message}`);
+    }
+  }
+  if (!candidates.length) return { images, warnings };
+  let checked;
+  try {
+    // Send the whole batch through stdin to avoid Windows command-line limits.
+    const pending = execute(productVideoPython(), [script, '--check-images'], { timeout: 60000, windowsHide: true, maxBuffer: 128 * 1024, env: { ...process.env, PYTHONUTF8: '1' } });
+    // An interpreter startup failure can close stdin early; execFile reports it.
+    pending.child.stdin.on('error', () => {});
+    pending.child.stdin.end(JSON.stringify(candidates.map(image => image.path)));
+    const { stdout } = await pending;
+    checked = JSON.parse(stdout.trim()).images;
+    if (!Array.isArray(checked) || checked.length !== candidates.length || checked.some(item => typeof item?.ok !== 'boolean' || !item.ok && typeof item.error !== 'string')) throw new Error('图片检查返回内容不完整。');
+  } catch (error) {
+    const detail = String(error.stderr || error.message || '');
+    const reason = error.code === 'ENOENT' ? '未找到 Python，请设置 DOUFENG_PYTHON。'
+      : /No module named ['"]PIL/.test(detail) ? '当前 Python 缺少 Pillow，请安装到所选解释器中。'
+      : /No module named ['"]imageio_ffmpeg/.test(detail) ? '当前 Python 缺少 imageio-ffmpeg，请安装到所选解释器中。'
+      : error.killed ? '图片解码检查超时，请检查本机 Python 和图片。'
+      : detail.trim().split(/\r?\n/).at(-1)?.slice(0, 300) || '请检查 Python 和图片处理库。';
+    throw new Error(`无法检查商品图片：${reason}`);
+  }
+  for (const [index, result] of checked.entries()) {
+    const image = candidates[index];
+    if (!result.ok) warnings.push(`${image.name || '商品图片'}：${result.error}`);
+    else if (images.length < 6) images.push(image);
+  }
+  return { images, warnings };
 }
 
 export async function renderProductVideo(product, outputRoot) {

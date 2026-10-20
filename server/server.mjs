@@ -78,10 +78,10 @@ const server = createServer(async (req, res) => {
         if (req.method === 'GET' && route === '') { sendJson(res, 200, { ok: true, ...(await dailyProduction.snapshot()) }); return; }
         if (req.method === 'GET' && route === '/browsers') { sendJson(res, 200, { browsers: await automation.browsers() }); return; }
         if (['GET', 'HEAD'].includes(req.method) && route === '/media') { const media = await dailyProduction.media(String(url.searchParams.get('id') || '')); await serveMedia(req, res, media.directory, media.path); return; }
-        if (req.method === 'POST' && ['/toggle', '/preview', '/source', '/sync', '/connect', '/reconcile'].includes(route)) {
+        if (req.method === 'POST' && ['/toggle', '/preview', '/source', '/sync', '/connect', '/reconcile', '/check', '/schedule', '/content-source'].includes(route)) {
           const input = await bodyJson(req, 4096), revision = req.headers['if-match'];
-          if (['/preview', '/sync'].includes(route)) await dailyProduction[route.slice(1)](revision);
-          else await dailyProduction[route.slice(1)](input, revision);
+          if (['/preview', '/sync', '/check'].includes(route)) await dailyProduction[route.slice(1)](revision);
+          else await dailyProduction[route === '/content-source' ? 'contentSource' : route.slice(1)](input, revision);
           sendJson(res, 200, { ok: true, ...(await dailyProduction.snapshot()) }); return;
         }
         sendJson(res, 404, { ok: false, message: '每日生产接口不存在。' }); return;
@@ -163,7 +163,7 @@ const server = createServer(async (req, res) => {
         const uploaded = await receiveMedia(req, uploadDir, original);
         let warning;
         try { await addActivity({ type: 'upload-prepared', label: original, path: uploaded.path, ok: true }); }
-        catch { warning = '素材已上传，但活动日志未写入。'; }
+        catch (error) { warning = '素材已上传，但活动日志未写入。'; console.warn('活动日志写入失败：', error?.message || error); }
         sendJson(res, 201, { ok: true, ...uploaded, ...(warning ? { warning } : {}) }); return;
       }
       if (['GET', 'HEAD'].includes(req.method) && url.pathname === '/api/media') {

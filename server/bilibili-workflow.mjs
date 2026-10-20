@@ -1,8 +1,9 @@
 import { copyFile, mkdir, readFile, realpath, rmdir, stat, unlink } from 'node:fs/promises';
-import { constants, createReadStream } from 'node:fs';
+import { constants } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { basename, extname, isAbsolute, join, resolve } from 'node:path';
 import { JsonStore } from '../workbuddy/connector/lib/json-store.mjs';
+import { hashFile } from '../lib/fs-utils.mjs';
 
 const statuses = new Set(['prepared', 'submitting', 'submitted', 'published', 'uncertain', 'abandoned', 'not_submitted']);
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -13,11 +14,9 @@ const text = (value, label, max, optional = false) => {
   return value.trim().normalize('NFC');
 };
 const shaPattern = /^[a-f0-9]{64}$/;
-export async function hashFile(path) {
-  const hash = createHash('sha256');
-  for await (const chunk of createReadStream(path)) hash.update(chunk);
-  return hash.digest('hex');
-}
+// Re-exported so scripts/bilibili-workflow.mjs and the tests keep importing it
+// from here; the implementation now lives in lib/fs-utils.mjs.
+export { hashFile } from '../lib/fs-utils.mjs';
 export async function readJson(path) {
   return JSON.parse((await readFile(path, 'utf8')).replace(/^\uFEFF/, ''));
 }
