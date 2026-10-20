@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": false,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT",
+    "browserId": "TEST-BROWSER",
+    "authorizedAt": "",
+    "firstDay": "",
+    "sourceFolder": "",
+    "sourceMode": "news",
+    "newsFeedUrl": "https://feeds.example.com/source-change.xml",
+    "newsKeywords": "人工智能"
+  },
+  "runs": [],
+  "lastSync": null,
+  "newsLastSync": null,
+  "newsItems": []
+}

@@ -1,0 +1,44 @@
+{
+  "checked_at_utc": "2026-10-20T07:26:35.842093+00:00",
+  "input_url": "https://v.douyin.com/8Y3Pg2MsKV8/",
+  "canonical_url": "https://www.douyin.com/video/7696886989051860559",
+  "result": "public_http_did_not_expose_analyzable_media",
+  "attempts": [
+    {
+      "method": "ordinary desktop HTTP GET",
+      "status": 200,
+      "body_bytes": 72914,
+      "evidence": "No title, requested video ID, RENDER_DATA, ROUTER_DATA, play_addr, playAddr or aweme_detail in body.",
+      "saved_body": "desktop.html"
+    },
+    {
+      "method": "yt-dlp 2026.8.19 direct public extraction, no browser cookies",
+      "status": 403,
+      "evidence": "Failed to download web detail JSON: HTTP Error 403: Forbidden; Fresh cookies (not necessarily logged in) are needed.",
+      "downloaded_media": false
+    },
+    {
+      "method": "ordinary mobile HTTP GET to original public short link",
+      "status": 200,
+      "body_bytes": 35950,
+      "redirect_host": "www.iesdouyin.com",
+      "redirect_path": "/share/video/7696886989051860559/",
+      "evidence": "ROUTER_DATA confirms itemId, but contains page configuration only; no playable media URL or video details.",
+      "saved_body": "short-mobile.html"
+    },
+    {
+      "method": "ordinary mobile HTTP GET to public share page",
+      "status": 200,
+      "body_bytes": 32563,
+      "url": "https://www.iesdouyin.com/share/video/7696886989051860559/",
+      "evidence": "ROUTER_DATA confirms itemId, but contains page configuration only; no playable media URL or video details.",
+      "saved_body": "share-public.html"
+    }
+  ],
+  "media_downloaded": false,
+  "frame_or_audio_analysis_possible": false,
+  "browser_credentials_read": false,
+  "signature_simulation_or_captcha_bypass": false,
+  "extra_note": "Only short-link target identity is confirmed. No visual style, characters, motion, pacing or audio conclusions can be drawn from these HTTP results.",
+  "isolated_dependency": "python-packages/yt_dlp (official PyPI 2026.8.19); system Python packages unchanged"
+}

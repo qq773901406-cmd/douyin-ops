@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": false,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": ""
+  },
+  "runs": [
+    {
+      "id": "interrupted-publishing-before-submit",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "status": "failed",
+      "message": "上次运行中断，已暂停；提交结果待核实时不能自动重试。",
+      "finishedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "lastSync": null
+}

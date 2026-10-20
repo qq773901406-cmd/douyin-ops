@@ -1,0 +1,14 @@
+[
+  {
+    "at": "2026-10-19T22:00:00.000Z",
+    "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\preview-once-per-day\\daily-production\\videos\\bc645bb2-b66f-46b3-be6f-21bcab5749fa\\video.mp4",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "isSimulation": true
+  },
+  {
+    "at": "2026-10-20T22:00:00.000Z",
+    "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\preview-once-per-day\\daily-production\\videos\\617026ed-45ef-48de-93a8-550f652293db\\video.mp4",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "isSimulation": true
+  }
+]

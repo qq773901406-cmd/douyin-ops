@@ -1,0 +1,70 @@
+{
+  "account": "我的账号",
+  "persona": "",
+  "audience": "",
+  "pillars": "",
+  "diagnosis": null,
+  "schemaVersion": 5,
+  "trash": [],
+  "records": [],
+  "drafts": [
+    {
+      "id": "b0a43e46-f224-4078-ab15-d55c5b98d891",
+      "title": "10月20日资讯速览",
+      "pubTitle": "10月20日资讯速览",
+      "caption": "10月20日资讯速览｜资讯标题速览·非现场画面\n\n根据来源公开标题制作图卡，完整内容以原文为准。\n\n1. 隔离测试科技资讯1\n来源：隔离验收科技源\nhttps://news.example.com/articles/1?source=feed&edition=cn",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\final\\uncertain-submit\\daily-production\\videos\\32f64784-69eb-45c6-b606-10ebf90b7034\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceVideoId": "52085b54-c97c-43f5-a707-b60fbf7f9d0c",
+      "sourceProductionId": "d8ac4c5e-2ad5-4c42-8b36-4e10da5a86e1",
+      "sourceMode": "news",
+      "sourceArticles": [
+        {
+          "id": "8dc0fb0ba5b6bb0f9afeddd7b533a9956de00c7050c2d8541ac6b313b4f1f262",
+          "title": "隔离测试科技资讯1",
+          "url": "https://news.example.com/articles/1?source=feed&edition=cn",
+          "publishedAt": "2026-10-19T21:59:00.000Z",
+          "sourceName": "隔离验收科技源",
+          "sourceUrl": "https://feeds.example.com/uncertain-submit.xml"
+        }
+      ],
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z",
+      "productionStatus": "uncertain",
+      "productionMessage": "SIMULATED connection loss after submit"
+    }
+  ],
+  "metrics": [],
+  "ideas": [],
+  "research": [],
+  "comments": [],
+  "videos": [
+    {
+      "title": "10月20日资讯速览",
+      "subject": "每日资讯标题速览",
+      "setting": "",
+      "style": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地资讯图卡字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\final\\uncertain-submit\\daily-production\\videos\\32f64784-69eb-45c6-b606-10ebf90b7034\\video.mp4",
+      "blocker": "",
+      "notes": "公开资讯标题编排为原创信息卡画面，非现场画面，不含热度排名。\n隔离验收科技源：隔离测试科技资讯1\nhttps://news.example.com/articles/1?source=feed&edition=cn",
+      "shots": [
+        {
+          "seconds": 20,
+          "action": "按资讯逐条展示信息卡、标题、发布日期和来源，附字幕说明。",
+          "camera": "竖屏资讯图卡"
+        }
+      ],
+      "id": "52085b54-c97c-43f5-a707-b60fbf7f9d0c",
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "products": []
+}

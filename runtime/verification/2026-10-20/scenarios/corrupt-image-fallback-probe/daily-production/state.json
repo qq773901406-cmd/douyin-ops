@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": false,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": ""
+  },
+  "runs": [
+    {
+      "id": "ad06d90f-0d8d-4e2e-9986-5a9ff8b2dbca",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "status": "failed",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "本地视频合成失败：odule>\r\n    print(json.dumps(render(json.loads(Path(args.config).read_text(encoding=\"utf-8-sig\")), args.out), ensure_ascii=False))\r\n                     ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"D:\\ai\\tools\\product_video\\render.py\", line 73, in render\r\n    with Image.open(pictures[index % len(pictures)]) as source:\r\n         ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"C:\\Users\\wuzhuoxuan123\\.workbuddy\\binaries\\python\\envs\\default\\Lib\\site-packages\\PIL\\Image.py\", line 3580, in open\r\n    raise UnidentifiedImageError(msg)\r\nPIL.UnidentifiedImageError: cannot identify image file 'D:\\\\ai\\\\runtime\\\\verification\\\\2026-10-20\\\\scenarios\\\\corrupt-image-fallback-probe\\\\daily-production\\\\videos\\\\137297fe-9791-4aa7-9e1c-7c06986d7259\\\\image-0.png'\r\n",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-19T22:00:00.000Z"
+      },
+      "warnings": [],
+      "productId": "A",
+      "productKey": "验收商品a",
+      "title": "验收商品A",
+      "finishedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "lastSync": {
+    "scanned": 0,
+    "added": 0,
+    "existing": 0,
+    "warnings": [],
+    "at": "2026-10-19T22:00:00.000Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\corrupt-image-fallback-probe\\product-inbox"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": ""
+  },
+  "runs": [
+    {
+      "id": "b4eaac52-a939-4cb5-80ca-3c308a57547c",
+      "day": "2026-10-20",
+      "previewOnly": true,
+      "status": "rendering",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "正在用本地图片合成竖屏字幕视频。",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-19T22:00:00.000Z"
+      },
+      "warnings": [
+        "验收商品A：A.png：文件已移动或不存在"
+      ],
+      "productId": "B",
+      "productKey": "验收商品b",
+      "title": "验收商品B",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\missing-image-fallback\\daily-production\\videos\\84602366-cc89-4b3f-8d22-ee3bda85e802\\video.mp4",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\missing-image-fallback\\daily-production\\videos\\84602366-cc89-4b3f-8d22-ee3bda85e802",
+      "seconds": 18,
+      "sha256": "973ec23b2d86688fd9b20b1e1f7a3ff8ffbe898f9fdd732812bc50f13f955afd",
+      "videoId": "ede23de0-cce8-4566-92d9-f190a0fadd85",
+      "draftId": "dd35389b-aa05-4e9c-9d13-10b68378b650"
+    }
+  ],
+  "lastSync": {
+    "scanned": 0,
+    "added": 0,
+    "existing": 0,
+    "warnings": [],
+    "at": "2026-10-19T22:00:00.000Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\missing-image-fallback\\product-inbox"
+  }
+}

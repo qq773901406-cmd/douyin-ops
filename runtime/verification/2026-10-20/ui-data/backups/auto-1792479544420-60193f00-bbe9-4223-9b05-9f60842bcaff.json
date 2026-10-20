@@ -1,0 +1,63 @@
+{
+  "format": "doufeng-workspace",
+  "version": 1,
+  "createdAt": "2026-10-20T06:59:04.420Z",
+  "kind": "auto",
+  "label": "修改前自动快照",
+  "state": {
+    "account": "我的账号",
+    "persona": "表达直接、自然，用具体信息帮助观众。视频前三秒有钩子，结尾留一个自然问题。",
+    "audience": "",
+    "pillars": "",
+    "diagnosis": null,
+    "schemaVersion": 5,
+    "trash": [],
+    "records": [],
+    "drafts": [],
+    "metrics": [],
+    "ideas": [],
+    "research": [],
+    "comments": [],
+    "videos": [],
+    "products": [
+      {
+        "title": "验收专用商品",
+        "category": "",
+        "status": "research",
+        "currency": "USD",
+        "price": "",
+        "cost": "",
+        "shipping": "",
+        "packaging": "",
+        "feeRate": "",
+        "adCost": "",
+        "returnRate": "",
+        "supplier": "",
+        "supplierUrl": "",
+        "audience": "",
+        "hook": "",
+        "captionZh": "## 中文\n这是功能验收用的本地测试素材，仅用于验证视频合成，不用于公开发布。",
+        "captionEn": "",
+        "notes": "从原项目日报导入。报告中的结论和毛利率尚未核实；补全费用后可计算估算利润。",
+        "sourceDate": "2026-10-20",
+        "sourceKey": "2026-10-20/验收专用商品",
+        "reportedMargin": "",
+        "documents": {
+          "analysis": "# 验收专用商品",
+          "copy": "## 中文\n这是功能验收用的本地测试素材，仅用于验证视频合成，不用于公开发布。"
+        },
+        "images": [
+          {
+            "name": "test.png",
+            "path": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-data\\uploads\\3a28642a-502d-4810-87d5-b53eba1eb13e-product.png",
+            "createdAt": "2026-10-20T06:58:58.119Z"
+          }
+        ],
+        "cards": [],
+        "id": "17bb2df6-1931-487e-ab22-0b8903b261fa",
+        "createdAt": "2026-10-20T06:58:58.119Z",
+        "updatedAt": "2026-10-20T06:58:58.119Z"
+      }
+    ]
+  }
+}

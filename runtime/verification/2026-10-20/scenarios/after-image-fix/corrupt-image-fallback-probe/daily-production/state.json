@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": ""
+  },
+  "runs": [
+    {
+      "id": "06f42ad6-7988-40bb-943c-8ff9029ef136",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "status": "submitted",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "SIMULATED submission only; no browser or platform was contacted.",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-19T22:00:00.000Z"
+      },
+      "warnings": [
+        "验收商品A：A.png：图片无法解码或不符合尺寸要求：cannot identify image file 'D:\\\\ai\\\\runtime\\\\verification\\\\2026-10-20\\\\scenarios\\\\after-image-fix\\\\corrupt.png'"
+      ],
+      "productId": "B",
+      "productKey": "验收商品b",
+      "title": "验收商品B",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\corrupt-image-fallback-probe\\daily-production\\videos\\adb67f65-5385-4bb1-89d0-df2ccddc9e07\\video.mp4",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\corrupt-image-fallback-probe\\daily-production\\videos\\adb67f65-5385-4bb1-89d0-df2ccddc9e07",
+      "seconds": 18,
+      "sha256": "e08d5a9c256c9ceedbe3944248faf7c4c5811fd0ce8422980928f10232cb3053",
+      "videoId": "0c33cd16-740c-4a5b-a2b2-4f31dd0a4768",
+      "draftId": "724f5b85-7e6f-4c2f-9919-edb3f0ba3352",
+      "submitStartedAt": "2026-10-19T22:00:00.000Z",
+      "evidence": {
+        "simulation": true
+      },
+      "finishedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "lastSync": {
+    "scanned": 0,
+    "added": 0,
+    "existing": 0,
+    "warnings": [],
+    "at": "2026-10-19T22:00:00.000Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\corrupt-image-fallback-probe\\product-inbox"
+  }
+}

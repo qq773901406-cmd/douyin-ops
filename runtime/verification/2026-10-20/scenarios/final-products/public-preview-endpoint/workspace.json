@@ -1,0 +1,96 @@
+{
+  "account": "我的账号",
+  "persona": "",
+  "audience": "",
+  "pillars": "",
+  "diagnosis": null,
+  "products": [
+    {
+      "title": "验收商品A",
+      "category": "",
+      "status": "ready",
+      "currency": "USD",
+      "price": "",
+      "cost": "",
+      "shipping": "",
+      "packaging": "",
+      "feeRate": "",
+      "adCost": "",
+      "returnRate": "",
+      "supplier": "",
+      "supplierUrl": "",
+      "audience": "",
+      "hook": "",
+      "captionZh": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "captionEn": "",
+      "notes": "",
+      "sourceDate": "2026-10-20",
+      "sourceKey": "",
+      "reportedMargin": "",
+      "documents": {},
+      "images": [
+        {
+          "name": "A.png",
+          "path": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\fixture.png"
+        }
+      ],
+      "cards": [],
+      "id": "A"
+    }
+  ],
+  "schemaVersion": 5,
+  "trash": [],
+  "records": [],
+  "drafts": [
+    {
+      "id": "4965ed9b-f142-453b-8f6e-dcd3563c0d1c",
+      "title": "验收商品A",
+      "pubTitle": "验收商品A",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\public-preview-endpoint\\daily-production\\videos\\c399a6eb-692e-4836-a3de-2d8ce2da61b9\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceProductId": "A",
+      "sourceVideoId": "f3588ada-5869-4986-90f8-09ea0955a7b0",
+      "sourceProductionId": "1988541d-2b41-4163-a6eb-a737a3020d3f",
+      "sourceMode": "products",
+      "sourceArticles": [],
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z",
+      "productionStatus": "preview",
+      "productionMessage": "成片已生成，仅预览，没有发布。"
+    }
+  ],
+  "metrics": [],
+  "ideas": [],
+  "research": [],
+  "comments": [],
+  "videos": [
+    {
+      "title": "验收商品A",
+      "subject": "验收商品A",
+      "setting": "",
+      "style": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地图片字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\public-preview-endpoint\\daily-production\\videos\\c399a6eb-692e-4836-a3de-2d8ce2da61b9\\video.mp4",
+      "blocker": "",
+      "notes": "",
+      "shots": [
+        {
+          "seconds": 18,
+          "action": "按商品图片依次展示商品资料，字幕来自保存的中文文案。",
+          "camera": "竖屏商品展示"
+        }
+      ],
+      "id": "f3588ada-5869-4986-90f8-09ea0955a7b0",
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z",
+      "sourceProductId": "A"
+    }
+  ]
+}

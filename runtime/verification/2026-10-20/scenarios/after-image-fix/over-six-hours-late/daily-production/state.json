@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": ""
+  },
+  "runs": [
+    {
+      "id": "94b98eb8-9b35-4080-8aba-d8a5f4b146e2",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "status": "skipped",
+      "startedAt": "2026-10-20T04:00:00.001Z",
+      "message": "超过计划开工时间 6 小时，今天不补发。",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": ""
+      },
+      "finishedAt": "2026-10-20T04:00:00.001Z"
+    }
+  ],
+  "lastSync": null
+}

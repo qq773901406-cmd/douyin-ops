@@ -1,0 +1,22 @@
+﻿[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Microsoft YaHei,64,&H00FFFFFF,&H000000FF,&HCC000000,&H7A000000,-1,0,0,0,100,100,1,0,1,5,1,2,70,70,235,1
+Style: Title,Microsoft YaHei,92,&H00FFFFFF,&H000000FF,&HCC2A2418,&H65000000,-1,0,0,0,100,100,2,0,1,6,2,8,70,70,250,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:02.80,Title,,0,0,0,,桂花一开\N秋天才到
+Dialogue: 0,0:00:00.00,0:00:05.11,Default,,0,0,0,,为什么闻到桂花的那一刻，\N大家才觉得秋天真的来了？
+Dialogue: 0,0:00:05.11,0:00:08.70,Default,,0,0,0,,桂花不像树叶那样\N慢慢变色
+Dialogue: 0,0:00:08.70,0:00:12.10,Default,,0,0,0,,它总是在某一天\N突然出现
+Dialogue: 0,0:00:12.10,0:00:16.83,Default,,0,0,0,,一阵风吹过，整座城市\N像被按下了秋天开关
+Dialogue: 0,0:00:16.83,0:00:20.61,Default,,0,0,0,,我们记住的\N也许不是花香
+Dialogue: 0,0:00:20.61,0:00:24.58,Default,,0,0,0,,而是放学的路、\N傍晚的风
+Dialogue: 0,0:00:24.58,0:00:29.12,Default,,0,0,0,,还有某个再也回不去的\N秋天
+Dialogue: 0,0:00:29.12,0:00:32.71,Default,,0,0,0,,你那里\N闻到桂花了吗？

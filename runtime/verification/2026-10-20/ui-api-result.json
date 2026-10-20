@@ -1,0 +1,41 @@
+{
+  "checkedAt": "2026-10-20T06:59:15.965Z",
+  "base": "http://127.0.0.1:49255",
+  "dataDir": "D:/ai/runtime/verification/2026-10-20/ui-data",
+  "enabled": false,
+  "startTime": "07:30",
+  "eligible": 1,
+  "lastSync": {
+    "scanned": 1,
+    "added": 0,
+    "existing": 1,
+    "warnings": [],
+    "at": "2026-10-20T06:59:03.354Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-data\\product-inbox"
+  },
+  "runStatuses": [
+    {
+      "status": "failed",
+      "previewOnly": true,
+      "message": "没有尚未发布且图片可读取的商品。请补充商品图片或同步新日报。"
+    },
+    {
+      "status": "preview",
+      "previewOnly": true,
+      "title": "验收专用商品",
+      "message": "成片已生成，仅预览，没有发布。"
+    }
+  ],
+  "workspace": {
+    "products": 1,
+    "videos": 1,
+    "drafts": 1
+  },
+  "previewAsset": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-data\\daily-production\\videos\\05c2a2f7-c717-4157-8492-d14bc3f781a5\\video.mp4",
+  "mediaRange": {
+    "status": 206,
+    "contentRange": "bytes 0-31/74356",
+    "contentType": "video/mp4",
+    "bytes": 32
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "ffmpeg_version": "7.1-essentials_build-www.gyan.dev built with gcc 14.2.0 (Rev1, Built by MSYS2 project)",
+  "codec": "hevc",
+  "pix_fmt": "yuv420p(tv, bt709)",
+  "audio_codec": "aac",
+  "fps": 30.0,
+  "source_size": [
+    576,
+    1280
+  ],
+  "size": [
+    576,
+    1280
+  ],
+  "rotate": 0,
+  "duration": 23.57,
+  "source": "C:\\Users\\wuzhuoxuan123\\Documents\\xwechat_files\\wxid_gbq8zkj8rzzz22_e8e9\\temp\\RWTemp\\2026-10\\7862ffef91a8052235e6d609875abfe3\\3ed48dd30d3c24c9e365c07614aa3724.mp4",
+  "bytes": 3211921,
+  "frames": [
+    {
+      "timeSeconds": 0.0,
+      "path": "D:\\ai\\runtime\\reference-remake-20261020\\reference\\frames\\frame-00-00.00s.png"
+    },
+    {
+      "timeSeconds": 2.5,
+      "path": "D:\\ai\\runtime\\reference-remake-20261020\\reference\\frames\\frame-01-02.50s.png"
+    },
+    {
+      "timeSeconds": 5.0,
+      "path": "D:\\ai\\runtime\\reference-remake-20261020\\reference\\frames\\frame-02-05.00s.png"
+    },
+    {
+      "timeSeconds": 7.5,
+      "path": "D:\\ai\\runtime\\reference-remake-20261020\\reference\\frames\\frame-03-07.50s.png"
+    },
+    {
+      "timeSeconds": 10.0,
+      "path": "D:\\ai\\runtime\\reference-remake-20261020\\reference\\frames\\frame-04-10.00s.png"
+    },
+    {
+      "timeSeconds": 12.5,
+      "path": "D:\\ai\\runtime\\reference-remake-20261020\\reference\\frames\\frame-05-12.50s.png"
+    },
+    {
+      "timeSeconds": 15.0,
+      "path": "D:\\ai\\runtime\\reference-remake-20261020\\reference\\frames\\frame-06-15.00s.png"
+    },
+    {
+      "timeSeconds": 17.5,
+      "path": "D:\\ai\\runtime\\reference-remake-20261020\\reference\\frames\\frame-07-17.50s.png"
+    },
+    {
+      "timeSeconds": 20.0,
+      "path": "D:\\ai\\runtime\\reference-remake-20261020\\reference\\frames\\frame-08-20.00s.png"
+    },
+    {
+      "timeSeconds": 22.5,
+      "path": "D:\\ai\\runtime\\reference-remake-20261020\\reference\\frames\\frame-09-22.50s.png"
+    }
+  ],
+  "contactSheet": "D:\\ai\\runtime\\reference-remake-20261020\\reference\\reference-contact-sheet.jpg"
+}

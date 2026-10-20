@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": false,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": ""
+  },
+  "runs": [
+    {
+      "id": "cfccb050-5d82-4037-91bf-7ed252714418",
+      "day": "2026-10-20",
+      "previewOnly": true,
+      "status": "preview",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "成片已生成，仅预览，没有发布。",
+      "binding": {
+        "enabled": false,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-19T22:00:00.000Z"
+      },
+      "warnings": [],
+      "productId": "A",
+      "productKey": "验收商品a",
+      "title": "验收商品A",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\public-preview-endpoint\\daily-production\\videos\\05d0befe-54a9-447f-a3cb-5198b118a0f6\\video.mp4",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\public-preview-endpoint\\daily-production\\videos\\05d0befe-54a9-447f-a3cb-5198b118a0f6",
+      "seconds": 18,
+      "sha256": "fbf4b007a93880c7237875add825a0106b14999a35583269135aa6fc1a131537",
+      "videoId": "62b8ce9b-e7c8-43bb-bf1c-e56777a36c27",
+      "draftId": "e1259a66-334d-4b6b-8a32-023de52a13df",
+      "finishedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "lastSync": {
+    "scanned": 0,
+    "added": 0,
+    "existing": 0,
+    "warnings": [],
+    "at": "2026-10-19T22:00:00.000Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\public-preview-endpoint\\product-inbox"
+  }
+}

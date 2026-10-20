@@ -1,0 +1,100 @@
+{
+  "account": "我的账号",
+  "persona": "表达直接、自然，用具体信息帮助观众。视频前三秒有钩子，结尾留一个自然问题。",
+  "audience": "",
+  "pillars": "",
+  "diagnosis": null,
+  "schemaVersion": 5,
+  "trash": [],
+  "records": [],
+  "drafts": [
+    {
+      "id": "fae168c5-c8c1-42c3-9580-a1fddd16a6fe",
+      "title": "验收专用商品",
+      "pubTitle": "验收专用商品",
+      "caption": "中文\n这是功能验收用的本地测试素材，仅用于验证视频合成，不用于公开发布。",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-data\\daily-production\\videos\\05c2a2f7-c717-4157-8492-d14bc3f781a5\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceProductId": "17bb2df6-1931-487e-ab22-0b8903b261fa",
+      "sourceVideoId": "85a18e18-d244-488c-accc-1eccb3ef5484",
+      "sourceProductionId": "3734f541-59a6-4e48-8e66-537793d11371",
+      "createdAt": "2026-10-20T06:59:04.420Z",
+      "updatedAt": "2026-10-20T06:59:04.435Z",
+      "productionStatus": "preview",
+      "productionMessage": "成片已生成，仅预览，没有发布。"
+    }
+  ],
+  "metrics": [],
+  "ideas": [],
+  "research": [],
+  "comments": [],
+  "videos": [
+    {
+      "title": "验收专用商品",
+      "subject": "验收专用商品",
+      "setting": "",
+      "style": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地图片字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-data\\daily-production\\videos\\05c2a2f7-c717-4157-8492-d14bc3f781a5\\video.mp4",
+      "blocker": "",
+      "notes": "",
+      "shots": [
+        {
+          "seconds": 18,
+          "action": "按商品图片依次展示商品资料，字幕来自保存的中文文案。",
+          "camera": "竖屏商品展示"
+        }
+      ],
+      "id": "85a18e18-d244-488c-accc-1eccb3ef5484",
+      "createdAt": "2026-10-20T06:59:04.420Z",
+      "updatedAt": "2026-10-20T06:59:04.420Z",
+      "sourceProductId": "17bb2df6-1931-487e-ab22-0b8903b261fa"
+    }
+  ],
+  "products": [
+    {
+      "title": "验收专用商品",
+      "category": "",
+      "status": "research",
+      "currency": "USD",
+      "price": "",
+      "cost": "",
+      "shipping": "",
+      "packaging": "",
+      "feeRate": "",
+      "adCost": "",
+      "returnRate": "",
+      "supplier": "",
+      "supplierUrl": "",
+      "audience": "",
+      "hook": "",
+      "captionZh": "## 中文\n这是功能验收用的本地测试素材，仅用于验证视频合成，不用于公开发布。",
+      "captionEn": "",
+      "notes": "从原项目日报导入。报告中的结论和毛利率尚未核实；补全费用后可计算估算利润。",
+      "sourceDate": "2026-10-20",
+      "sourceKey": "2026-10-20/验收专用商品",
+      "reportedMargin": "",
+      "documents": {
+        "analysis": "# 验收专用商品",
+        "copy": "## 中文\n这是功能验收用的本地测试素材，仅用于验证视频合成，不用于公开发布。"
+      },
+      "images": [
+        {
+          "name": "test.png",
+          "path": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-data\\uploads\\3a28642a-502d-4810-87d5-b53eba1eb13e-product.png",
+          "createdAt": "2026-10-20T06:58:58.119Z"
+        }
+      ],
+      "cards": [],
+      "id": "17bb2df6-1931-487e-ab22-0b8903b261fa",
+      "createdAt": "2026-10-20T06:58:58.119Z",
+      "updatedAt": "2026-10-20T06:58:58.119Z"
+    }
+  ]
+}

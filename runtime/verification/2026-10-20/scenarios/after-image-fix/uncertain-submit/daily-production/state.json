@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": false,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": ""
+  },
+  "runs": [
+    {
+      "id": "ec6b9420-b4bb-42c4-82b1-1598726c73b4",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "status": "uncertain",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "SIMULATED: connection lost after submit callback",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-19T22:00:00.000Z"
+      },
+      "warnings": [],
+      "productId": "A",
+      "productKey": "验收商品a",
+      "title": "验收商品A",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\uncertain-submit\\daily-production\\videos\\1be07fc1-eba9-426b-b9c1-f9e7e62f859a\\video.mp4",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\uncertain-submit\\daily-production\\videos\\1be07fc1-eba9-426b-b9c1-f9e7e62f859a",
+      "seconds": 18,
+      "sha256": "58d8b763081ee118b38418b3cf185721f6682119866af195ca1dbddd623b3271",
+      "videoId": "075fb2c8-e3c1-4ed4-834e-ef5b9709a5d3",
+      "draftId": "b47155d5-7154-48bf-b3ef-f8baa85a951a",
+      "submitStartedAt": "2026-10-19T22:00:00.000Z",
+      "finishedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "lastSync": {
+    "scanned": 0,
+    "added": 0,
+    "existing": 0,
+    "warnings": [],
+    "at": "2026-10-19T22:00:00.000Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\uncertain-submit\\product-inbox"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT",
+    "browserId": "TEST-BROWSER",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": "",
+    "sourceMode": "news",
+    "newsFeedUrl": "https://feeds.example.com/source-unavailable.xml",
+    "newsKeywords": ""
+  },
+  "runs": [
+    {
+      "id": "d727176d-27e7-4fd7-93ef-d30f274b3568",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "sourceMode": "news",
+      "status": "skipped",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "资讯来源暂不可用，且没有近期缓存，本次不发布；计划开启时下个执行日再采集。",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT",
+        "browserId": "TEST-BROWSER",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "news",
+        "newsFeedUrl": "https://feeds.example.com/source-unavailable.xml",
+        "newsKeywords": ""
+      },
+      "warnings": [
+        "资讯来源返回 HTTP 503。"
+      ],
+      "finishedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "lastSync": null,
+  "newsLastSync": null,
+  "newsItems": []
+}

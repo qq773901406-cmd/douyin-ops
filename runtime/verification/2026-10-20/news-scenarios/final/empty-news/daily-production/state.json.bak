@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT",
+    "browserId": "TEST-BROWSER",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": "",
+    "sourceMode": "news",
+    "newsFeedUrl": "https://feeds.example.com/empty-news.xml",
+    "newsKeywords": ""
+  },
+  "runs": [
+    {
+      "id": "dae4c047-c693-4e83-bea0-14d9d6ba340a",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "sourceMode": "news",
+      "status": "selecting",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "正在采集近期资讯标题与出处。",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT",
+        "browserId": "TEST-BROWSER",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "news",
+        "newsFeedUrl": "https://feeds.example.com/empty-news.xml",
+        "newsKeywords": ""
+      },
+      "sourceResult": {
+        "at": "2026-10-19T22:00:00.000Z",
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "feedTitle": "隔离验收科技源",
+        "feedUrl": "https://feeds.example.com/empty-news.xml"
+      },
+      "warnings": []
+    }
+  ],
+  "lastSync": null,
+  "newsLastSync": {
+    "at": "2026-10-19T22:00:00.000Z",
+    "scanned": 0,
+    "added": 0,
+    "existing": 0,
+    "warnings": [],
+    "feedTitle": "隔离验收科技源",
+    "feedUrl": "https://feeds.example.com/empty-news.xml"
+  },
+  "newsItems": []
+}

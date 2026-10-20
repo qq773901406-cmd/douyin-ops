@@ -1,0 +1,14 @@
+[
+  {
+    "simulation": true,
+    "title": "10月20日资讯速览",
+    "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\final\\daily-pipeline\\daily-production\\videos\\590beb55-1bfa-45c9-8a8c-83b57ef61e03\\video.mp4",
+    "at": "2026-10-19T22:00:00.000Z"
+  },
+  {
+    "simulation": true,
+    "title": "10月21日资讯速览",
+    "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\final\\daily-pipeline\\daily-production\\videos\\5d92b56c-b9f2-477f-aad6-13fd6c6d8cf7\\video.mp4",
+    "at": "2026-10-20T22:00:00.000Z"
+  }
+]

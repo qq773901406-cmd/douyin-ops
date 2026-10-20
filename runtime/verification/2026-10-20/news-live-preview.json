@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-20T07:05:37.145Z",
+  "base": "http://127.0.0.1:61842",
+  "sourceMode": "news",
+  "enabled": false,
+  "startTime": "06:00",
+  "eligible": 60,
+  "lastSync": {
+    "at": "2026-10-20T07:04:52.886Z",
+    "scanned": 60,
+    "added": 0,
+    "existing": 60,
+    "warnings": [],
+    "feedTitle": "IT之家",
+    "feedUrl": "https://www.ithome.com/rss/"
+  },
+  "run": {
+    "status": "preview",
+    "title": "10月20日科技资讯速览",
+    "seconds": 36,
+    "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-news-data\\daily-production\\videos\\330f88a0-f3e4-44c3-a827-de3f209b68b8\\video.mp4",
+    "sourceArticles": [
+      {
+        "id": "5e0d5ce151d4609fcd22d302e70dd0567483fb82ffbcfcd4e2750e45282ca387",
+        "title": "万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡",
+        "url": "https://www.ithome.com/1/015/316.htm",
+        "publishedAt": "2026-10-20T06:58:03.000Z",
+        "sourceName": "IT之家",
+        "sourceUrl": "https://www.ithome.com/rss/"
+      },
+      {
+        "id": "66889da9d455a88d1b7b6575276c23653b78bd1d29f3db4da14b5165f60a9f92",
+        "title": "荣耀 Magic6 系列手机「AI 随心握」功能推送,升级至 110 版本可体验",
+        "url": "https://www.ithome.com/1/015/315.htm",
+        "publishedAt": "2026-10-20T06:57:13.000Z",
+        "sourceName": "IT之家",
+        "sourceUrl": "https://www.ithome.com/rss/"
+      },
+      {
+        "id": "b3fc27869813cf9e456f8a477d25ab1cc9f7275e09924263f359cb442db52033",
+        "title": "思科总裁用 AI 智能体盘点并取消无用订阅服务,一年省下上千美元",
+        "url": "https://www.ithome.com/1/015/314.htm",
+        "publishedAt": "2026-10-20T06:56:15.000Z",
+        "sourceName": "IT之家",
+        "sourceUrl": "https://www.ithome.com/rss/"
+      }
+    ],
+    "message": "成片已生成，仅预览，没有发布。"
+  },
+  "workspace": {
+    "products": 0,
+    "videos": 1,
+    "drafts": 1
+  }
+}

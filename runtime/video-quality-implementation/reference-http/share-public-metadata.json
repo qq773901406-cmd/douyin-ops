@@ -1,0 +1,20 @@
+{
+  "label": "share-public",
+  "url": "https://www.iesdouyin.com/share/video/7696886989051860559/",
+  "status": 200,
+  "content_type": "text/html; charset=UTF-8",
+  "bytes": 32563,
+  "title": [
+    "在抖音记录美好生活20261020 - 抖音"
+  ],
+  "markers": {
+    "RENDER_DATA": -1,
+    "ROUTER_DATA": 30897,
+    "play_addr": -1,
+    "playAddr": -1,
+    "video_id": -1,
+    "7696886989051860559": 21655,
+    "captcha": 3102,
+    "aweme_detail": -1
+  }
+}

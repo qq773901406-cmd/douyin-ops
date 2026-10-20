@@ -1,0 +1,202 @@
+{
+  "account": "我的账号",
+  "persona": "",
+  "audience": "",
+  "pillars": "",
+  "diagnosis": null,
+  "schemaVersion": 5,
+  "trash": [],
+  "records": [],
+  "drafts": [
+    {
+      "id": "b6b14189-9210-475b-b245-a4195fab6997",
+      "title": "10月20日科技资讯速览",
+      "pubTitle": "10月20日科技资讯速览",
+      "caption": "10月20日科技资讯速览｜资讯标题速览·非现场画面\n\n根据来源公开标题制作图卡，完整内容以原文为准。\n\n1. 隔离测试科技资讯1\n来源：隔离验收科技源\nhttps://news.example.com/articles/1?source=feed&edition=cn\n\n2. 隔离测试科技资讯2\n来源：隔离验收科技源\nhttps://news.example.com/articles/2?source=feed&edition=cn\n\n3. 隔离测试科技资讯3\n来源：隔离验收科技源\nhttps://news.example.com/articles/3?source=feed&edition=cn",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\daily-pipeline\\daily-production\\videos\\3158cbc9-d55c-40c7-9418-bc5123a0043a\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceVideoId": "73160d98-9554-4ad9-b1a1-ef184f5622d3",
+      "sourceProductionId": "db21b342-b5ab-4c2e-a51b-54706ba8674e",
+      "sourceMode": "news",
+      "sourceArticles": [
+        {
+          "id": "8dc0fb0ba5b6bb0f9afeddd7b533a9956de00c7050c2d8541ac6b313b4f1f262",
+          "title": "隔离测试科技资讯1",
+          "url": "https://news.example.com/articles/1?source=feed&edition=cn",
+          "publishedAt": "2026-10-19T21:59:00.000Z",
+          "sourceName": "隔离验收科技源",
+          "sourceUrl": "https://feeds.example.com/daily-pipeline.xml"
+        },
+        {
+          "id": "825e30544d2a2b6b88c04cceb12d5f8b664d7704babb459f739fdde305f356d9",
+          "title": "隔离测试科技资讯2",
+          "url": "https://news.example.com/articles/2?source=feed&edition=cn",
+          "publishedAt": "2026-10-19T21:58:00.000Z",
+          "sourceName": "隔离验收科技源",
+          "sourceUrl": "https://feeds.example.com/daily-pipeline.xml"
+        },
+        {
+          "id": "a801aa1687f6f047d5d77263a4f655701dafcab29e1b4b4095d34d183411fbbd",
+          "title": "隔离测试科技资讯3",
+          "url": "https://news.example.com/articles/3?source=feed&edition=cn",
+          "publishedAt": "2026-10-19T21:57:00.000Z",
+          "sourceName": "隔离验收科技源",
+          "sourceUrl": "https://feeds.example.com/daily-pipeline.xml"
+        }
+      ],
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z",
+      "productionStatus": "preview",
+      "productionMessage": "成片已生成，仅预览，没有发布。"
+    },
+    {
+      "id": "e587e258-20de-4b52-af9f-dc2592468e87",
+      "title": "10月20日科技资讯速览",
+      "pubTitle": "10月20日科技资讯速览",
+      "caption": "10月20日科技资讯速览｜资讯标题速览·非现场画面\n\n根据来源公开标题制作图卡，完整内容以原文为准。\n\n1. 隔离测试科技资讯1\n来源：隔离验收科技源\nhttps://news.example.com/articles/1?source=feed&edition=cn\n\n2. 隔离测试科技资讯2\n来源：隔离验收科技源\nhttps://news.example.com/articles/2?source=feed&edition=cn\n\n3. 隔离测试科技资讯3\n来源：隔离验收科技源\nhttps://news.example.com/articles/3?source=feed&edition=cn",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\daily-pipeline\\daily-production\\videos\\19b060ae-72f0-4256-a148-15ac31654e72\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceVideoId": "9a874d05-bca3-44cc-88f6-522c0608558c",
+      "sourceProductionId": "4c9c3ad1-0acc-4a28-b9be-ef06f2449b0d",
+      "sourceMode": "news",
+      "sourceArticles": [
+        {
+          "id": "8dc0fb0ba5b6bb0f9afeddd7b533a9956de00c7050c2d8541ac6b313b4f1f262",
+          "title": "隔离测试科技资讯1",
+          "url": "https://news.example.com/articles/1?source=feed&edition=cn",
+          "publishedAt": "2026-10-19T21:59:00.000Z",
+          "sourceName": "隔离验收科技源",
+          "sourceUrl": "https://feeds.example.com/daily-pipeline.xml"
+        },
+        {
+          "id": "825e30544d2a2b6b88c04cceb12d5f8b664d7704babb459f739fdde305f356d9",
+          "title": "隔离测试科技资讯2",
+          "url": "https://news.example.com/articles/2?source=feed&edition=cn",
+          "publishedAt": "2026-10-19T21:58:00.000Z",
+          "sourceName": "隔离验收科技源",
+          "sourceUrl": "https://feeds.example.com/daily-pipeline.xml"
+        },
+        {
+          "id": "a801aa1687f6f047d5d77263a4f655701dafcab29e1b4b4095d34d183411fbbd",
+          "title": "隔离测试科技资讯3",
+          "url": "https://news.example.com/articles/3?source=feed&edition=cn",
+          "publishedAt": "2026-10-19T21:57:00.000Z",
+          "sourceName": "隔离验收科技源",
+          "sourceUrl": "https://feeds.example.com/daily-pipeline.xml"
+        }
+      ],
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z",
+      "productionStatus": "submitted",
+      "productionMessage": "SIMULATED submission only; no browser or platform contacted."
+    },
+    {
+      "id": "83945850-3cc8-4747-875b-5eae1eb9a566",
+      "title": "10月21日科技资讯速览",
+      "pubTitle": "10月21日科技资讯速览",
+      "caption": "10月21日科技资讯速览｜资讯标题速览·非现场画面\n\n根据来源公开标题制作图卡，完整内容以原文为准。\n\n1. 隔离测试科技资讯4\n来源：隔离验收科技源\nhttps://news.example.com/articles/4?source=feed&edition=cn",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\daily-pipeline\\daily-production\\videos\\a2065345-2e30-44ec-ac94-ead60f0dff32\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceVideoId": "49f4b2ba-71cf-4746-a0fc-8b4cd3a56c57",
+      "sourceProductionId": "2809ba55-4520-48bd-9a20-53d203f19c39",
+      "sourceMode": "news",
+      "sourceArticles": [
+        {
+          "id": "707b680bc79e80835cbce882bec0f7eb332142e9d300167fd4f5dd98ac2de890",
+          "title": "隔离测试科技资讯4",
+          "url": "https://news.example.com/articles/4?source=feed&edition=cn",
+          "publishedAt": "2026-10-19T21:56:00.000Z",
+          "sourceName": "隔离验收科技源",
+          "sourceUrl": "https://feeds.example.com/daily-pipeline.xml"
+        }
+      ],
+      "createdAt": "2026-10-20T22:00:00.000Z",
+      "updatedAt": "2026-10-20T22:00:00.000Z"
+    }
+  ],
+  "metrics": [],
+  "ideas": [],
+  "research": [],
+  "comments": [],
+  "videos": [
+    {
+      "title": "10月20日科技资讯速览",
+      "subject": "每日资讯标题速览",
+      "setting": "",
+      "style": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地资讯图卡字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\daily-pipeline\\daily-production\\videos\\3158cbc9-d55c-40c7-9418-bc5123a0043a\\video.mp4",
+      "blocker": "",
+      "notes": "公开资讯标题编排为原创信息卡画面，非现场画面，不含热度排名。\n隔离验收科技源：隔离测试科技资讯1\nhttps://news.example.com/articles/1?source=feed&edition=cn\n隔离验收科技源：隔离测试科技资讯2\nhttps://news.example.com/articles/2?source=feed&edition=cn\n隔离验收科技源：隔离测试科技资讯3\nhttps://news.example.com/articles/3?source=feed&edition=cn",
+      "shots": [
+        {
+          "seconds": 36,
+          "action": "按资讯逐条展示信息卡、标题、发布日期和来源，附字幕说明。",
+          "camera": "竖屏资讯图卡"
+        }
+      ],
+      "id": "73160d98-9554-4ad9-b1a1-ef184f5622d3",
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z"
+    },
+    {
+      "title": "10月20日科技资讯速览",
+      "subject": "每日资讯标题速览",
+      "setting": "",
+      "style": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地资讯图卡字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\daily-pipeline\\daily-production\\videos\\19b060ae-72f0-4256-a148-15ac31654e72\\video.mp4",
+      "blocker": "",
+      "notes": "公开资讯标题编排为原创信息卡画面，非现场画面，不含热度排名。\n隔离验收科技源：隔离测试科技资讯1\nhttps://news.example.com/articles/1?source=feed&edition=cn\n隔离验收科技源：隔离测试科技资讯2\nhttps://news.example.com/articles/2?source=feed&edition=cn\n隔离验收科技源：隔离测试科技资讯3\nhttps://news.example.com/articles/3?source=feed&edition=cn",
+      "shots": [
+        {
+          "seconds": 36,
+          "action": "按资讯逐条展示信息卡、标题、发布日期和来源，附字幕说明。",
+          "camera": "竖屏资讯图卡"
+        }
+      ],
+      "id": "9a874d05-bca3-44cc-88f6-522c0608558c",
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z"
+    },
+    {
+      "title": "10月21日科技资讯速览",
+      "subject": "每日资讯标题速览",
+      "setting": "",
+      "style": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地资讯图卡字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\daily-pipeline\\daily-production\\videos\\a2065345-2e30-44ec-ac94-ead60f0dff32\\video.mp4",
+      "blocker": "",
+      "notes": "公开资讯标题编排为原创信息卡画面，非现场画面，不含热度排名。\n隔离验收科技源：隔离测试科技资讯4\nhttps://news.example.com/articles/4?source=feed&edition=cn",
+      "shots": [
+        {
+          "seconds": 20,
+          "action": "按资讯逐条展示信息卡、标题、发布日期和来源，附字幕说明。",
+          "camera": "竖屏资讯图卡"
+        }
+      ],
+      "id": "49f4b2ba-71cf-4746-a0fc-8b4cd3a56c57",
+      "createdAt": "2026-10-20T22:00:00.000Z",
+      "updatedAt": "2026-10-20T22:00:00.000Z"
+    }
+  ],
+  "products": []
+}

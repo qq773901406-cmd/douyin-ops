@@ -1,0 +1,93 @@
+{
+  "at": "2026-10-20T07:06:18.139Z",
+  "autoStart": false,
+  "createdTemporaryDaemon": true,
+  "usedBrowserSession": false,
+  "initial": {
+    "ok": false,
+    "exit": 2,
+    "autoStartDisabled": true,
+    "summary": {
+      "keys": [
+        "code",
+        "message",
+        "hint",
+        "exit_code"
+      ],
+      "exit_code": 2
+    }
+  },
+  "ownedPid": 125252,
+  "foregroundStatus": {
+    "ok": true,
+    "summary": {
+      "keys": [
+        "daemon_version",
+        "protocol_version",
+        "pid",
+        "uptime_secs",
+        "ws_port",
+        "sock_path",
+        "browsers",
+        "sessions",
+        "version_skew_browsers"
+      ],
+      "pid": 125252,
+      "browsers": {
+        "type": "array",
+        "count": 1,
+        "responsiveCount": 1,
+        "entryKeys": [
+          "instance_id",
+          "browser_name",
+          "browser_version",
+          "extension_version",
+          "label",
+          "session_count",
+          "connected_at_ms",
+          "version_skew",
+          "extension_protocol_version",
+          "unresponsive"
+        ]
+      },
+      "sessions": {
+        "type": "array",
+        "count": 0,
+        "responsiveCount": 0,
+        "entryKeys": []
+      }
+    }
+  },
+  "foregroundReady": true,
+  "browsers": {
+    "ok": true,
+    "exit": 0,
+    "summary": {
+      "type": "array",
+      "count": 1,
+      "responsiveCount": 1,
+      "entryKeys": [
+        "instance_id",
+        "browser_name",
+        "browser_version",
+        "extension_version",
+        "label",
+        "session_count",
+        "connected_at_ms",
+        "version_skew",
+        "extension_protocol_version",
+        "unresponsive"
+      ]
+    }
+  },
+  "result": "Foreground daemon started; browser connection summary captured",
+  "daemonOutput": {
+    "bytes": 1,
+    "jobObject": false,
+    "addressInUse": false,
+    "permissionDenied": false,
+    "spawnError": null,
+    "exit": null
+  },
+  "ownedDaemonStopped": true
+}

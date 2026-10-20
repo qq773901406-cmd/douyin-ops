@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "15:00",
+    "accountId": "fixture-account",
+    "browserId": "fixture-browser",
+    "authorizedAt": "2026-10-20T07:00:36.218Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": "D:\\ai\\runtime\\verification\\2026-10-20\\goal-audit\\corrupt-image-after-1792479635666\\source"
+  },
+  "runs": [
+    {
+      "id": "c02e4d7c-ba47-476f-819a-c7d5bd228bf2",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "status": "submitted",
+      "startedAt": "2026-10-20T07:00:36.277Z",
+      "message": "SIMULATED success; no network or real publication",
+      "binding": {
+        "enabled": true,
+        "startTime": "15:00",
+        "accountId": "fixture-account",
+        "browserId": "fixture-browser",
+        "authorizedAt": "2026-10-20T07:00:36.218Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "D:\\ai\\runtime\\verification\\2026-10-20\\goal-audit\\corrupt-image-after-1792479635666\\source"
+      },
+      "sourceResult": {
+        "scanned": 1,
+        "added": 0,
+        "existing": 1,
+        "warnings": [],
+        "at": "2026-10-20T07:00:36.288Z"
+      },
+      "warnings": [
+        "bad-product：bad.png：图片无法解码或不符合尺寸要求：cannot identify image file 'D:\\\\ai\\\\runtime\\\\verification\\\\2026-10-20\\\\goal-audit\\\\corrupt-image-after-1792479635666\\\\uploads\\\\8b8039fe-8b25-4a86-8782-08f2ca9aec07-product.png'"
+      ],
+      "productId": "z-valid",
+      "productKey": "valid-product",
+      "title": "valid-product",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\goal-audit\\corrupt-image-after-1792479635666\\daily-production\\videos\\c15cb42d-82ec-428f-8ede-10439a8afe34\\video.mp4",
+      "caption": "valid-product。商品图片展示，具体规格请查看商品资料。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\goal-audit\\corrupt-image-after-1792479635666\\daily-production\\videos\\c15cb42d-82ec-428f-8ede-10439a8afe34",
+      "seconds": 18,
+      "sha256": "04b3cf7372373f4c74a0920299d94eec5497aec13b76eb66587d422e6cbbdd93",
+      "videoId": "1de6b9f2-961d-4146-896e-aa44d7abaa7c",
+      "draftId": "98797a56-7ea7-431e-a1aa-2443c426515e",
+      "submitStartedAt": "2026-10-20T07:00:37.674Z",
+      "evidence": {
+        "kind": "offline-stub"
+      },
+      "finishedAt": "2026-10-20T07:00:37.677Z"
+    }
+  ],
+  "lastSync": {
+    "scanned": 1,
+    "added": 0,
+    "existing": 1,
+    "warnings": [],
+    "at": "2026-10-20T07:00:36.288Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\goal-audit\\corrupt-image-after-1792479635666\\source"
+  }
+}

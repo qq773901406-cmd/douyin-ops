@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": ""
+  },
+  "runs": [
+    {
+      "id": "bd4bf187-b2a7-4300-ac83-c1d1475ea84d",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "status": "selecting",
+      "startedAt": "2026-10-20T04:00:00.001Z",
+      "message": "正在从商品库选择未发布商品。",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": ""
+      }
+    }
+  ],
+  "lastSync": null
+}

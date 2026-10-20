@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-20T07:09:05.313Z",
+  "day": "2026-10-20",
+  "sources": [
+    {
+      "id": "old-title-id",
+      "title": "同一文章的早期标题",
+      "url": "https://www.ithome.com/0/123/456.htm",
+      "publishedAt": "2026-10-20T07:09:04.440Z",
+      "sourceName": "测试资讯",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    }
+  ]
+}

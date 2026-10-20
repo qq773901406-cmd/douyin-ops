@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": "",
+    "sourceMode": "products",
+    "newsFeedUrl": "https://www.ithome.com/rss/",
+    "newsKeywords": ""
+  },
+  "runs": [
+    {
+      "id": "41468dd0-b038-4ead-b8bf-9fbe9a5d8d73",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "sourceMode": "products",
+      "status": "skipped",
+      "startedAt": "2026-10-20T04:00:00.001Z",
+      "message": "超过计划开工时间 6 小时，今天不补发。",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "products",
+        "newsFeedUrl": "https://www.ithome.com/rss/",
+        "newsKeywords": ""
+      },
+      "finishedAt": "2026-10-20T04:00:00.001Z"
+    }
+  ],
+  "lastSync": null,
+  "newsLastSync": null,
+  "newsItems": []
+}

@@ -1,0 +1,79 @@
+[
+  {
+    "id": 0,
+    "file": "D:\\ai\\runtime\\ai_gen\\videos\\cat-clip-final.mp4",
+    "duration": 40.12,
+    "dimensions": [
+      720,
+      1280
+    ],
+    "sheet": "D:\\ai\\runtime\\video-quality-audit\\00-cat-clip-final-contact.jpg",
+    "probe": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'D:\\ai\\runtime\\ai_gen\\videos\\cat-clip-final.mp4':\r\n  Metadata:\r\n    major_brand     : isom\r\n    minor_version   : 512\r\n    compatible_brands: isomiso2avc1mp41\r\n    encoder         : Lavf61.7.100\r\n  Duration: 00:00:40.12, start: 0.000000, bitrate: 2307 kb/s\r\n  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 720x1280, 2168 kb/s, 24 fps, 24 tbr, 12288 tbn (default)\r\n      Metadata:\r\n        handler_name    : VideoHandler\r\n        vendor_id       : [0][0][0][0]\r\n        encoder         : Lavc61.19.100 libx264\r\n  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 134 kb/s (default)\r\n      Metadata:\r\n        handler_name    : SoundHandler\r\n        vendor_id       : [0][0][0][0]\r\nAt least one output file must be specified\r\n"
+  },
+  {
+    "id": 1,
+    "file": "D:\\ai\\runtime\\ai_gen\\videos\\cat-dance-v2.mp4",
+    "duration": 30.46,
+    "dimensions": [
+      720,
+      1280
+    ],
+    "sheet": "D:\\ai\\runtime\\video-quality-audit\\01-cat-dance-v2-contact.jpg",
+    "probe": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'D:\\ai\\runtime\\ai_gen\\videos\\cat-dance-v2.mp4':\r\n  Metadata:\r\n    major_brand     : isom\r\n    minor_version   : 512\r\n    compatible_brands: isomiso2avc1mp41\r\n    encoder         : Lavf61.7.100\r\n  Duration: 00:00:30.46, start: 0.000000, bitrate: 1831 kb/s\r\n  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 720x1280, 1828 kb/s, 24 fps, 24 tbr, 12288 tbn (default)\r\n      Metadata:\r\n        handler_name    : VideoHandler\r\n        vendor_id       : [0][0][0][0]\r\n        encoder         : Lavc61.19.100 libx264\r\nAt least one output file must be specified\r\n"
+  },
+  {
+    "id": 2,
+    "file": "D:\\ai\\runtime\\ai_gen\\videos\\橘色虎斑小猫双手比成猫耳形状放在头顶_然后在胸前画出一个爱心_2026-10-16T01-44-11.mp4",
+    "duration": 5.04,
+    "dimensions": [
+      784,
+      1176
+    ],
+    "sheet": "D:\\ai\\runtime\\video-quality-audit\\02-在头顶_然后在胸前画出一个爱心_2026-10-16T01-44-11-contact.jpg",
+    "probe": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'D:\\ai\\runtime\\ai_gen\\videos\\橘色虎斑小猫双手比成猫耳形状放在头顶_然后在胸前画出一个爱心_2026-10-16T01-44-11.mp4':\r\n  Metadata:\r\n    minor_version   : 512\r\n    major_brand     : isom\r\n    compatible_brands: isomiso2avc1mp41\r\n    AIGC            : {\"Label\":\"1\",\"ContentProducer\":\"00119111010856365494821TRJJ\",\"ProduceID\":\"1312831544-WandVideo-25ff9d180ccc45a2980a307bbdf23b46\",\"ReservedCode1\":\"{\\\"Type\\\":\\\" TC260PG\\\",\\\"Version\\\":1,\\\"Bindings\\\":[{\\\"Type\\\":\\\"soft\\\",\\\"AlgID\\\":\\\"sm3\\\",\\\"Value\\\":\\\"0d8be5b34\r\n    encoder         : Lavf58.29.100\r\n  Duration: 00:00:05.04, start: 0.000000, bitrate: 9186 kb/s\r\n  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 784x1176 [SAR 1:1 DAR 2:3], 9181 kb/s, 24 fps, 24 tbr, 24k tbn (default)\r\n      Metadata:\r\n        handler_name    : VideoHandler\r\n        vendor_id       : [0][0][0][0]\r\nAt least one output file must be specified\r\n"
+  },
+  {
+    "id": 3,
+    "file": "D:\\ai\\runtime\\ai_gen\\videos\\橘色虎斑小猫把双爪做成毛茸茸的猫爪状举到耳朵旁边_开心地左右_2026-10-16T01-41-47.mp4",
+    "duration": 5.04,
+    "dimensions": [
+      784,
+      1176
+    ],
+    "sheet": "D:\\ai\\runtime\\video-quality-audit\\03-猫爪状举到耳朵旁边_开心地左右_2026-10-16T01-41-47-contact.jpg",
+    "probe": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'D:\\ai\\runtime\\ai_gen\\videos\\橘色虎斑小猫把双爪做成毛茸茸的猫爪状举到耳朵旁边_开心地左右_2026-10-16T01-41-47.mp4':\r\n  Metadata:\r\n    minor_version   : 512\r\n    major_brand     : isom\r\n    compatible_brands: isomiso2avc1mp41\r\n    AIGC            : {\"Label\":\"1\",\"ContentProducer\":\"00119111010856365494821TRJJ\",\"ProduceID\":\"1312831544-WandVideo-cac1d77e5ef84eceaf64542e8367da36\",\"ReservedCode1\":\"{\\\"Type\\\":\\\" TC260PG\\\",\\\"Version\\\":1,\\\"Bindings\\\":[{\\\"Type\\\":\\\"soft\\\",\\\"AlgID\\\":\\\"sm3\\\",\\\"Value\\\":\\\"a56312dd3\r\n    encoder         : Lavf58.29.100\r\n  Duration: 00:00:05.04, start: 0.000000, bitrate: 8942 kb/s\r\n  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 784x1176 [SAR 1:1 DAR 2:3], 8937 kb/s, 24 fps, 24 tbr, 24k tbn (default)\r\n      Metadata:\r\n        handler_name    : VideoHandler\r\n        vendor_id       : [0][0][0][0]\r\nAt least one output file must be specified\r\n"
+  },
+  {
+    "id": 4,
+    "file": "D:\\ai\\runtime\\ai_gen\\videos\\橘色虎斑小猫用毛茸茸的猫爪做可爱抓挠动作_同时左右点胯扭动身_2026-10-16T01-44-05.mp4",
+    "duration": 5.04,
+    "dimensions": [
+      784,
+      1176
+    ],
+    "sheet": "D:\\ai\\runtime\\video-quality-audit\\04-爱抓挠动作_同时左右点胯扭动身_2026-10-16T01-44-05-contact.jpg",
+    "probe": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'D:\\ai\\runtime\\ai_gen\\videos\\橘色虎斑小猫用毛茸茸的猫爪做可爱抓挠动作_同时左右点胯扭动身_2026-10-16T01-44-05.mp4':\r\n  Metadata:\r\n    minor_version   : 512\r\n    major_brand     : isom\r\n    compatible_brands: isomiso2avc1mp41\r\n    AIGC            : {\"Label\":\"1\",\"ContentProducer\":\"00119111010856365494821TRJJ\",\"ProduceID\":\"1312831544-WandVideo-bd2ca52936074f2eb9e7ba2181e8baee\",\"ReservedCode1\":\"{\\\"Type\\\":\\\" TC260PG\\\",\\\"Version\\\":1,\\\"Bindings\\\":[{\\\"Type\\\":\\\"soft\\\",\\\"AlgID\\\":\\\"sm3\\\",\\\"Value\\\":\\\"cfedf3079\r\n    encoder         : Lavf58.29.100\r\n  Duration: 00:00:05.04, start: 0.000000, bitrate: 9449 kb/s\r\n  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 784x1176 [SAR 1:1 DAR 2:3], 9443 kb/s, 24 fps, 24 tbr, 24k tbn (default)\r\n      Metadata:\r\n        handler_name    : VideoHandler\r\n        vendor_id       : [0][0][0][0]\r\nAt least one output file must be specified\r\n"
+  },
+  {
+    "id": 5,
+    "file": "D:\\ai\\runtime\\ai_gen\\videos\\橘色虎斑小猫用猫爪把粉色蝴蝶结发夹别在头侧耳边_松开爪子后开_2026-10-16T01-41-53.mp4",
+    "duration": 5.04,
+    "dimensions": [
+      784,
+      1176
+    ],
+    "sheet": "D:\\ai\\runtime\\video-quality-audit\\05-发夹别在头侧耳边_松开爪子后开_2026-10-16T01-41-53-contact.jpg",
+    "probe": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'D:\\ai\\runtime\\ai_gen\\videos\\橘色虎斑小猫用猫爪把粉色蝴蝶结发夹别在头侧耳边_松开爪子后开_2026-10-16T01-41-53.mp4':\r\n  Metadata:\r\n    minor_version   : 512\r\n    major_brand     : isom\r\n    compatible_brands: isomiso2avc1mp41\r\n    AIGC            : {\"Label\":\"1\",\"ContentProducer\":\"00119111010856365494821TRJJ\",\"ProduceID\":\"1312831544-WandVideo-a68f249ba56248b08dcbbb3e2ec444b0\",\"ReservedCode1\":\"{\\\"Type\\\":\\\" TC260PG\\\",\\\"Version\\\":1,\\\"Bindings\\\":[{\\\"Type\\\":\\\"soft\\\",\\\"AlgID\\\":\\\"sm3\\\",\\\"Value\\\":\\\"bbee326d6\r\n    encoder         : Lavf58.29.100\r\n  Duration: 00:00:05.04, start: 0.000000, bitrate: 9142 kb/s\r\n  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 784x1176 [SAR 1:1 DAR 2:3], 9136 kb/s, 24 fps, 24 tbr, 24k tbn (default)\r\n      Metadata:\r\n        handler_name    : VideoHandler\r\n        vendor_id       : [0][0][0][0]\r\nAt least one output file must be specified\r\n"
+  },
+  {
+    "id": 6,
+    "file": "D:\\ai\\runtime\\ai_gen\\videos\\橘色虎斑小猫站在温暖室内木地板上_低头看脚边地上的一个粉色蝴_2026-10-16T01-41-58.mp4",
+    "duration": 5.04,
+    "dimensions": [
+      784,
+      1176
+    ],
+    "sheet": "D:\\ai\\runtime\\video-quality-audit\\06-上_低头看脚边地上的一个粉色蝴_2026-10-16T01-41-58-contact.jpg",
+    "probe": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'D:\\ai\\runtime\\ai_gen\\videos\\橘色虎斑小猫站在温暖室内木地板上_低头看脚边地上的一个粉色蝴_2026-10-16T01-41-58.mp4':\r\n  Metadata:\r\n    minor_version   : 512\r\n    major_brand     : isom\r\n    compatible_brands: isomiso2avc1mp41\r\n    AIGC            : {\"Label\":\"1\",\"ContentProducer\":\"00119111010856365494821TRJJ\",\"ProduceID\":\"1312831544-WandVideo-b9e410226620414189c207136417d440\",\"ReservedCode1\":\"{\\\"Type\\\":\\\" TC260PG\\\",\\\"Version\\\":1,\\\"Bindings\\\":[{\\\"Type\\\":\\\"soft\\\",\\\"AlgID\\\":\\\"sm3\\\",\\\"Value\\\":\\\"ba5ef16c3\r\n    encoder         : Lavf58.29.100\r\n  Duration: 00:00:05.04, start: 0.000000, bitrate: 7553 kb/s\r\n  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 784x1176 [SAR 1:1 DAR 2:3], 7547 kb/s, 24 fps, 24 tbr, 24k tbn (default)\r\n      Metadata:\r\n        handler_name    : VideoHandler\r\n        vendor_id       : [0][0][0][0]\r\nAt least one output file must be specified\r\n"
+  }
+]

@@ -1,0 +1,5 @@
+
+> doufeng-workbench@4.2.0 check
+> node scripts/check.mjs
+
+静态语法检查通过：50 个文件。未执行功能测试。

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "config": {
+    "folder": "",
+    "dailyTime": "20:00",
+    "timeZone": "Asia/Shanghai",
+    "enabled": false,
+    "browserId": "TEST-BROWSER",
+    "accountId": "TEST-ACCOUNT",
+    "verifiedAt": "2026-10-19T22:00:00.000Z"
+  },
+  "items": [],
+  "events": []
+}

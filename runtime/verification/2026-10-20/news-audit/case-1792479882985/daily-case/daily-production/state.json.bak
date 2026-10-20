@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "15:00",
+    "accountId": "audit",
+    "browserId": "audit-browser",
+    "authorizedAt": "2026-10-20T07:04:42.988Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": "",
+    "sourceMode": "news",
+    "newsFeedUrl": "https://www.ithome.com/rss/",
+    "newsKeywords": ""
+  },
+  "runs": [
+    {
+      "id": "c6d3cdf3-2118-431e-a016-4f06f242e05a",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "sourceMode": "news",
+      "status": "rendering",
+      "startedAt": "2026-10-20T07:04:43.487Z",
+      "message": "已选择 2 条资讯，正在制作原创排版的信息卡与字幕。",
+      "binding": {
+        "enabled": true,
+        "startTime": "15:00",
+        "accountId": "audit",
+        "browserId": "audit-browser",
+        "authorizedAt": "2026-10-20T07:04:42.988Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "news",
+        "newsFeedUrl": "https://www.ithome.com/rss/",
+        "newsKeywords": ""
+      },
+      "sourceResult": {
+        "at": "2026-10-20T07:04:42.988Z",
+        "warnings": [],
+        "scanned": 2,
+        "existing": 2,
+        "added": 0
+      },
+      "warnings": [],
+      "title": "2026-10-20 资讯速览",
+      "newsItemIds": [
+        "5e6748b9797bb30606863af421a2a071492091a0c764c84ca9416feb29e87154",
+        "f6385a7b9ada06ec4a34c2562c5f1449b9d2ddfa80b1fc77e594b9b8abfe44bb"
+      ],
+      "sourceArticles": [
+        {
+          "title": "同一文章的早期标题",
+          "url": "https://www.ithome.com/0/123/456.htm",
+          "publishedAt": "2026-10-20T07:04:42.988000Z",
+          "sourceName": "测试资讯",
+          "sourceUrl": "https://www.ithome.com/rss/",
+          "id": "5e6748b9797bb30606863af421a2a071492091a0c764c84ca9416feb29e87154"
+        },
+        {
+          "title": "同一文章更新后的标题",
+          "url": "https://www.ithome.com/0/123/456.htm",
+          "publishedAt": "2026-10-20T07:04:42.988000Z",
+          "sourceName": "测试资讯",
+          "sourceUrl": "https://www.ithome.com/rss/",
+          "id": "f6385a7b9ada06ec4a34c2562c5f1449b9d2ddfa80b1fc77e594b9b8abfe44bb"
+        }
+      ]
+    }
+  ],
+  "lastSync": null,
+  "newsLastSync": {
+    "at": "2026-10-20T07:04:42.988Z",
+    "feedUrl": "https://www.ithome.com/rss/"
+  },
+  "newsItems": [
+    {
+      "title": "同一文章的早期标题",
+      "url": "https://www.ithome.com/0/123/456.htm",
+      "publishedAt": "2026-10-20T07:04:42.988000Z",
+      "sourceName": "测试资讯",
+      "sourceUrl": "https://www.ithome.com/rss/",
+      "id": "5e6748b9797bb30606863af421a2a071492091a0c764c84ca9416feb29e87154"
+    },
+    {
+      "title": "同一文章更新后的标题",
+      "url": "https://www.ithome.com/0/123/456.htm",
+      "publishedAt": "2026-10-20T07:04:42.988000Z",
+      "sourceName": "测试资讯",
+      "sourceUrl": "https://www.ithome.com/rss/",
+      "id": "f6385a7b9ada06ec4a34c2562c5f1449b9d2ddfa80b1fc77e594b9b8abfe44bb"
+    }
+  ]
+}

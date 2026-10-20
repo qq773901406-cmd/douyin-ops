@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": false,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": "",
+    "sourceMode": "products",
+    "newsFeedUrl": "https://www.ithome.com/rss/",
+    "newsKeywords": ""
+  },
+  "runs": [
+    {
+      "id": "1988541d-2b41-4163-a6eb-a737a3020d3f",
+      "day": "2026-10-20",
+      "previewOnly": true,
+      "sourceMode": "products",
+      "status": "preview",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "成片已生成，仅预览，没有发布。",
+      "binding": {
+        "enabled": false,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "products",
+        "newsFeedUrl": "https://www.ithome.com/rss/",
+        "newsKeywords": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-19T22:00:00.000Z"
+      },
+      "warnings": [],
+      "productId": "A",
+      "productKey": "验收商品a",
+      "title": "验收商品A",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\public-preview-endpoint\\daily-production\\videos\\c399a6eb-692e-4836-a3de-2d8ce2da61b9\\video.mp4",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\public-preview-endpoint\\daily-production\\videos\\c399a6eb-692e-4836-a3de-2d8ce2da61b9",
+      "seconds": 18,
+      "sha256": "a60d61d839e31fa5df11cdd8c096054a0989ddce2e90c4351d7743f2b1078086",
+      "videoId": "f3588ada-5869-4986-90f8-09ea0955a7b0",
+      "draftId": "4965ed9b-f142-453b-8f6e-dcd3563c0d1c",
+      "finishedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "lastSync": {
+    "scanned": 0,
+    "added": 0,
+    "existing": 0,
+    "warnings": [],
+    "at": "2026-10-19T22:00:00.000Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\public-preview-endpoint\\product-inbox"
+  },
+  "newsLastSync": null,
+  "newsItems": []
+}

@@ -1,0 +1,162 @@
+{
+  "startedAt": "2026-10-20T07:09:54.566Z",
+  "finishedAt": "2026-10-20T07:10:08.744Z",
+  "root": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products",
+  "scope": "Real DailyProduction, JsonStore, normalizeState, local Python/Pillow/FFmpeg rendering. Fake account, fake browser, fake publisher only. No web publication and no platform connection.",
+  "clock": "Date injected with Beijing schedule times inside this isolated Node process.",
+  "environment": {
+    "ok": true,
+    "checkedAt": "2026-10-19T22:00:00.000Z",
+    "message": "Python、图片处理库、中文字体及 FFmpeg 可用；尚未生成视频。"
+  },
+  "sourceHashesBefore": {
+    "server/daily-production.mjs": "986632c50272272d27ab837eac9a5775dbe6a1cf00c057f6c9deae21176cb0a7",
+    "server/product-video.mjs": "17d72a76feec043e98b7b47b76dc618f54df7a8ff4ff182888891c18fb98398d",
+    "server/product-source.mjs": "72750f7ec0d9d6653fb00b9cd020bb04989f1f233a656705430ae47ff032c73b",
+    "tools/product_video/render.py": "39346e7b82ce66a4b658074d53ea4de9bb21549878c6c09c57ec715a81267365",
+    "workbuddy/connector/lib/workspace-model.mjs": "34bbdfd4fbb2fdaf5efff340cbc34e97686731e2264fc81ced57afc0c41eb1e2"
+  },
+  "sourceHashesAfter": {
+    "server/daily-production.mjs": "986632c50272272d27ab837eac9a5775dbe6a1cf00c057f6c9deae21176cb0a7",
+    "server/product-video.mjs": "17d72a76feec043e98b7b47b76dc618f54df7a8ff4ff182888891c18fb98398d",
+    "server/product-source.mjs": "72750f7ec0d9d6653fb00b9cd020bb04989f1f233a656705430ae47ff032c73b",
+    "tools/product_video/render.py": "39346e7b82ce66a4b658074d53ea4de9bb21549878c6c09c57ec715a81267365",
+    "workbuddy/connector/lib/workspace-model.mjs": "34bbdfd4fbb2fdaf5efff340cbc34e97686731e2264fc81ced57afc0c41eb1e2"
+  },
+  "sourcesChangedDuringVerification": [],
+  "summary": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "name": "preview-does-not-publish-and-once-per-day",
+      "result": "PASS",
+      "elapsedMs": 5820,
+      "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\preview-once-per-day",
+      "realRenderedVideo": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\preview-once-per-day\\daily-production\\videos\\0de2b5f7-99dd-4e25-a768-b6a0f2654c60\\video.mp4",
+      "simulatedPublisherCalls": 2,
+      "statuses": [
+        {
+          "day": "2026-10-20",
+          "preview": true,
+          "status": "preview",
+          "productId": "A"
+        },
+        {
+          "day": "2026-10-20",
+          "preview": false,
+          "status": "submitted",
+          "productId": "A"
+        },
+        {
+          "day": "2026-10-21",
+          "preview": false,
+          "status": "submitted",
+          "productId": "B"
+        }
+      ],
+      "leaseCount": 3,
+      "releaseCount": 3
+    },
+    {
+      "name": "beijing-time-boundaries-and-six-hour-window",
+      "result": "PASS",
+      "elapsedMs": 74,
+      "evidenceDirectories": [
+        "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\before-six",
+        "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\exactly-six-hours-late",
+        "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\over-six-hours-late"
+      ],
+      "before06RunCount": 0,
+      "exactly06Status": "failed",
+      "exactly12Status": "failed-no-product-not-expired",
+      "after12Status": "skipped"
+    },
+    {
+      "name": "no-products-fails-and-pauses",
+      "result": "PASS",
+      "elapsedMs": 34,
+      "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\no-products",
+      "status": "failed",
+      "message": "没有尚未发布且图片可读取的商品。请补充商品图片或同步新日报。",
+      "scheduleEnabled": false
+    },
+    {
+      "name": "missing-first-image-skips-to-next-product",
+      "result": "PASS",
+      "elapsedMs": 1411,
+      "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\missing-image-fallback",
+      "selectedProductId": "B",
+      "warnings": [
+        "验收商品A：A.png：文件已移动或不存在"
+      ],
+      "realRenderedVideo": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\missing-image-fallback\\daily-production\\videos\\6acae639-b696-475a-9c92-9f8b76556c2d\\video.mp4"
+    },
+    {
+      "name": "submit-exception-becomes-uncertain-without-retry",
+      "result": "PASS",
+      "elapsedMs": 1643,
+      "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\uncertain-submit",
+      "status": "uncertain",
+      "simulatedPublisherCalls": 1,
+      "scheduleEnabled": false,
+      "submitStartedAt": "2026-10-19T22:00:00.000Z"
+    },
+    {
+      "name": "interrupted-startup-recovery",
+      "result": "PASS",
+      "elapsedMs": 57,
+      "variants": [
+        {
+          "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\interrupted-selecting",
+          "originalStatus": "selecting",
+          "submitStarted": false,
+          "recoveredStatus": "failed"
+        },
+        {
+          "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\interrupted-rendering",
+          "originalStatus": "rendering",
+          "submitStarted": false,
+          "recoveredStatus": "failed"
+        },
+        {
+          "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\interrupted-publishing-before-submit",
+          "originalStatus": "publishing",
+          "submitStarted": false,
+          "recoveredStatus": "failed"
+        },
+        {
+          "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\interrupted-publishing-after-submit",
+          "originalStatus": "publishing",
+          "submitStarted": true,
+          "recoveredStatus": "uncertain"
+        }
+      ]
+    },
+    {
+      "name": "public-preview-endpoint-eventually-renders-without-publish",
+      "result": "PASS",
+      "elapsedMs": 1203,
+      "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\public-preview-endpoint",
+      "status": "preview",
+      "simulatedPublisherCalls": 0,
+      "realRenderedVideo": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\public-preview-endpoint\\daily-production\\videos\\c399a6eb-692e-4836-a3de-2d8ce2da61b9\\video.mp4"
+    },
+    {
+      "name": "corrupt-first-image-skips-to-next-product",
+      "result": "PASS",
+      "elapsedMs": 1532,
+      "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\corrupt-image-fallback-probe",
+      "observedStatus": "submitted",
+      "selectedProductId": "B",
+      "scheduleEnabled": true,
+      "message": "SIMULATED submission only; no browser or platform was contacted.",
+      "warnings": [
+        "验收商品A：A.png：图片无法解码或不符合尺寸要求：cannot identify image file 'D:\\\\ai\\\\runtime\\\\verification\\\\2026-10-20\\\\scenarios\\\\final-products\\\\corrupt.png'"
+      ],
+      "simulatedPublisherCalls": 1
+    }
+  ]
+}

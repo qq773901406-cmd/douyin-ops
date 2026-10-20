@@ -1,0 +1,240 @@
+{
+  "startedAt": "2026-10-20T07:05:36.532Z",
+  "finishedAt": "2026-10-20T07:05:44.969Z",
+  "root": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight",
+  "scope": "Real DailyProduction, collectNews RSS/Atom parser, JsonStore, normalizeState and offline Pillow/FFmpeg news rendering. HTTPS/DNS transport adapted only inside this process to a local HTTP fixture. Publisher stub only; no platform/browser or external network contacted.",
+  "sourceHashesBefore": {
+    "server/daily-production.mjs": "cdc696c7195a30962d1a1a557d00cc1cb9a5bad7816e43f55646e348882e13f9",
+    "server/news-source.mjs": "279a03bb01698c475a2ffd4ca8089a65bd8d711f10b3ed8c702487f9083e925f",
+    "server/news-video.mjs": "319e77e0f4e43c3fbf1b849a14c38c9944cfab8a50fa301fd061bfbb0a750f4f",
+    "tools/news_feed/parse.py": "607d344e813e3d9c3e2df675d33d9e52b9eb3756f0d552187e52b9e955337090",
+    "tools/news_video/render.py": "b373528f80dfa42e3371cf3ae67cff3f17f44baf8abb0624e9ee0282678ba073",
+    "server/product-video.mjs": "17d72a76feec043e98b7b47b76dc618f54df7a8ff4ff182888891c18fb98398d",
+    "workbuddy/connector/lib/workspace-model.mjs": "34bbdfd4fbb2fdaf5efff340cbc34e97686731e2264fc81ced57afc0c41eb1e2"
+  },
+  "sourceHashesAfter": {
+    "server/daily-production.mjs": "cdc696c7195a30962d1a1a557d00cc1cb9a5bad7816e43f55646e348882e13f9",
+    "server/news-source.mjs": "be4c1c37031de3e62ab25ab33b4a8ed57e2fe17695e2f14cca3b0e7892a0e613",
+    "server/news-video.mjs": "319e77e0f4e43c3fbf1b849a14c38c9944cfab8a50fa301fd061bfbb0a750f4f",
+    "tools/news_feed/parse.py": "b45dfda946a77b7f2e0d478799cb259da80f7919f62c1acf0556e8c779976702",
+    "tools/news_video/render.py": "b373528f80dfa42e3371cf3ae67cff3f17f44baf8abb0624e9ee0282678ba073",
+    "server/product-video.mjs": "17d72a76feec043e98b7b47b76dc618f54df7a8ff4ff182888891c18fb98398d",
+    "workbuddy/connector/lib/workspace-model.mjs": "34bbdfd4fbb2fdaf5efff340cbc34e97686731e2264fc81ced57afc0c41eb1e2"
+  },
+  "sourcesChangedDuringVerification": [
+    "server/news-source.mjs",
+    "tools/news_feed/parse.py"
+  ],
+  "summary": {
+    "total": 10,
+    "passed": 10,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "name": "rss-fetch-parse-date-filter-and-title-deduplication",
+      "result": "PASS",
+      "itemCount": 2,
+      "warnings": [
+        "1 条资讯没有明确日期和时区，已跳过。",
+        "2 条资讯不在最近 48 小时内或日期超前，已跳过。",
+        "已跳过链接无效或指向非公开地址的资讯。"
+      ],
+      "elapsedMs": 197
+    },
+    {
+      "name": "atom-and-keyword-filter",
+      "result": "PASS",
+      "itemCount": 1,
+      "title": "人工智能芯片测试进展",
+      "sourceName": "ATOM科技来源",
+      "elapsedMs": 248
+    },
+    {
+      "name": "preview-daily-limit-cross-day-dedup-and-empty-day",
+      "result": "PASS",
+      "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\daily-pipeline",
+      "statuses": [
+        {
+          "day": "2026-10-20",
+          "status": "preview",
+          "previewOnly": true,
+          "sourceCount": 3
+        },
+        {
+          "day": "2026-10-20",
+          "status": "submitted",
+          "previewOnly": false,
+          "sourceCount": 3
+        },
+        {
+          "day": "2026-10-21",
+          "status": "submitted",
+          "previewOnly": false,
+          "sourceCount": 1
+        },
+        {
+          "day": "2026-10-22",
+          "status": "skipped",
+          "previewOnly": false,
+          "sourceCount": 0
+        }
+      ],
+      "realRenderedVideo": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\daily-pipeline\\daily-production\\videos\\3158cbc9-d55c-40c7-9418-bc5123a0043a\\video.mp4",
+      "introCard": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\daily-pipeline\\daily-production\\videos\\3158cbc9-d55c-40c7-9418-bc5123a0043a\\cards\\intro.png",
+      "newsCard": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\daily-pipeline\\daily-production\\videos\\3158cbc9-d55c-40c7-9418-bc5123a0043a\\cards\\news-1.png",
+      "simulatedPublisherCalls": 2,
+      "leases": 4,
+      "releases": 4,
+      "elapsedMs": 4848
+    },
+    {
+      "name": "no-new-news-skips-with-plan-enabled",
+      "result": "PASS",
+      "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\empty-news",
+      "status": "skipped",
+      "enabled": true,
+      "message": "最近 48 小时没有尚未发布的匹配资讯，本次跳过，不重复发布；计划开启时下个执行日继续采集。",
+      "elapsedMs": 146
+    },
+    {
+      "name": "source-outage-no-cache-skips-with-plan-enabled",
+      "result": "PASS",
+      "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\source-unavailable",
+      "status": "skipped",
+      "warnings": [
+        "资讯来源返回 HTTP 503。"
+      ],
+      "elapsedMs": 23
+    },
+    {
+      "name": "source-outage-reuses-fresh-cache",
+      "result": "PASS",
+      "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\cache-fallback",
+      "status": "submitted",
+      "simulatedPublisherCalls": 1,
+      "warnings": [
+        "资讯采集未完成，沿用 48 小时内的缓存：资讯来源返回 HTTP 503。"
+      ],
+      "elapsedMs": 1228
+    },
+    {
+      "name": "submit-exception-protected-no-retry",
+      "result": "PASS",
+      "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\uncertain-submit",
+      "status": "uncertain",
+      "simulatedPublisherCalls": 1,
+      "enabled": false,
+      "elapsedMs": 1170
+    },
+    {
+      "name": "beijing-six-oclock-and-expiry",
+      "result": "PASS",
+      "evidenceDirectories": [
+        "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\time-boundary",
+        "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\too-late"
+      ],
+      "before06RunCount": 0,
+      "at06RunCount": 1,
+      "after12Fetched": false,
+      "elapsedMs": 219
+    },
+    {
+      "name": "source-change-disables-authorization-and-clears-cache",
+      "result": "PASS",
+      "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\source-change",
+      "enabled": false,
+      "remainingCache": 0,
+      "elapsedMs": 151
+    },
+    {
+      "name": "local-source-and-entity-declarations-rejected",
+      "result": "PASS",
+      "localSourceFetched": false,
+      "entityFeedRejected": true,
+      "elapsedMs": 184
+    }
+  ],
+  "networkLog": [
+    {
+      "path": "/rss-contract.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/atom-contract.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/daily-pipeline.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/daily-pipeline.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/daily-pipeline.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/daily-pipeline.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/daily-pipeline.xml",
+      "simulationTime": "2026-10-20T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/daily-pipeline.xml",
+      "simulationTime": "2026-10-21T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/empty-news.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/source-unavailable.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 503
+    },
+    {
+      "path": "/cache-fallback.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/cache-fallback.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 503
+    },
+    {
+      "path": "/uncertain-submit.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/time-boundary.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/source-change.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 200
+    },
+    {
+      "path": "/entity-contract.xml",
+      "simulationTime": "2026-10-19T22:00:00.000Z",
+      "status": 200
+    }
+  ]
+}

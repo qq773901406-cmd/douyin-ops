@@ -1,0 +1,68 @@
+{
+  "account": "我的账号",
+  "persona": "",
+  "audience": "",
+  "pillars": "",
+  "diagnosis": null,
+  "schemaVersion": 5,
+  "trash": [],
+  "records": [],
+  "drafts": [
+    {
+      "id": "6bfa3c06-eceb-401a-9602-c663b56c10a6",
+      "title": "10月20日科技资讯速览",
+      "pubTitle": "10月20日科技资讯速览",
+      "caption": "10月20日科技资讯速览｜资讯标题速览·非现场画面\n\n根据来源公开标题制作图卡，完整内容以原文为准。\n\n1. 隔离测试科技资讯1\n来源：隔离验收科技源\nhttps://news.example.com/articles/1?source=feed&edition=cn",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\cache-fallback\\daily-production\\videos\\ee4f61c0-6a8e-4aea-8f8b-398fb842794a\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceVideoId": "0b644b0f-c7f3-4049-801f-7fbfd8468ca9",
+      "sourceProductionId": "1e310b5f-de67-4845-8081-c54968b0396d",
+      "sourceMode": "news",
+      "sourceArticles": [
+        {
+          "id": "8dc0fb0ba5b6bb0f9afeddd7b533a9956de00c7050c2d8541ac6b313b4f1f262",
+          "title": "隔离测试科技资讯1",
+          "url": "https://news.example.com/articles/1?source=feed&edition=cn",
+          "publishedAt": "2026-10-19T21:59:00.000Z",
+          "sourceName": "隔离验收科技源",
+          "sourceUrl": "https://feeds.example.com/cache-fallback.xml"
+        }
+      ],
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "metrics": [],
+  "ideas": [],
+  "research": [],
+  "comments": [],
+  "videos": [
+    {
+      "title": "10月20日科技资讯速览",
+      "subject": "每日资讯标题速览",
+      "setting": "",
+      "style": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地资讯图卡字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-scenarios\\preflight\\cache-fallback\\daily-production\\videos\\ee4f61c0-6a8e-4aea-8f8b-398fb842794a\\video.mp4",
+      "blocker": "",
+      "notes": "公开资讯标题编排为原创信息卡画面，非现场画面，不含热度排名。\n隔离验收科技源：隔离测试科技资讯1\nhttps://news.example.com/articles/1?source=feed&edition=cn",
+      "shots": [
+        {
+          "seconds": 20,
+          "action": "按资讯逐条展示信息卡、标题、发布日期和来源，附字幕说明。",
+          "camera": "竖屏资讯图卡"
+        }
+      ],
+      "id": "0b644b0f-c7f3-4049-801f-7fbfd8468ca9",
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "products": []
+}

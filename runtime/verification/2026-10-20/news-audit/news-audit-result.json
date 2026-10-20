@@ -1,0 +1,116 @@
+{
+  "checkedAt": "2026-10-20T07:04:43.509Z",
+  "sourcesUnchangedDuringAudit": true,
+  "before": {
+    "server/news-source.mjs": {
+      "sha256": "279a03bb01698c475a2ffd4ca8089a65bd8d711f10b3ed8c702487f9083e925f",
+      "modifiedAt": "2026-10-20T07:02:41.956Z"
+    },
+    "server/news-video.mjs": {
+      "sha256": "319e77e0f4e43c3fbf1b849a14c38c9944cfab8a50fa301fd061bfbb0a750f4f",
+      "modifiedAt": "2026-10-20T07:01:44.791Z"
+    },
+    "tools/news_feed/parse.py": {
+      "sha256": "607d344e813e3d9c3e2df675d33d9e52b9eb3756f0d552187e52b9e955337090",
+      "modifiedAt": "2026-10-20T07:02:42.154Z"
+    },
+    "tools/news_video/render.py": {
+      "sha256": "b373528f80dfa42e3371cf3ae67cff3f17f44baf8abb0624e9ee0282678ba073",
+      "modifiedAt": "2026-10-20T07:01:45.365Z"
+    },
+    "server/daily-production.mjs": {
+      "sha256": "cdc696c7195a30962d1a1a557d00cc1cb9a5bad7816e43f55646e348882e13f9",
+      "modifiedAt": "2026-10-20T07:02:28.750Z"
+    }
+  },
+  "after": {
+    "server/news-source.mjs": {
+      "sha256": "279a03bb01698c475a2ffd4ca8089a65bd8d711f10b3ed8c702487f9083e925f",
+      "modifiedAt": "2026-10-20T07:02:41.956Z"
+    },
+    "server/news-video.mjs": {
+      "sha256": "319e77e0f4e43c3fbf1b849a14c38c9944cfab8a50fa301fd061bfbb0a750f4f",
+      "modifiedAt": "2026-10-20T07:01:44.791Z"
+    },
+    "tools/news_feed/parse.py": {
+      "sha256": "607d344e813e3d9c3e2df675d33d9e52b9eb3756f0d552187e52b9e955337090",
+      "modifiedAt": "2026-10-20T07:02:42.154Z"
+    },
+    "tools/news_video/render.py": {
+      "sha256": "b373528f80dfa42e3371cf3ae67cff3f17f44baf8abb0624e9ee0282678ba073",
+      "modifiedAt": "2026-10-20T07:01:45.365Z"
+    },
+    "server/daily-production.mjs": {
+      "sha256": "cdc696c7195a30962d1a1a557d00cc1cb9a5bad7816e43f55646e348882e13f9",
+      "modifiedAt": "2026-10-20T07:02:28.750Z"
+    }
+  },
+  "duplicateLink": {
+    "parsedItemCount": 2,
+    "uniqueUrlCount": 1,
+    "run": {
+      "id": "c6d3cdf3-2118-431e-a016-4f06f242e05a",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "sourceMode": "news",
+      "status": "failed",
+      "startedAt": "2026-10-20T07:04:43.487Z",
+      "message": "本次资讯包含重复链接，请去重后制作。",
+      "binding": {
+        "enabled": true,
+        "startTime": "15:00",
+        "accountId": "audit",
+        "browserId": "audit-browser",
+        "authorizedAt": "2026-10-20T07:04:42.988Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "news",
+        "newsFeedUrl": "https://www.ithome.com/rss/",
+        "newsKeywords": ""
+      },
+      "sourceResult": {
+        "at": "2026-10-20T07:04:42.988Z",
+        "warnings": [],
+        "scanned": 2,
+        "existing": 2,
+        "added": 0
+      },
+      "warnings": [],
+      "title": "2026-10-20 资讯速览",
+      "newsItemIds": [
+        "5e6748b9797bb30606863af421a2a071492091a0c764c84ca9416feb29e87154",
+        "f6385a7b9ada06ec4a34c2562c5f1449b9d2ddfa80b1fc77e594b9b8abfe44bb"
+      ],
+      "sourceArticles": [
+        {
+          "title": "同一文章的早期标题",
+          "url": "https://www.ithome.com/0/123/456.htm",
+          "publishedAt": "2026-10-20T07:04:42.988000Z",
+          "sourceName": "测试资讯",
+          "sourceUrl": "https://www.ithome.com/rss/",
+          "id": "5e6748b9797bb30606863af421a2a071492091a0c764c84ca9416feb29e87154"
+        },
+        {
+          "title": "同一文章更新后的标题",
+          "url": "https://www.ithome.com/0/123/456.htm",
+          "publishedAt": "2026-10-20T07:04:42.988000Z",
+          "sourceName": "测试资讯",
+          "sourceUrl": "https://www.ithome.com/rss/",
+          "id": "f6385a7b9ada06ec4a34c2562c5f1449b9d2ddfa80b1fc77e594b9b8abfe44bb"
+        }
+      ],
+      "finishedAt": "2026-10-20T07:04:43.506Z"
+    },
+    "planEnabledAfter": false,
+    "publishCalls": 0
+  },
+  "atomHtmlTitle": {
+    "expected": "新手机支持AI & 影像处理",
+    "actual": "<b>新手机</b>支持AI &amp; 影像处理"
+  },
+  "truncation": {
+    "originalTitle": "重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题，但实际尚未发布，仅为传闻",
+    "actualTitle": "重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题",
+    "warnings": []
+  }
+}

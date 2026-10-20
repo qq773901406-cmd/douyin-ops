@@ -1,0 +1,27 @@
+{
+  "items": [
+    {
+      "id": "8dc0fb0ba5b6bb0f9afeddd7b533a9956de00c7050c2d8541ac6b313b4f1f262",
+      "title": "隔离测试科技资讯1",
+      "url": "https://news.example.com/articles/1?source=feed&edition=cn",
+      "publishedAt": "2026-10-19T21:59:00.000Z",
+      "sourceName": "隔离验收科技源",
+      "sourceUrl": "https://feeds.example.com/rss-contract.xml"
+    },
+    {
+      "id": "825e30544d2a2b6b88c04cceb12d5f8b664d7704babb459f739fdde305f356d9",
+      "title": "隔离测试科技资讯2",
+      "url": "https://news.example.com/articles/2?source=feed&edition=cn",
+      "publishedAt": "2026-10-19T21:58:00.000Z",
+      "sourceName": "隔离验收科技源",
+      "sourceUrl": "https://feeds.example.com/rss-contract.xml"
+    }
+  ],
+  "warnings": [
+    "1 条资讯没有明确日期和时区，已跳过。",
+    "2 条资讯不在最近 48 小时内或日期超前，已跳过。",
+    "已跳过链接无效或指向非公开地址的资讯。"
+  ],
+  "at": "2026-10-19T22:00:00.000Z",
+  "feedTitle": "隔离验收科技源"
+}

@@ -1,0 +1,94 @@
+{
+  "account": "我的账号",
+  "persona": "",
+  "audience": "",
+  "pillars": "",
+  "diagnosis": null,
+  "products": [
+    {
+      "title": "验收商品A",
+      "category": "",
+      "status": "ready",
+      "currency": "USD",
+      "price": "",
+      "cost": "",
+      "shipping": "",
+      "packaging": "",
+      "feeRate": "",
+      "adCost": "",
+      "returnRate": "",
+      "supplier": "",
+      "supplierUrl": "",
+      "audience": "",
+      "hook": "",
+      "captionZh": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "captionEn": "",
+      "notes": "",
+      "sourceDate": "2026-10-20",
+      "sourceKey": "",
+      "reportedMargin": "",
+      "documents": {},
+      "images": [
+        {
+          "name": "A.png",
+          "path": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\fixture.png"
+        }
+      ],
+      "cards": [],
+      "id": "A"
+    }
+  ],
+  "schemaVersion": 5,
+  "trash": [],
+  "records": [],
+  "drafts": [
+    {
+      "id": "e33876a7-306d-445c-b81d-e1d55377843d",
+      "title": "验收商品A",
+      "pubTitle": "验收商品A",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\public-preview-endpoint\\daily-production\\videos\\9c5f2bc0-f0e8-4523-9080-3e06efc5195e\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceProductId": "A",
+      "sourceVideoId": "a4efc871-cc60-4b34-8b9b-0eba92f0a8a1",
+      "sourceProductionId": "4a82ac5e-4b74-4752-85ee-f8094090c0d8",
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z",
+      "productionStatus": "preview",
+      "productionMessage": "成片已生成，仅预览，没有发布。"
+    }
+  ],
+  "metrics": [],
+  "ideas": [],
+  "research": [],
+  "comments": [],
+  "videos": [
+    {
+      "title": "验收商品A",
+      "subject": "验收商品A",
+      "setting": "",
+      "style": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地图片字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\public-preview-endpoint\\daily-production\\videos\\9c5f2bc0-f0e8-4523-9080-3e06efc5195e\\video.mp4",
+      "blocker": "",
+      "notes": "",
+      "shots": [
+        {
+          "seconds": 18,
+          "action": "按商品图片依次展示商品资料，字幕来自保存的中文文案。",
+          "camera": "竖屏商品展示"
+        }
+      ],
+      "id": "a4efc871-cc60-4b34-8b9b-0eba92f0a8a1",
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z",
+      "sourceProductId": "A"
+    }
+  ]
+}

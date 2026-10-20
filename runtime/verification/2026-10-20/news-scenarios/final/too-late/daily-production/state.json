@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT",
+    "browserId": "TEST-BROWSER",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": "",
+    "sourceMode": "news",
+    "newsFeedUrl": "https://feeds.example.com/too-late.xml",
+    "newsKeywords": ""
+  },
+  "runs": [
+    {
+      "id": "f12924d4-7b90-48f2-b7f2-caa487f4ecbf",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "sourceMode": "news",
+      "status": "skipped",
+      "startedAt": "2026-10-20T04:00:00.001Z",
+      "message": "超过计划开工时间 6 小时，今天不补发。",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT",
+        "browserId": "TEST-BROWSER",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "news",
+        "newsFeedUrl": "https://feeds.example.com/too-late.xml",
+        "newsKeywords": ""
+      },
+      "finishedAt": "2026-10-20T04:00:00.001Z"
+    }
+  ],
+  "lastSync": null,
+  "newsLastSync": null,
+  "newsItems": []
+}

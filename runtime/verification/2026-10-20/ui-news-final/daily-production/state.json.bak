@@ -1,0 +1,579 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": false,
+    "startTime": "06:00",
+    "accountId": "",
+    "browserId": "",
+    "authorizedAt": "",
+    "firstDay": "",
+    "sourceFolder": "",
+    "sourceMode": "news",
+    "newsFeedUrl": "https://www.ithome.com/rss/",
+    "newsKeywords": ""
+  },
+  "runs": [
+    {
+      "id": "967d1356-ccdf-4d21-9ba5-edd3afcf17a9",
+      "day": "2026-10-20",
+      "previewOnly": true,
+      "sourceMode": "news",
+      "status": "rendering",
+      "startedAt": "2026-10-20T07:10:02.543Z",
+      "message": "已选择 3 条资讯，正在制作原创排版的信息卡与字幕。",
+      "binding": {
+        "enabled": false,
+        "startTime": "06:00",
+        "accountId": "",
+        "browserId": "",
+        "authorizedAt": "",
+        "firstDay": "",
+        "sourceFolder": "",
+        "sourceMode": "news",
+        "newsFeedUrl": "https://www.ithome.com/rss/",
+        "newsKeywords": ""
+      },
+      "sourceResult": {
+        "at": "2026-10-20T07:10:02.564Z",
+        "scanned": 60,
+        "added": 60,
+        "existing": 0,
+        "warnings": [],
+        "feedTitle": "IT之家",
+        "feedUrl": "https://www.ithome.com/rss/"
+      },
+      "warnings": [],
+      "title": "10月20日资讯速览",
+      "newsItemIds": [
+        "c7ba850bf7581b1fb61e3862d348d2105032280ed82bc161903afd3f4f27a5e4",
+        "d87d48c437cf63a1cb5e40f8b77278ffb95fd38b71278ca0ad0c44c103547241",
+        "5e0d5ce151d4609fcd22d302e70dd0567483fb82ffbcfcd4e2750e45282ca387"
+      ],
+      "sourceArticles": [
+        {
+          "id": "c7ba850bf7581b1fb61e3862d348d2105032280ed82bc161903afd3f4f27a5e4",
+          "title": "华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起",
+          "url": "https://www.ithome.com/1/015/319.htm",
+          "publishedAt": "2026-10-20T07:02:12.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        },
+        {
+          "id": "d87d48c437cf63a1cb5e40f8b77278ffb95fd38b71278ca0ad0c44c103547241",
+          "title": "乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元",
+          "url": "https://www.ithome.com/1/015/317.htm",
+          "publishedAt": "2026-10-20T07:00:12.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        },
+        {
+          "id": "5e0d5ce151d4609fcd22d302e70dd0567483fb82ffbcfcd4e2750e45282ca387",
+          "title": "万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡",
+          "url": "https://www.ithome.com/1/015/316.htm",
+          "publishedAt": "2026-10-20T06:58:03.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        }
+      ],
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-news-final\\daily-production\\videos\\48807343-94d3-40e6-8935-1d117dbca87c\\video.mp4",
+      "caption": "10月20日资讯速览｜资讯标题速览·非现场画面\n\n根据来源公开标题制作图卡，完整内容以原文为准。\n\n1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起\n来源：IT之家\nhttps://www.ithome.com/1/015/319.htm\n\n2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元\n来源：IT之家\nhttps://www.ithome.com/1/015/317.htm\n\n3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡\n来源：IT之家\nhttps://www.ithome.com/1/015/316.htm",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-news-final\\daily-production\\videos\\48807343-94d3-40e6-8935-1d117dbca87c",
+      "seconds": 36,
+      "sha256": "ed9ab0a356f2845143cdd29238d95237b84f18a04a6c4de19f00e3482948fee5",
+      "videoId": "648fc0e1-bac0-4070-92c6-799900ddbfca",
+      "draftId": "a63ddd58-a7ed-4942-b73b-d7112e1c8186"
+    }
+  ],
+  "lastSync": null,
+  "newsLastSync": {
+    "at": "2026-10-20T07:10:02.564Z",
+    "scanned": 60,
+    "added": 60,
+    "existing": 0,
+    "warnings": [],
+    "feedTitle": "IT之家",
+    "feedUrl": "https://www.ithome.com/rss/"
+  },
+  "newsItems": [
+    {
+      "id": "c7ba850bf7581b1fb61e3862d348d2105032280ed82bc161903afd3f4f27a5e4",
+      "title": "华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起",
+      "url": "https://www.ithome.com/1/015/319.htm",
+      "publishedAt": "2026-10-20T07:02:12.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "d87d48c437cf63a1cb5e40f8b77278ffb95fd38b71278ca0ad0c44c103547241",
+      "title": "乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元",
+      "url": "https://www.ithome.com/1/015/317.htm",
+      "publishedAt": "2026-10-20T07:00:12.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "5e0d5ce151d4609fcd22d302e70dd0567483fb82ffbcfcd4e2750e45282ca387",
+      "title": "万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡",
+      "url": "https://www.ithome.com/1/015/316.htm",
+      "publishedAt": "2026-10-20T06:58:03.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "66889da9d455a88d1b7b6575276c23653b78bd1d29f3db4da14b5165f60a9f92",
+      "title": "荣耀 Magic6 系列手机「AI 随心握」功能推送,升级至 110 版本可体验",
+      "url": "https://www.ithome.com/1/015/315.htm",
+      "publishedAt": "2026-10-20T06:57:13.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "b3fc27869813cf9e456f8a477d25ab1cc9f7275e09924263f359cb442db52033",
+      "title": "思科总裁用 AI 智能体盘点并取消无用订阅服务,一年省下上千美元",
+      "url": "https://www.ithome.com/1/015/314.htm",
+      "publishedAt": "2026-10-20T06:56:15.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "e8e96dfe10c78be1fe88ea5dfd7c847d38fee5b5186cf622e7597e0d79e33655",
+      "title": "4499 → 3013 元:小米 REDMI K100 Pro Max 旗舰手机官方 11.11 再降(无需 88VIP)",
+      "url": "https://www.ithome.com/1/015/313.htm",
+      "publishedAt": "2026-10-20T06:55:49.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "c48b09f6cbb63a3bed9614b34e3988d188737f294626eff2dbb162d252fa539f",
+      "title": "消息称微软正考虑大幅下调新款入门级 12 英寸 Surface 设备硬件规格,重新评估处理器选型",
+      "url": "https://www.ithome.com/1/015/311.htm",
+      "publishedAt": "2026-10-20T06:51:27.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "472f4ce54e174b06a30820b0d88d7503593e7fc1155de1ae7a63deb230812b39",
+      "title": "点一下 Win11 桌面就打开必应?外媒称微软 Bing 壁纸应用存在引流行为",
+      "url": "https://www.ithome.com/1/015/310.htm",
+      "publishedAt": "2026-10-20T06:47:49.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "301eb472ccc9dc1f6481c58a1299a1a68d6012cac3d7bf4c2f04466f77c01a60",
+      "title": "微软 XBOX 手柄无线控制器 X25 特别版国行现货发售,优惠价 558 元",
+      "url": "https://www.ithome.com/1/015/306.htm",
+      "publishedAt": "2026-10-20T06:41:49.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "2bd1e350ad9480e23fd9728acd64b2f06a89f01cf92ad46c9f720c474da73ea9",
+      "title": "联想启动拯救者下代游戏平板电脑先锋内测招募,12 月 31 日公布名单",
+      "url": "https://www.ithome.com/1/015/301.htm",
+      "publishedAt": "2026-10-20T06:35:35.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "ba4343c5cdff26ee8daf8f94fc990bd89c38fd2bd3876ef8bed21cd065104ccd",
+      "title": "1399 → 679 元起:小米 Sound 2 Pro 音箱京东新低,两分频架构 + 可组 4.0 环绕声",
+      "url": "https://www.ithome.com/1/015/300.htm",
+      "publishedAt": "2026-10-20T06:29:51.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "348575f60486c7bd0b016b8152075efba510056ebce623647b79fe909c3402b2",
+      "title": "OpenAI 上线 ChatGPT Slides 幻灯片工具,支持团队协作编辑",
+      "url": "https://www.ithome.com/1/015/298.htm",
+      "publishedAt": "2026-10-20T06:23:55.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "c6ebecb06473fef5e4f29c32b264f2205c065d8b024e6329b9919fb38cc4e0c0",
+      "title": "2026 年度天猫双十一活动今晚 8 点开启:88VIP 用户可自选消费券面额、苹果 iPhone 18 Pro 系列手机参与活动",
+      "url": "https://www.ithome.com/1/015/296.htm",
+      "publishedAt": "2026-10-20T06:19:04.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "e6a73f70faf4511dcd9428135762bf22c4680102040a4e09fa070e330809e7d6",
+      "title": "医疗系统服务公司 Medley 旗下业务平台 @link 遭黑客入侵,官方宣布重建整个系统",
+      "url": "https://www.ithome.com/1/015/289.htm",
+      "publishedAt": "2026-10-20T06:15:19.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "4c5d4ca9761042c7e45540852db1777867acafb5adcece93a29f5829a0fd8191",
+      "title": "27 英寸 OLED 电竞显示器 AOC“惊雪”Q27G4ZDP / WS 国补后 1998 元,具备 2K 280Hz、HDR500",
+      "url": "https://www.ithome.com/1/015/288.htm",
+      "publishedAt": "2026-10-20T06:15:15.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "becca3080c98e9e581dddb216a511db30178377fd6ce5b9637a22abebebff484",
+      "title": "国家广电总局:中国微短剧正成为继美国电影、日本动画、韩国电视剧之后的第四大全球性视听产品新业态",
+      "url": "https://www.ithome.com/1/015/287.htm",
+      "publishedAt": "2026-10-20T06:14:27.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "e92dc78dd54e6c5459d21f33cb99eca482e9620789800f8a39bd7aed9279aacb",
+      "title": "消息称华为引望与宁德时代“巧克力”换电首款车型计划 2027 年推出,奕境品牌首发",
+      "url": "https://www.ithome.com/1/015/280.htm",
+      "publishedAt": "2026-10-20T06:11:11.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "cf4ac1dce11b30bbd7f82a5f155697942a508dbb42d4cf5a062cd4bbd02cf6aa",
+      "title": "20:00 速度保价:苹果 AirPods Pro 3 京东 PLUS 1121 元,国补 15% 限地区",
+      "url": "https://www.ithome.com/1/015/277.htm",
+      "publishedAt": "2026-10-20T06:10:21.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "06e17a34d55f3f61147bdde604123d55b0723ce86fdb8de21c896950670fb3d7",
+      "title": "微星 5 热管无光风冷 PRO COREFROZR AR13 在售,99 元",
+      "url": "https://www.ithome.com/1/015/275.htm",
+      "publishedAt": "2026-10-20T06:08:37.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "068ae6d4182a99daa5a3e1cdf479a78df1132c8294f8e3426d78ebf1654386c4",
+      "title": "日本经济产业省计划 2027~2029 财年向 Rapidus 追加投资 4000 亿日元",
+      "url": "https://www.ithome.com/1/015/269.htm",
+      "publishedAt": "2026-10-20T06:00:28.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "8bd83a2d41d7eb4e17090537f5a0dec218e7c33109226566d8d6a7206ba96e92",
+      "title": "1499 → 843 元:小米米家净水器 2 官方新低,1200G 大通量 + 7 年 RO 滤芯",
+      "url": "https://www.ithome.com/1/015/267.htm",
+      "publishedAt": "2026-10-20T05:56:46.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "1b2dfdc997d4cf369deb4131f3b5cc9b4f7cdca2cac6c9340ea24b68118a917a",
+      "title": "萨维、赵家驹和闪电机器人首次同框赛跑",
+      "url": "https://www.ithome.com/1/015/266.htm",
+      "publishedAt": "2026-10-20T05:54:19.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "63aef39f04c9b7b8d4b0c0fad566f2a0cc69fc74346714abc4df95ca89f589c0",
+      "title": "漫步者 Comfo Clip Ultra 耳夹式蓝牙耳机发售:支持心率检测、内置 AI 教练,国补后 899 元",
+      "url": "https://www.ithome.com/1/015/265.htm",
+      "publishedAt": "2026-10-20T05:52:33.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "54192ec1b322ca97cfd745d9c8c1358c0a08499e67a133cfb4cb8c49d055b062",
+      "title": "网络覆盖、上下行速率显著提升,陕西电信联合华为完成高铁场景 FDD Massive MIMO 全国首商用",
+      "url": "https://www.ithome.com/1/015/264.htm",
+      "publishedAt": "2026-10-20T05:51:44.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "91b40b65fcbe0959048ac4177fa490e979073ced8706fe4d46ccbde6ae345bbf",
+      "title": "小米充电宝 Pro 25000 250W 发售:2C+1A,25000mAh 电芯售 999 元",
+      "url": "https://www.ithome.com/1/015/263.htm",
+      "publishedAt": "2026-10-20T05:39:41.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "09427d20504c7879f26e5c87b5406fc20b60953ebe147d5a61358deaf4d7b2dc",
+      "title": "消息称某厂阔直板手机目前工程机搭载天玑 9600M、影像双 2 亿 HPE + HP5,预计为 OPPO",
+      "url": "https://www.ithome.com/1/015/261.htm",
+      "publishedAt": "2026-10-20T05:35:41.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "4701aa27c5042928d287ba0991cb13b4a637b0b3a5a881b514b9ae687e31061d",
+      "title": "2027 款领克 03 车型官宣,口号“宽不可挡”",
+      "url": "https://www.ithome.com/1/015/260.htm",
+      "publishedAt": "2026-10-20T05:35:08.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "bbd4e8c182d702f563df73d78cef0e65f8fabf277879c24163121ea98791a53d",
+      "title": "iQOO Neo12 手机官宣搭载全新冰穹主动散热风扇、Neo 史上最大面积 VC",
+      "url": "https://www.ithome.com/1/015/259.htm",
+      "publishedAt": "2026-10-20T05:20:49.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "c2d4b5e96e89b9403e7b77a3d626fc166fb7efae8c9ba6fd1589ef847c848f3b",
+      "title": "小米米家口袋照片打印机 Pro 礼盒装开售:专属浅紫配色,799 元",
+      "url": "https://www.ithome.com/1/015/258.htm",
+      "publishedAt": "2026-10-20T05:10:47.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "7f6dd393b9b088f1d79c04ea96a3976911d1e596826ec902bc8f353f6ba640d9",
+      "title": "诺奖得主安德烈 · 海姆:单层石墨烯性能卓越,相关研究 15 年内一定能走入百姓生活",
+      "url": "https://www.ithome.com/1/015/256.htm",
+      "publishedAt": "2026-10-20T04:57:18.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "850ba824e8a9a90e18f13a242749a534f43de5c3f535376886e2d586b2f915cd",
+      "title": "月球正在缩小:过去 4 亿至 8 亿年间半径缩短约 45 米",
+      "url": "https://www.ithome.com/1/015/255.htm",
+      "publishedAt": "2026-10-20T04:56:05.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "22a1a4e7f7b854cbbb5c76a44d65bea919b920dc3bb9445623025b2ced86d30b",
+      "title": "王坚院士警示:科技已到分水岭,以后都应以降低自然资源消耗为目的",
+      "url": "https://www.ithome.com/1/015/254.htm",
+      "publishedAt": "2026-10-20T04:53:48.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "7f6b9231ea72e948cb1a95b82876a50dc9cc109edcce3c85372d6e234638a12a",
+      "title": "多省份发生用户访问请求异常跳转至博彩网站事件,国家互联网应急中心公布调查情况",
+      "url": "https://www.ithome.com/1/015/252.htm",
+      "publishedAt": "2026-10-20T04:52:06.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "c868b857b4786c2b767c4087f7a13486ff37e8a9f94cbfbe82de01262507d2ae",
+      "title": "长城 27 款坦克 500 将于 10 月 23 日上市,搭载 Coffee Pilot 4 辅助驾驶系统",
+      "url": "https://www.ithome.com/1/015/251.htm",
+      "publishedAt": "2026-10-20T04:41:24.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "f91238af606e8deeaeba83271d0d4ea2a0c677991da6810a973c69538cf7445d",
+      "title": "粉丝用 AI 基于虚幻引擎 5.8 重制《恶霸鲁尼》,Mac 上 1080P 能跑 45 帧",
+      "url": "https://www.ithome.com/1/015/250.htm",
+      "publishedAt": "2026-10-20T04:40:37.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "aa2dce70d03854915e83d0ec9e2432694a433b74f19913a5889bbbb0075a9ff6",
+      "title": "玩家将索尼 PlayStation 游戏机独占《神秘海域:内森德雷克合集》三部曲游戏搬上 PC 平台",
+      "url": "https://www.ithome.com/1/015/249.htm",
+      "publishedAt": "2026-10-20T04:35:12.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "b33c44d5e77063eca12ddb61258df8885632f4df9ee807086b1b8d282882114e",
+      "title": "一汽奔腾小马五门版 10 月 28 日上市,搭载宁德时代电池",
+      "url": "https://www.ithome.com/1/015/248.htm",
+      "publishedAt": "2026-10-20T04:31:46.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "f43d1fbf70e0810be1084a718dba7105f5522da99b8e974d2c8be0a5af20f8fa",
+      "title": "可体验逼真刹车 / 碰撞:经典车辆物理模拟器《BeamNG.drive》登陆索尼 PS5,198 港币",
+      "url": "https://www.ithome.com/1/015/247.htm",
+      "publishedAt": "2026-10-20T04:25:48.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "64b3641aa70d9955e408b9e310ee21f152ad9c56b5182db37a3bbaf3449336ce",
+      "title": "倍思海外推出 U2 Pro Outdoor 监控摄像头,带有可追踪移动目标的聚光灯",
+      "url": "https://www.ithome.com/1/015/246.htm",
+      "publishedAt": "2026-10-20T04:19:57.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "9fbcf10f50e6ad192b5e7a718a328c8bf8cb462c0ebe73966abf1afbe674b8bc",
+      "title": "一加 Ace 7 系列手机风扇设计公布:双路出风,一路吹芯片、一路吹后盖",
+      "url": "https://www.ithome.com/1/015/245.htm",
+      "publishedAt": "2026-10-20T04:17:50.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "282176770fcaa57a3ee858afcd658f1feb4e4738dfacac86b948ee7a21cb04c2",
+      "title": "Epic 喜加一:第一人称 3D 跑酷游戏《GetHigh.EXE》免费领",
+      "url": "https://www.ithome.com/1/015/243.htm",
+      "publishedAt": "2026-10-20T04:11:02.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "1a1e762cc6dcc070ec0744e2310a3068d5269b1d5d39f0bda42d8010f4952b2f",
+      "title": "奇瑞宣布 2027 上半年在风云 A9 纯电车型首发 V2G 功能",
+      "url": "https://www.ithome.com/1/015/242.htm",
+      "publishedAt": "2026-10-20T04:10:45.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "886c32f495e3c1f89875b92f92a4543f11dc675ca9aa95d9fcf7bdca025c30bd",
+      "title": "八位堂 XBOX 无线手柄专属充电底座新增经典黑 / 白款,套装 169 元",
+      "url": "https://www.ithome.com/1/015/240.htm",
+      "publishedAt": "2026-10-20T04:05:50.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "c27ef81ce7fd70788e47a1fe953452d3ace6431a887bb69a04c21fa440b4fae4",
+      "title": "奇瑞犀牛 S 固态电池中试线 2027 年投入使用,400Wh/kg 能量密度",
+      "url": "https://www.ithome.com/1/015/230.htm",
+      "publishedAt": "2026-10-20T04:00:21.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "6466a97aa67412720b9fda594955c252cf021d3ded16d0c6bd3f21db297d4800",
+      "title": "达尔优 COOL75 磁轴键盘上市:钻石灯箱 + 音量触控条,499 元起",
+      "url": "https://www.ithome.com/1/015/229.htm",
+      "publishedAt": "2026-10-20T03:59:06.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "b9ecf388bb2810ea3d333f3879b8aef263b892d6aba26547fbee60c76d468514",
+      "title": "英伟达 Vera CPU 获 AI 初创公司 Modal 订单,杀入英特尔、AMD 主场",
+      "url": "https://www.ithome.com/1/015/228.htm",
+      "publishedAt": "2026-10-20T03:50:40.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "1da11a0a3fb0221d9fcb8fd2fae89d274d66dd8c158d946834ee4007a585b093",
+      "title": "奇瑞全新一代 AI 座舱产品“超能小奇”亮相:超懂你、超能干、超安心",
+      "url": "https://www.ithome.com/1/015/226.htm",
+      "publishedAt": "2026-10-20T03:48:11.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "14f711721587fb139207d932c01d5b9a53df19ef564e5b0c6e377abd00c4b456",
+      "title": "吉利汽车与曹操出行等联合打造,中国首款原生开发 Robotaxi 首台工程样车下线",
+      "url": "https://www.ithome.com/1/015/225.htm",
+      "publishedAt": "2026-10-20T03:41:09.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "0a19c3220a2c13e582d8617c5e7c5a493da2bc82b673b5d0fd628c3cf96cf0c2",
+      "title": "奇瑞凌霄 eVTOL 亮相:首发两款机型,最大航程超 1000km",
+      "url": "https://www.ithome.com/1/015/224.htm",
+      "publishedAt": "2026-10-20T03:39:42.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "af6b7360b8af5852247fde76df38b6dfb744cb103dc1e1ad6ffcca5d35f2df8f",
+      "title": "微软的“怀旧执念”:Win11 26H2 仍保留部分 Win95 内存管理器代码",
+      "url": "https://www.ithome.com/1/015/222.htm",
+      "publishedAt": "2026-10-20T03:38:26.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "bec64dd4c85badf97ccd6d7bd499780a657096602cb9d880115578d2c2df84fd",
+      "title": "奇瑞 CheryMind 垂域基础大模型亮相,为物理 AI 而生",
+      "url": "https://www.ithome.com/1/015/219.htm",
+      "publishedAt": "2026-10-20T03:32:35.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "0278643c0223863c37a4fd0cdf80732417c837d27f2d465366e3a5d1f9600d52",
+      "title": "消息称 Waymo 计划明年年底前将自动驾驶车队规模扩至目前 5 倍,达 2 万辆",
+      "url": "https://www.ithome.com/1/015/218.htm",
+      "publishedAt": "2026-10-20T03:29:38.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "2ec409288509a08900f6dd71df1e20dc2249ca3ec8341bad551c86517509d97d",
+      "title": "今年国内自动驾驶领域最大单笔融资:新石器完成近 4 亿美元 E 轮融资,消息称国家人工智能产业投资基金领投",
+      "url": "https://www.ithome.com/1/015/217.htm",
+      "publishedAt": "2026-10-20T03:28:44.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "1d22cd666dddc07bad53b2a20e191781f81defc5859b7a8846d51e834bc6fbb1",
+      "title": "奇瑞紫微芯片首秀:三大系列、五大封装,8 英寸晶圆进入量产阶段",
+      "url": "https://www.ithome.com/1/015/216.htm",
+      "publishedAt": "2026-10-20T03:26:39.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "d52ca2a4976c67ac7de6da9d03b3156e98d5ef19764a1fd78d1b45444447c0d3",
+      "title": "闪迪 ELE SE 移动固态硬盘 500GB 版本开售:读取速度最高 600MB/s,499 元",
+      "url": "https://www.ithome.com/1/015/214.htm",
+      "publishedAt": "2026-10-20T03:18:54.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "663e2deb92abac623f66af54da2620d007ace48dcab1a4c60f204b4ee5789fde",
+      "title": "马斯克向特朗普的儿童储蓄账户捐款、美国财长公开致谢,总额已达 80 亿美元",
+      "url": "https://www.ithome.com/1/015/213.htm",
+      "publishedAt": "2026-10-20T03:12:00.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "e76019c0e8e4e95a9763940e6462af0e1d5b82dd5999b27dfad66f75f0e2e710",
+      "title": "苹果收紧 App Store 开发者准则,严打 AI 不良内容与换皮“脱衣”应用",
+      "url": "https://www.ithome.com/1/015/212.htm",
+      "publishedAt": "2026-10-20T03:08:30.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "e3c4afa0ff1d75f736acbbfb333677ff620380cede477165f07a59a279f25324",
+      "title": "致 17 名中国公民遇难,韩国华城电池厂火灾涉事企业代表终审获刑 4 年",
+      "url": "https://www.ithome.com/1/015/210.htm",
+      "publishedAt": "2026-10-20T03:07:17.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "29109cad1add1363e2858947035a54b9915d1be202c65a07a30b7b11686ecec3",
+      "title": "三星 Galaxy S27 Ultra 手机爆料:横向矩阵后摄方案,钢化膜大概率能和 S26 Ultra 通用",
+      "url": "https://www.ithome.com/1/015/209.htm",
+      "publishedAt": "2026-10-20T03:05:21.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    },
+    {
+      "id": "ce0d715b79608ec3b1772324d5dc49689a043747993d9fff941d3af5cd8757d2",
+      "title": "2028 款 iPhone 有望首发:消息称苹果重金锁定台积电 1.4 纳米首批产能",
+      "url": "https://www.ithome.com/1/015/201.htm",
+      "publishedAt": "2026-10-20T02:53:32.000Z",
+      "sourceName": "IT之家",
+      "sourceUrl": "https://www.ithome.com/rss/"
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "checkedAt": "2026-10-20T07:07:17.771Z",
+  "sourcesUnchangedDuringAudit": true,
+  "before": {
+    "server/news-source.mjs": {
+      "sha256": "be4c1c37031de3e62ab25ab33b4a8ed57e2fe17695e2f14cca3b0e7892a0e613",
+      "modifiedAt": "2026-10-20T07:05:44.682Z"
+    },
+    "server/news-video.mjs": {
+      "sha256": "d425dfe04d0a0ea2b2571ac776193baa6ecd8093adc2fa03c59f8711d294e309",
+      "modifiedAt": "2026-10-20T07:06:35.364Z"
+    },
+    "tools/news_feed/parse.py": {
+      "sha256": "b45dfda946a77b7f2e0d478799cb259da80f7919f62c1acf0556e8c779976702",
+      "modifiedAt": "2026-10-20T07:05:44.452Z"
+    },
+    "tools/news_video/render.py": {
+      "sha256": "7f15185db593bed75e09d8757db9a60fb92cfc024e0a4e74339a4b7c4f2d14ee",
+      "modifiedAt": "2026-10-20T07:06:35.573Z"
+    },
+    "server/daily-production.mjs": {
+      "sha256": "986632c50272272d27ab837eac9a5775dbe6a1cf00c057f6c9deae21176cb0a7",
+      "modifiedAt": "2026-10-20T07:06:10.687Z"
+    }
+  },
+  "after": {
+    "server/news-source.mjs": {
+      "sha256": "be4c1c37031de3e62ab25ab33b4a8ed57e2fe17695e2f14cca3b0e7892a0e613",
+      "modifiedAt": "2026-10-20T07:05:44.682Z"
+    },
+    "server/news-video.mjs": {
+      "sha256": "d425dfe04d0a0ea2b2571ac776193baa6ecd8093adc2fa03c59f8711d294e309",
+      "modifiedAt": "2026-10-20T07:06:35.364Z"
+    },
+    "tools/news_feed/parse.py": {
+      "sha256": "b45dfda946a77b7f2e0d478799cb259da80f7919f62c1acf0556e8c779976702",
+      "modifiedAt": "2026-10-20T07:05:44.452Z"
+    },
+    "tools/news_video/render.py": {
+      "sha256": "7f15185db593bed75e09d8757db9a60fb92cfc024e0a4e74339a4b7c4f2d14ee",
+      "modifiedAt": "2026-10-20T07:06:35.573Z"
+    },
+    "server/daily-production.mjs": {
+      "sha256": "986632c50272272d27ab837eac9a5775dbe6a1cf00c057f6c9deae21176cb0a7",
+      "modifiedAt": "2026-10-20T07:06:10.687Z"
+    }
+  },
+  "duplicateLink": {
+    "parsedItemCount": 1,
+    "cachedCandidateCount": 1,
+    "renamedAlreadySubmittedCandidateCount": 0,
+    "run": {
+      "id": "5bb432b2-8f82-49e6-b7be-e159c8ea0148",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "sourceMode": "news",
+      "status": "submitted",
+      "startedAt": "2026-10-20T07:07:15.992Z",
+      "message": "OFFLINE STUB: no real publication",
+      "binding": {
+        "enabled": true,
+        "startTime": "15:00",
+        "accountId": "audit",
+        "browserId": "audit-browser",
+        "authorizedAt": "2026-10-20T07:07:14.958Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "news",
+        "newsFeedUrl": "https://www.ithome.com/rss/",
+        "newsKeywords": ""
+      },
+      "sourceResult": {
+        "at": "2026-10-20T07:07:14.958Z",
+        "warnings": [],
+        "scanned": 2,
+        "existing": 2,
+        "added": 0
+      },
+      "warnings": [],
+      "title": "10月20日资讯速览",
+      "newsItemIds": [
+        "old-title-id"
+      ],
+      "sourceArticles": [
+        {
+          "id": "old-title-id",
+          "title": "同一文章的早期标题",
+          "url": "https://www.ithome.com/0/123/456.htm",
+          "publishedAt": "2026-10-20T07:07:14.958Z",
+          "sourceName": "测试资讯",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        }
+      ],
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\news-audit\\after-1792480034954\\daily-case\\daily-production\\videos\\dba82ae8-5517-455c-bd5a-78d648905fbc\\video.mp4",
+      "caption": "10月20日资讯速览｜资讯标题速览·非现场画面\n\n根据来源公开标题制作图卡，完整内容以原文为准。\n\n1. 同一文章的早期标题\n来源：测试资讯\nhttps://www.ithome.com/0/123/456.htm",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\news-audit\\after-1792480034954\\daily-case\\daily-production\\videos\\dba82ae8-5517-455c-bd5a-78d648905fbc",
+      "seconds": 20,
+      "sha256": "d1618102fe3934d79b4bb8141815f6f687afc382562c652cfa0590a43255434f",
+      "videoId": "cbe11aea-b4a4-4998-b7ab-ffafb7695e68",
+      "draftId": "7e9d6c8f-4d93-487f-9c86-d61024b7b72c",
+      "submitStartedAt": "2026-10-20T07:07:17.762Z",
+      "evidence": {
+        "kind": "offline-stub"
+      },
+      "finishedAt": "2026-10-20T07:07:17.766Z"
+    },
+    "planEnabledAfter": true,
+    "simulatedPublishCalls": 1,
+    "realPublishCalls": 0
+  },
+  "longTitle": {
+    "originalTitle": "重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题重要资讯标题，但实际尚未发布，仅为传闻",
+    "items": [],
+    "warnings": [
+      "1 条资讯标题超过 120 字，已跳过；未截断标题。"
+    ],
+    "boundary120Preserved": true
+  },
+  "atomResults": [
+    {
+      "name": "html",
+      "expected": "新手机支持AI & 影像处理",
+      "actual": "<b>新手机</b>支持AI &amp; 影像处理",
+      "correct": false
+    },
+    {
+      "name": "text-comparison",
+      "expected": "新机 A < B,温度 > 40 度,字面量 <b>保持原样</b>",
+      "actual": "新机 A < B,温度 > 40 度,字面量 <b>保持原样</b>",
+      "correct": true
+    },
+    {
+      "name": "xhtml",
+      "expected": "AI 新进展 & 新方案",
+      "actual": "AI 新进展 & 新方案",
+      "correct": true
+    }
+  ]
+}

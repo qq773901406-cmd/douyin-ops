@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": "",
+    "sourceMode": "products",
+    "newsFeedUrl": "https://www.ithome.com/rss/",
+    "newsKeywords": ""
+  },
+  "runs": [
+    {
+      "id": "e2f76d2e-9628-4a74-8080-46480697fd2f",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "sourceMode": "products",
+      "status": "publishing",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "正在单次提交；结果不明时禁止自动重发。",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "products",
+        "newsFeedUrl": "https://www.ithome.com/rss/",
+        "newsKeywords": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-19T22:00:00.000Z"
+      },
+      "warnings": [
+        "验收商品A：A.png：图片无法解码或不符合尺寸要求：cannot identify image file 'D:\\\\ai\\\\runtime\\\\verification\\\\2026-10-20\\\\scenarios\\\\final-products\\\\corrupt.png'"
+      ],
+      "productId": "B",
+      "productKey": "验收商品b",
+      "title": "验收商品B",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\corrupt-image-fallback-probe\\daily-production\\videos\\b8915c5a-4f69-426c-8b0f-2075441ae4ee\\video.mp4",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\corrupt-image-fallback-probe\\daily-production\\videos\\b8915c5a-4f69-426c-8b0f-2075441ae4ee",
+      "seconds": 18,
+      "sha256": "61bf9d4462d0cd1f042798611746bd49c926931e9eb057a398a9b6713d67e094",
+      "videoId": "be057aba-6dc4-429e-bf36-2042d70974bf",
+      "draftId": "a3d7db4c-6cff-41f6-b53a-71e9cea7113f",
+      "submitStartedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "lastSync": {
+    "scanned": 0,
+    "added": 0,
+    "existing": 0,
+    "warnings": [],
+    "at": "2026-10-19T22:00:00.000Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\corrupt-image-fallback-probe\\product-inbox"
+  },
+  "newsLastSync": null,
+  "newsItems": []
+}

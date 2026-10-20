@@ -1,0 +1,199 @@
+{
+  "source": "C:\\Users\\wuzhuoxuan123\\Documents\\xwechat_files\\wxid_gbq8zkj8rzzz22_e8e9\\temp\\RWTemp\\2026-10\\7862ffef91a8052235e6d609875abfe3\\3ed48dd30d3c24c9e365c07614aa3724.mp4",
+  "duration_seconds": 23.57,
+  "probe": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\\Users\\wuzhuoxuan123\\Documents\\xwechat_files\\wxid_gbq8zkj8rzzz22_e8e9\\temp\\RWTemp\\2026-10\\7862ffef91a8052235e6d609875abfe3\\3ed48dd30d3c24c9e365c07614aa3724.mp4':\r\n  Metadata:\r\n    minor_version   : 512\r\n    major_brand     : isom\r\n    compatible_brands: isomiso2mp41\r\n    copyright       : \r\n    copyright-eng   : \r\n    wxMeta          : {\"WXVer\":671108917}\r\n    encoder         : Lavf58.20.100\r\n  Duration: 00:00:23.57, start: 0.000000, bitrate: 1090 kb/s\r\n  Stream #0:0[0x1](und): Video: hevc (Main) (hvc1 / 0x31637668), yuv420p(tv, bt709), 576x1280, 1030 kb/s, 30 fps, 30 tbr, 90k tbn (default)\r\n      Metadata:\r\n        handler_name    : VideoHandler\r\n        vendor_id       : [0][0][0][0]\r\n  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, mono, fltp, 48 kb/s (default)\r\n      Metadata:\r\n        handler_name    : SoundHandler\r\n        vendor_id       : [0][0][0][0]\r\nAt least one output file must be specified\r\n",
+  "frames": [
+    {
+      "seconds": 0,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-00s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 1,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-01s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 2,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-02s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 3,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-03s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 4,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-04s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 5,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-05s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 6,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-06s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 7,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-07s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 8,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-08s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 9,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-09s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 10,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-10s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 11,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-11s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 12,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-12s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 13,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-13s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 14,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-14s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 15,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-15s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 16,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-16s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 17,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-17s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 18,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-18s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 19,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-19s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 20,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-20s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 21,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-21s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 22,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-22s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    },
+    {
+      "seconds": 23,
+      "path": "D:\\ai\\runtime\\video-quality-implementation\\reference-screenrecord\\frame-23s.jpg",
+      "dimensions": [
+        576,
+        1280
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+warning: in the working copy of '.workbuddy/memory/2026-10-16.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'public/automation.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'public/daily-production.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/product-video.mjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tools/product_video/render.py', LF will be replaced by CRLF the next time Git touches it
+DIFF_CHECK_EXIT=0

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": ""
+  },
+  "runs": [
+    {
+      "id": "interrupted-publishing-before-submit",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "status": "publishing"
+    }
+  ],
+  "lastSync": null
+}

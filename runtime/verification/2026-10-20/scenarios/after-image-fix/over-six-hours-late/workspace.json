@@ -1,0 +1,50 @@
+{
+  "account": "我的账号",
+  "persona": "",
+  "audience": "",
+  "pillars": "",
+  "diagnosis": null,
+  "products": [
+    {
+      "title": "验收商品A",
+      "category": "",
+      "status": "ready",
+      "currency": "USD",
+      "price": "",
+      "cost": "",
+      "shipping": "",
+      "packaging": "",
+      "feeRate": "",
+      "adCost": "",
+      "returnRate": "",
+      "supplier": "",
+      "supplierUrl": "",
+      "audience": "",
+      "hook": "",
+      "captionZh": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "captionEn": "",
+      "notes": "",
+      "sourceDate": "2026-10-20",
+      "sourceKey": "",
+      "reportedMargin": "",
+      "documents": {},
+      "images": [
+        {
+          "name": "A.png",
+          "path": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\fixture.png"
+        }
+      ],
+      "cards": [],
+      "id": "A"
+    }
+  ],
+  "schemaVersion": 5,
+  "trash": [],
+  "records": [],
+  "drafts": [],
+  "metrics": [],
+  "ideas": [],
+  "research": [],
+  "comments": [],
+  "videos": []
+}

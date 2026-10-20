@@ -14,5 +14,4 @@ knowledge-base/**
 !knowledge-base/reviews/.gitkeep
 
 output
-runtime/
 .codex_tmp/

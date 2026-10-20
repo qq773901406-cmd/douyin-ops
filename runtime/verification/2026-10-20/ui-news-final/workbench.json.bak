@@ -1,0 +1,84 @@
+{
+  "account": "我的账号",
+  "persona": "表达直接、自然，用具体信息帮助观众。视频前三秒有钩子，结尾留一个自然问题。",
+  "audience": "",
+  "pillars": "",
+  "diagnosis": null,
+  "schemaVersion": 5,
+  "trash": [],
+  "records": [],
+  "drafts": [
+    {
+      "id": "a63ddd58-a7ed-4942-b73b-d7112e1c8186",
+      "title": "10月20日资讯速览",
+      "pubTitle": "10月20日资讯速览",
+      "caption": "10月20日资讯速览｜资讯标题速览·非现场画面\n\n根据来源公开标题制作图卡，完整内容以原文为准。\n\n1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起\n来源：IT之家\nhttps://www.ithome.com/1/015/319.htm\n\n2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元\n来源：IT之家\nhttps://www.ithome.com/1/015/317.htm\n\n3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡\n来源：IT之家\nhttps://www.ithome.com/1/015/316.htm",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-news-final\\daily-production\\videos\\48807343-94d3-40e6-8935-1d117dbca87c\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceVideoId": "648fc0e1-bac0-4070-92c6-799900ddbfca",
+      "sourceProductionId": "967d1356-ccdf-4d21-9ba5-edd3afcf17a9",
+      "sourceMode": "news",
+      "sourceArticles": [
+        {
+          "id": "c7ba850bf7581b1fb61e3862d348d2105032280ed82bc161903afd3f4f27a5e4",
+          "title": "华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起",
+          "url": "https://www.ithome.com/1/015/319.htm",
+          "publishedAt": "2026-10-20T07:02:12.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        },
+        {
+          "id": "d87d48c437cf63a1cb5e40f8b77278ffb95fd38b71278ca0ad0c44c103547241",
+          "title": "乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元",
+          "url": "https://www.ithome.com/1/015/317.htm",
+          "publishedAt": "2026-10-20T07:00:12.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        },
+        {
+          "id": "5e0d5ce151d4609fcd22d302e70dd0567483fb82ffbcfcd4e2750e45282ca387",
+          "title": "万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡",
+          "url": "https://www.ithome.com/1/015/316.htm",
+          "publishedAt": "2026-10-20T06:58:03.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        }
+      ],
+      "createdAt": "2026-10-20T07:10:05.460Z",
+      "updatedAt": "2026-10-20T07:10:05.460Z"
+    }
+  ],
+  "metrics": [],
+  "ideas": [],
+  "research": [],
+  "comments": [],
+  "videos": [
+    {
+      "title": "10月20日资讯速览",
+      "subject": "每日资讯标题速览",
+      "setting": "",
+      "style": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地资讯图卡字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-news-final\\daily-production\\videos\\48807343-94d3-40e6-8935-1d117dbca87c\\video.mp4",
+      "blocker": "",
+      "notes": "公开资讯标题编排为原创信息卡画面，非现场画面，不含热度排名。\nIT之家：华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起\nhttps://www.ithome.com/1/015/319.htm\nIT之家：乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元\nhttps://www.ithome.com/1/015/317.htm\nIT之家：万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡\nhttps://www.ithome.com/1/015/316.htm",
+      "shots": [
+        {
+          "seconds": 36,
+          "action": "按资讯逐条展示信息卡、标题、发布日期和来源，附字幕说明。",
+          "camera": "竖屏资讯图卡"
+        }
+      ],
+      "id": "648fc0e1-bac0-4070-92c6-799900ddbfca",
+      "createdAt": "2026-10-20T07:10:05.460Z",
+      "updatedAt": "2026-10-20T07:10:05.460Z"
+    }
+  ],
+  "products": []
+}

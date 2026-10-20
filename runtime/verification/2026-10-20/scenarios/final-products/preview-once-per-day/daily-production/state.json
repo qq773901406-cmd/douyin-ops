@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": "",
+    "sourceMode": "products",
+    "newsFeedUrl": "https://www.ithome.com/rss/",
+    "newsKeywords": ""
+  },
+  "runs": [
+    {
+      "id": "9bb87ca4-c931-482f-bf0c-8debdb624cc0",
+      "day": "2026-10-20",
+      "previewOnly": true,
+      "sourceMode": "products",
+      "status": "preview",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "成片已生成，仅预览，没有发布。",
+      "binding": {
+        "enabled": false,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "products",
+        "newsFeedUrl": "https://www.ithome.com/rss/",
+        "newsKeywords": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-19T22:00:00.000Z"
+      },
+      "warnings": [],
+      "productId": "A",
+      "productKey": "验收商品a",
+      "title": "验收商品A",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\preview-once-per-day\\daily-production\\videos\\0de2b5f7-99dd-4e25-a768-b6a0f2654c60\\video.mp4",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\preview-once-per-day\\daily-production\\videos\\0de2b5f7-99dd-4e25-a768-b6a0f2654c60",
+      "seconds": 18,
+      "sha256": "6ec9479791e343eb710143bbd14f883e93a486ff39302e2e53dcf3a0efd97370",
+      "videoId": "c285876b-4c9d-4c50-a512-26fa8cc69bf7",
+      "draftId": "c30b8cae-a492-411d-a371-5f448c4f9cb3",
+      "finishedAt": "2026-10-19T22:00:00.000Z"
+    },
+    {
+      "id": "9d31048b-0dbd-462f-8de4-b113ea7578b1",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "sourceMode": "products",
+      "status": "submitted",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "SIMULATED submission only; no browser or platform was contacted.",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "products",
+        "newsFeedUrl": "https://www.ithome.com/rss/",
+        "newsKeywords": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-19T22:00:00.000Z"
+      },
+      "warnings": [],
+      "productId": "A",
+      "productKey": "验收商品a",
+      "title": "验收商品A",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\preview-once-per-day\\daily-production\\videos\\be1fb696-226f-4926-85eb-009b97385b2c\\video.mp4",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\preview-once-per-day\\daily-production\\videos\\be1fb696-226f-4926-85eb-009b97385b2c",
+      "seconds": 18,
+      "sha256": "83e61e052a0d6e7099433b64cdae80be6658b4006f6297f04899d0e6498f91db",
+      "videoId": "88ce59b3-2323-482f-aa87-662b2e57b9fe",
+      "draftId": "ded330bd-ff72-499e-8c43-d44a293014d1",
+      "submitStartedAt": "2026-10-19T22:00:00.000Z",
+      "evidence": {
+        "simulation": true
+      },
+      "finishedAt": "2026-10-19T22:00:00.000Z"
+    },
+    {
+      "id": "a9508b68-d1b2-44f3-93b0-39b1839997af",
+      "day": "2026-10-21",
+      "previewOnly": false,
+      "sourceMode": "products",
+      "status": "submitted",
+      "startedAt": "2026-10-20T22:00:00.000Z",
+      "message": "SIMULATED submission only; no browser or platform was contacted.",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "products",
+        "newsFeedUrl": "https://www.ithome.com/rss/",
+        "newsKeywords": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-20T22:00:00.000Z"
+      },
+      "warnings": [],
+      "productId": "B",
+      "productKey": "验收商品b",
+      "title": "验收商品B",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\preview-once-per-day\\daily-production\\videos\\314c87c1-0b80-4080-ae1c-c636ba92c123\\video.mp4",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\preview-once-per-day\\daily-production\\videos\\314c87c1-0b80-4080-ae1c-c636ba92c123",
+      "seconds": 18,
+      "sha256": "b002486521d6b83d908dcc50c22a63254aa09bf532808fbe991c2d367de5f79c",
+      "videoId": "3ef3444e-eaf5-4740-8285-74899d00323c",
+      "draftId": "8a27e384-0907-4850-9728-c7a7b61026d8",
+      "submitStartedAt": "2026-10-20T22:00:00.000Z",
+      "evidence": {
+        "simulation": true
+      },
+      "finishedAt": "2026-10-20T22:00:00.000Z"
+    }
+  ],
+  "lastSync": {
+    "scanned": 0,
+    "added": 0,
+    "existing": 0,
+    "warnings": [],
+    "at": "2026-10-20T22:00:00.000Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\preview-once-per-day\\product-inbox"
+  },
+  "newsLastSync": null,
+  "newsItems": []
+}

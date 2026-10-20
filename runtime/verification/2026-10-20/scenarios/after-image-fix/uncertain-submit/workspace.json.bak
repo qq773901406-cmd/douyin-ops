@@ -1,0 +1,124 @@
+{
+  "account": "我的账号",
+  "persona": "",
+  "audience": "",
+  "pillars": "",
+  "diagnosis": null,
+  "products": [
+    {
+      "title": "验收商品A",
+      "category": "",
+      "status": "ready",
+      "currency": "USD",
+      "price": "",
+      "cost": "",
+      "shipping": "",
+      "packaging": "",
+      "feeRate": "",
+      "adCost": "",
+      "returnRate": "",
+      "supplier": "",
+      "supplierUrl": "",
+      "audience": "",
+      "hook": "",
+      "captionZh": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "captionEn": "",
+      "notes": "",
+      "sourceDate": "2026-10-20",
+      "sourceKey": "",
+      "reportedMargin": "",
+      "documents": {},
+      "images": [
+        {
+          "name": "A.png",
+          "path": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\fixture.png"
+        }
+      ],
+      "cards": [],
+      "id": "A"
+    },
+    {
+      "title": "验收商品B",
+      "category": "",
+      "status": "ready",
+      "currency": "USD",
+      "price": "",
+      "cost": "",
+      "shipping": "",
+      "packaging": "",
+      "feeRate": "",
+      "adCost": "",
+      "returnRate": "",
+      "supplier": "",
+      "supplierUrl": "",
+      "audience": "",
+      "hook": "",
+      "captionZh": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "captionEn": "",
+      "notes": "",
+      "sourceDate": "2026-10-20",
+      "sourceKey": "",
+      "reportedMargin": "",
+      "documents": {},
+      "images": [
+        {
+          "name": "B.png",
+          "path": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\fixture.png"
+        }
+      ],
+      "cards": [],
+      "id": "B"
+    }
+  ],
+  "schemaVersion": 5,
+  "trash": [],
+  "records": [],
+  "drafts": [
+    {
+      "id": "b47155d5-7154-48bf-b3ef-f8baa85a951a",
+      "title": "验收商品A",
+      "pubTitle": "验收商品A",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\uncertain-submit\\daily-production\\videos\\1be07fc1-eba9-426b-b9c1-f9e7e62f859a\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceProductId": "A",
+      "sourceVideoId": "075fb2c8-e3c1-4ed4-834e-ef5b9709a5d3",
+      "sourceProductionId": "ec6b9420-b4bb-42c4-82b1-1598726c73b4",
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "metrics": [],
+  "ideas": [],
+  "research": [],
+  "comments": [],
+  "videos": [
+    {
+      "title": "验收商品A",
+      "subject": "验收商品A",
+      "setting": "",
+      "style": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地图片字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\after-image-fix\\uncertain-submit\\daily-production\\videos\\1be07fc1-eba9-426b-b9c1-f9e7e62f859a\\video.mp4",
+      "blocker": "",
+      "notes": "",
+      "shots": [
+        {
+          "seconds": 18,
+          "action": "按商品图片依次展示商品资料，字幕来自保存的中文文案。",
+          "camera": "竖屏商品展示"
+        }
+      ],
+      "id": "075fb2c8-e3c1-4ed4-834e-ef5b9709a5d3",
+      "createdAt": "2026-10-19T22:00:00.000Z",
+      "updatedAt": "2026-10-19T22:00:00.000Z",
+      "sourceProductId": "A"
+    }
+  ]
+}

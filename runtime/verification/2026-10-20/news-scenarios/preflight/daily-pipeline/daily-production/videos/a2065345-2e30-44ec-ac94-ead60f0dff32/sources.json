@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-20T22:00:00.000Z",
+  "day": "2026-10-21",
+  "sources": [
+    {
+      "id": "707b680bc79e80835cbce882bec0f7eb332142e9d300167fd4f5dd98ac2de890",
+      "title": "隔离测试科技资讯4",
+      "url": "https://news.example.com/articles/4?source=feed&edition=cn",
+      "publishedAt": "2026-10-19T21:56:00.000Z",
+      "sourceName": "隔离验收科技源",
+      "sourceUrl": "https://feeds.example.com/daily-pipeline.xml"
+    }
+  ]
+}

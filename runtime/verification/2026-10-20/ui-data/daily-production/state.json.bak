@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": false,
+    "startTime": "07:30",
+    "accountId": "",
+    "browserId": "",
+    "authorizedAt": "",
+    "firstDay": "",
+    "sourceFolder": ""
+  },
+  "runs": [
+    {
+      "id": "a3fa08c2-4885-455d-b6be-4728026b0f42",
+      "day": "2026-10-20",
+      "previewOnly": true,
+      "status": "failed",
+      "startedAt": "2026-10-20T06:58:11.075Z",
+      "message": "没有尚未发布且图片可读取的商品。请补充商品图片或同步新日报。",
+      "binding": {
+        "enabled": false,
+        "startTime": "07:30",
+        "accountId": "",
+        "browserId": "",
+        "authorizedAt": "",
+        "firstDay": "",
+        "sourceFolder": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-20T06:58:11.101Z"
+      },
+      "warnings": [],
+      "finishedAt": "2026-10-20T06:58:11.122Z"
+    },
+    {
+      "id": "3734f541-59a6-4e48-8e66-537793d11371",
+      "day": "2026-10-20",
+      "previewOnly": true,
+      "status": "rendering",
+      "startedAt": "2026-10-20T06:59:03.342Z",
+      "message": "正在用本地图片合成竖屏字幕视频。",
+      "binding": {
+        "enabled": false,
+        "startTime": "07:30",
+        "accountId": "",
+        "browserId": "",
+        "authorizedAt": "",
+        "firstDay": "",
+        "sourceFolder": ""
+      },
+      "sourceResult": {
+        "scanned": 1,
+        "added": 0,
+        "existing": 1,
+        "warnings": [],
+        "at": "2026-10-20T06:59:03.354Z"
+      },
+      "warnings": [],
+      "productId": "17bb2df6-1931-487e-ab22-0b8903b261fa",
+      "productKey": "验收专用商品",
+      "title": "验收专用商品",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-data\\daily-production\\videos\\05c2a2f7-c717-4157-8492-d14bc3f781a5\\video.mp4",
+      "caption": "中文\n这是功能验收用的本地测试素材，仅用于验证视频合成，不用于公开发布。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-data\\daily-production\\videos\\05c2a2f7-c717-4157-8492-d14bc3f781a5",
+      "seconds": 18,
+      "sha256": "4e5c39243535f66a3ee384fc127338640867b5ff341f6e955069e4869a8b2c1f",
+      "videoId": "85a18e18-d244-488c-accc-1eccb3ef5484",
+      "draftId": "fae168c5-c8c1-42c3-9580-a1fddd16a6fe"
+    }
+  ],
+  "lastSync": {
+    "scanned": 1,
+    "added": 0,
+    "existing": 1,
+    "warnings": [],
+    "at": "2026-10-20T06:59:03.354Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\ui-data\\product-inbox"
+  }
+}

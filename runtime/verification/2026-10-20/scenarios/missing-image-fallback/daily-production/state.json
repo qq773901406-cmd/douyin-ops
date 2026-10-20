@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": ""
+  },
+  "runs": [
+    {
+      "id": "daee2f1c-8b84-4d61-8e6d-f5233b955a9c",
+      "day": "2026-10-20",
+      "previewOnly": true,
+      "status": "preview",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "成片已生成，仅预览，没有发布。",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-19T22:00:00.000Z"
+      },
+      "warnings": [
+        "验收商品A：A.png：文件已移动或不存在"
+      ],
+      "productId": "B",
+      "productKey": "验收商品b",
+      "title": "验收商品B",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\missing-image-fallback\\daily-production\\videos\\86262814-e715-4ffe-8983-f2a863ba9589\\video.mp4",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\missing-image-fallback\\daily-production\\videos\\86262814-e715-4ffe-8983-f2a863ba9589",
+      "seconds": 18,
+      "sha256": "408c037018f9f1165fa9b5c9b6a10bdb6445f309daff7d6b286fa3cf371e58f0",
+      "videoId": "66cf0731-814f-40ed-b4d8-503a16f7a11b",
+      "draftId": "16e27de7-bf42-4abb-ac48-8e4a526a48b3",
+      "finishedAt": "2026-10-19T22:00:00.000Z"
+    }
+  ],
+  "lastSync": {
+    "scanned": 0,
+    "added": 0,
+    "existing": 0,
+    "warnings": [],
+    "at": "2026-10-19T22:00:00.000Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\missing-image-fallback\\product-inbox"
+  }
+}

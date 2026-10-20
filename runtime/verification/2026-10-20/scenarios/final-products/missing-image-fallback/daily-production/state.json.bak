@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "06:00",
+    "accountId": "TEST-ACCOUNT-NOT-REAL",
+    "browserId": "TEST-BROWSER-NOT-REAL",
+    "authorizedAt": "2026-10-19T10:00:00.000Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": "",
+    "sourceMode": "products",
+    "newsFeedUrl": "https://www.ithome.com/rss/",
+    "newsKeywords": ""
+  },
+  "runs": [
+    {
+      "id": "75a90c5a-3553-475a-8973-d72ab7b816fe",
+      "day": "2026-10-20",
+      "previewOnly": true,
+      "sourceMode": "products",
+      "status": "rendering",
+      "startedAt": "2026-10-19T22:00:00.000Z",
+      "message": "正在用本地图片合成竖屏字幕视频。",
+      "binding": {
+        "enabled": true,
+        "startTime": "06:00",
+        "accountId": "TEST-ACCOUNT-NOT-REAL",
+        "browserId": "TEST-BROWSER-NOT-REAL",
+        "authorizedAt": "2026-10-19T10:00:00.000Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "",
+        "sourceMode": "products",
+        "newsFeedUrl": "https://www.ithome.com/rss/",
+        "newsKeywords": ""
+      },
+      "sourceResult": {
+        "scanned": 0,
+        "added": 0,
+        "existing": 0,
+        "warnings": [],
+        "at": "2026-10-19T22:00:00.000Z"
+      },
+      "warnings": [
+        "验收商品A：A.png：文件已移动或不存在"
+      ],
+      "productId": "B",
+      "productKey": "验收商品b",
+      "title": "验收商品B",
+      "asset": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\missing-image-fallback\\daily-production\\videos\\6acae639-b696-475a-9c92-9f8b76556c2d\\video.mp4",
+      "caption": "这是隔离测试商品。图片与字幕由本地免费合成。",
+      "directory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\missing-image-fallback\\daily-production\\videos\\6acae639-b696-475a-9c92-9f8b76556c2d",
+      "seconds": 18,
+      "sha256": "606875dee0025248acb31f8539f537fbcc8e9df8e0d566a0d79cc077da22bf63",
+      "videoId": "f9ddde50-9bea-4682-bd6a-75a591787372",
+      "draftId": "09461f1f-cb63-4124-8d5d-e77893b9ce4d"
+    }
+  ],
+  "lastSync": {
+    "scanned": 0,
+    "added": 0,
+    "existing": 0,
+    "warnings": [],
+    "at": "2026-10-19T22:00:00.000Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\final-products\\missing-image-fallback\\product-inbox"
+  },
+  "newsLastSync": null,
+  "newsItems": []
+}

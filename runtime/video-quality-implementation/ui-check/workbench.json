@@ -1,0 +1,100 @@
+{
+  "account": "我的账号",
+  "persona": "表达直接、自然，用具体信息帮助观众。视频前三秒有钩子，结尾留一个自然问题。",
+  "audience": "",
+  "pillars": "",
+  "diagnosis": null,
+  "schemaVersion": 5,
+  "trash": [],
+  "records": [],
+  "drafts": [],
+  "metrics": [],
+  "ideas": [],
+  "research": [],
+  "comments": [],
+  "videos": [
+    {
+      "title": "镜头验收流程测试",
+      "subject": "一只圆脸橘白小猫，白色口鼻、胸口和前爪，橘色额头与背部，全程使用同一角色参考。",
+      "setting": "温暖明亮的客厅，木地板，柔和日光，背景简洁。",
+      "style": "可爱写实，轻松搞笑，动作连贯，自然毛发质感。",
+      "referenceVideo": "https://v.douyin.com/8Y3Pg2MsKV8/",
+      "characterReference": "D:/references/test-cat.png",
+      "visualIdentity": "圆脸、短耳、橘白毛色及胖瘦比例与角色参考一致；不添加墨镜、衣服或嘴叼物。唯一道具是同一枚粉色蝴蝶结发夹；戴好后始终在左耳外侧。背景与光线保持一致。",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "",
+      "cost": "",
+      "status": "planned",
+      "asset": "",
+      "blocker": "",
+      "notes": "",
+      "shots": [
+        {
+          "id": "shot-10fac18e-2cb9-4f01-9ca2-af572fc657a4",
+          "seconds": 3,
+          "action": "小猫低头看向地上的粉色蝴蝶结发夹。",
+          "camera": "中景，固定机位，猫与发夹同时入镜。",
+          "referenceImage": "D:/references/test-shot-1.png",
+          "startState": "同一客厅木地板上，小猫坐着，粉色蝴蝶结发夹在前爪旁的地上。",
+          "endState": "同一客厅木地板上，小猫坐着低头看向前爪旁的粉色蝴蝶结发夹。",
+          "asset": "D:/renders/test-shot-1-v2.mp4",
+          "reviewStatus": "pending",
+          "reviewNotes": "测试验收状态保存与修改失效"
+        },
+        {
+          "id": "shot-9805002c-e2cd-44a8-a17d-9dbf3f1859de",
+          "seconds": 3,
+          "action": "小猫用左前爪轻触发夹。",
+          "camera": "前爪和发夹特写，固定机位。",
+          "referenceImage": "",
+          "startState": "同一客厅木地板上，小猫坐着低头看向前爪旁的粉色蝴蝶结发夹。",
+          "endState": "同一客厅木地板上，小猫坐着，左前爪触到地上的粉色蝴蝶结发夹。",
+          "asset": "",
+          "reviewStatus": "pending",
+          "reviewNotes": ""
+        },
+        {
+          "id": "shot-155ad2ce-c393-42b3-90a8-13bb49abbdea",
+          "seconds": 4,
+          "action": "小猫将发夹举到胸前。",
+          "camera": "中近景，完整保留左前爪与发夹。",
+          "referenceImage": "",
+          "startState": "同一客厅木地板上，小猫坐着，左前爪触到地上的粉色蝴蝶结发夹。",
+          "endState": "同一客厅木地板上，小猫坐着，左前爪将粉色蝴蝶结发夹举在胸前。",
+          "asset": "",
+          "reviewStatus": "pending",
+          "reviewNotes": ""
+        },
+        {
+          "id": "shot-0645e748-23e8-4f8d-ba99-648ceeee1817",
+          "seconds": 4,
+          "action": "小猫把发夹戴到左耳外侧。",
+          "camera": "头部与左前爪近景，动作过程不遮挡发夹。",
+          "referenceImage": "",
+          "startState": "同一客厅木地板上，小猫坐着，左前爪将粉色蝴蝶结发夹举在胸前。",
+          "endState": "同一客厅木地板上，小猫坐着，粉色蝴蝶结发夹固定在左耳外侧，双前爪自然垂下。",
+          "asset": "",
+          "reviewStatus": "pending",
+          "reviewNotes": ""
+        },
+        {
+          "id": "shot-65571202-2d80-4867-9b59-81c78873d4a8",
+          "seconds": 4,
+          "action": "小猫向右轻摆一次上身。",
+          "camera": "全身固定镜头，留足头顶和脚下空间。",
+          "referenceImage": "",
+          "startState": "同一客厅木地板上，小猫坐着，粉色蝴蝶结发夹固定在左耳外侧，双前爪自然垂下。",
+          "endState": "同一客厅木地板上，小猫坐着向右轻摆上身，粉色蝴蝶结发夹仍固定在左耳外侧。",
+          "asset": "",
+          "reviewStatus": "pending",
+          "reviewNotes": ""
+        }
+      ],
+      "id": "11412c78-035b-49eb-9a7e-461f1ecb9375",
+      "createdAt": "2026-10-20T07:16:04.173Z",
+      "updatedAt": "2026-10-20T07:16:04.173Z"
+    }
+  ],
+  "products": []
+}

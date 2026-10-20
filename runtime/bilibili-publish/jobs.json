@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "e82abddf-2020-47e4-ad32-9943fe910ad1",
+      "platform": "bilibili",
+      "account": {
+        "name": "Omni_Orange",
+        "uid": ""
+      },
+      "browserId": "",
+      "title": "橘猫捡到发夹跳喵阿里嘎多",
+      "video": {
+        "sha256": "bab94a65334bfa1953e55855f469f7cb6dd253f8b0ba7dd69ca7228ef57c8662",
+        "sourcePath": "D:\\ai\\runtime\\ai_gen\\videos\\cat-clip-final.mp4",
+        "path": null
+      },
+      "status": "published",
+      "createdAt": "2026-10-16T05:47:39.906Z",
+      "updatedAt": "2026-10-16T05:47:39.921Z",
+      "history": [
+        {
+          "at": "2026-10-16T05:47:39.921Z",
+          "action": "import-receipt",
+          "detail": "归档既有发布结果，用于后续重复检查；未执行上传或发布。"
+        }
+      ],
+      "receipt": {
+        "bvid": "BV1z4JD6xEcj",
+        "url": "https://www.bilibili.com/video/BV1z4JD6xEcj/",
+        "observedAt": "2026-10-16T05:47:39.921Z",
+        "evidence": {
+          "path": "D:\\ai\\runtime\\bilibili-publish\\evidence\\f7091ee3-0e5a-47e5-b705-dfa5b85e5030.png",
+          "sha256": "807f6389adb341b07a7ae6b9e3a097cf3d8438ef44dd19a95e0cee04ebdb2cab"
+        },
+        "note": "B站稿件管理显示：全部稿件 1，进行中 0，已发布 1；标题匹配，上传及转码已完成。",
+        "imported": true
+      }
+    }
+  ]
+}

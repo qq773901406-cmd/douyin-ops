@@ -1,0 +1,127 @@
+[
+  {
+    "name": "preview-does-not-publish-and-once-per-day",
+    "result": "PASS",
+    "elapsedMs": 3341,
+    "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\preview-once-per-day",
+    "realRenderedVideo": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\preview-once-per-day\\daily-production\\videos\\044847a6-da0d-46ee-9030-e1ac0d73667f\\video.mp4",
+    "simulatedPublisherCalls": 2,
+    "statuses": [
+      {
+        "day": "2026-10-20",
+        "preview": true,
+        "status": "preview",
+        "productId": "A"
+      },
+      {
+        "day": "2026-10-20",
+        "preview": false,
+        "status": "submitted",
+        "productId": "A"
+      },
+      {
+        "day": "2026-10-21",
+        "preview": false,
+        "status": "submitted",
+        "productId": "B"
+      }
+    ],
+    "leaseCount": 3,
+    "releaseCount": 3
+  },
+  {
+    "name": "beijing-time-boundaries-and-six-hour-window",
+    "result": "PASS",
+    "elapsedMs": 63,
+    "evidenceDirectories": [
+      "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\before-six",
+      "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\exactly-six-hours-late",
+      "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\over-six-hours-late"
+    ],
+    "before06RunCount": 0,
+    "exactly06Status": "failed",
+    "exactly12Status": "failed-no-product-not-expired",
+    "after12Status": "skipped"
+  },
+  {
+    "name": "no-products-fails-and-pauses",
+    "result": "PASS",
+    "elapsedMs": 29,
+    "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\no-products",
+    "status": "failed",
+    "message": "没有尚未发布且图片可读取的商品。请补充商品图片或同步新日报。",
+    "scheduleEnabled": false
+  },
+  {
+    "name": "missing-first-image-skips-to-next-product",
+    "result": "PASS",
+    "elapsedMs": 1059,
+    "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\missing-image-fallback",
+    "selectedProductId": "B",
+    "warnings": [
+      "验收商品A：A.png：文件已移动或不存在"
+    ],
+    "realRenderedVideo": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\missing-image-fallback\\daily-production\\videos\\86262814-e715-4ffe-8983-f2a863ba9589\\video.mp4"
+  },
+  {
+    "name": "submit-exception-becomes-uncertain-without-retry",
+    "result": "PASS",
+    "elapsedMs": 941,
+    "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\uncertain-submit",
+    "status": "uncertain",
+    "simulatedPublisherCalls": 1,
+    "scheduleEnabled": false,
+    "submitStartedAt": "2026-10-19T22:00:00.000Z"
+  },
+  {
+    "name": "interrupted-startup-recovery",
+    "result": "PASS",
+    "elapsedMs": 63,
+    "variants": [
+      {
+        "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\interrupted-selecting",
+        "originalStatus": "selecting",
+        "submitStarted": false,
+        "recoveredStatus": "failed"
+      },
+      {
+        "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\interrupted-rendering",
+        "originalStatus": "rendering",
+        "submitStarted": false,
+        "recoveredStatus": "failed"
+      },
+      {
+        "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\interrupted-publishing-before-submit",
+        "originalStatus": "publishing",
+        "submitStarted": false,
+        "recoveredStatus": "failed"
+      },
+      {
+        "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\interrupted-publishing-after-submit",
+        "originalStatus": "publishing",
+        "submitStarted": true,
+        "recoveredStatus": "uncertain"
+      }
+    ]
+  },
+  {
+    "name": "public-preview-endpoint-eventually-renders-without-publish",
+    "result": "PASS",
+    "elapsedMs": 883,
+    "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\public-preview-endpoint",
+    "status": "preview",
+    "simulatedPublisherCalls": 0,
+    "realRenderedVideo": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\public-preview-endpoint\\daily-production\\videos\\9c5f2bc0-f0e8-4523-9080-3e06efc5195e\\video.mp4"
+  },
+  {
+    "name": "corrupt-first-image-fallback-probe",
+    "result": "PASS",
+    "elapsedMs": 286,
+    "evidenceDirectory": "D:\\ai\\runtime\\verification\\2026-10-20\\scenarios\\corrupt-image-fallback-probe",
+    "observedStatus": "failed",
+    "selectedProductId": "A",
+    "scheduleEnabled": false,
+    "message": "本地视频合成失败：odule>\r\n    print(json.dumps(render(json.loads(Path(args.config).read_text(encoding=\"utf-8-sig\")), args.out), ensure_ascii=False))\r\n                     ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"D:\\ai\\tools\\product_video\\render.py\", line 73, in render\r\n    with Image.open(pictures[index % len(pictures)]) as source:\r\n         ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"C:\\Users\\wuzhuoxuan123\\.workbuddy\\binaries\\python\\envs\\default\\Lib\\site-packages\\PIL\\Image.py\", line 3580, in open\r\n    raise UnidentifiedImageError(msg)\r\nPIL.UnidentifiedImageError: cannot identify image file 'D:\\\\ai\\\\runtime\\\\verification\\\\2026-10-20\\\\scenarios\\\\corrupt-image-fallback-probe\\\\daily-production\\\\videos\\\\137297fe-9791-4aa7-9e1c-7c06986d7259\\\\image-0.png'\r\n",
+    "finding": "A corrupt but readable image aborts the whole day; a following valid product is not tried."
+  }
+]

@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "config": {
+    "enabled": true,
+    "startTime": "14:00",
+    "accountId": "fixture-account",
+    "browserId": "fixture-browser",
+    "authorizedAt": "2026-10-20T06:57:28.830Z",
+    "firstDay": "2026-10-20",
+    "sourceFolder": "D:\\ai\\runtime\\verification\\2026-10-20\\goal-audit\\corrupt-image-fixture\\source"
+  },
+  "runs": [
+    {
+      "id": "f3142842-2137-4ffc-8950-d2e9a5ef7037",
+      "day": "2026-10-20",
+      "previewOnly": false,
+      "status": "rendering",
+      "startedAt": "2026-10-20T06:57:29.030Z",
+      "message": "正在用本地图片合成竖屏字幕视频。",
+      "binding": {
+        "enabled": true,
+        "startTime": "14:00",
+        "accountId": "fixture-account",
+        "browserId": "fixture-browser",
+        "authorizedAt": "2026-10-20T06:57:28.830Z",
+        "firstDay": "2026-10-20",
+        "sourceFolder": "D:\\ai\\runtime\\verification\\2026-10-20\\goal-audit\\corrupt-image-fixture\\source"
+      },
+      "sourceResult": {
+        "scanned": 1,
+        "added": 0,
+        "existing": 1,
+        "warnings": [],
+        "at": "2026-10-20T06:57:29.133Z"
+      },
+      "warnings": [],
+      "productId": "a-corrupt",
+      "productKey": "bad-product",
+      "title": "bad-product"
+    }
+  ],
+  "lastSync": {
+    "scanned": 1,
+    "added": 0,
+    "existing": 1,
+    "warnings": [],
+    "at": "2026-10-20T06:57:29.133Z",
+    "folder": "D:\\ai\\runtime\\verification\\2026-10-20\\goal-audit\\corrupt-image-fixture\\source"
+  }
+}
