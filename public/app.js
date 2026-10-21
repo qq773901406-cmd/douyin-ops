@@ -8,6 +8,7 @@ import { createDataCenter } from './data-center.js';
 import { createShopWorkspace } from './shop-workspace.js';
 import { createAutomationWorkspace } from './automation.js';
 import { createDailyProduction } from './daily-production.js';
+import { createDouyinTracking } from './douyin-tracking.js';
 import { dashboard } from './dashboard.js';
 import { renderLegacyPage } from './legacy-pages.js';
 import { esc, request, download, localDay, createFormMemory } from './workspace-ui.js';
@@ -51,6 +52,7 @@ const library = createContentLibrary({ getState: () => state, save, render, noti
 const dataCenter = createDataCenter({ getState: () => state, getSync: () => sync, save, render, notify });
 const automation = createAutomationWorkspace({ notify });
 const dailyProduction = createDailyProduction({ notify, refreshWorkspace: () => sync.refreshSaved() });
+const douyinTracking = createDouyinTracking({ notify, refreshWorkspace: () => sync.refreshSaved() });
 const sync = createStateSync({ getState: () => state, setState(value, { initial = false } = {}) {
   state = value; studio.reset({ preserveEditor: initial }); planner.reset({ preserveEditor: initial }); shop.reset({ preserveEditor: initial });
   if (!initial) memory.reset();
@@ -90,6 +92,7 @@ function render() {
   connectionStatus(); if (page === 'data') void dataCenter.mount();
   if (page === 'automation') void automation.mount();
   if (page === 'production') void dailyProduction.mount();
+  if (page === 'tracking') void douyinTracking.mount();
 }
 async function refreshRuntime(checkBrowser = false) {
   if (refreshing) return; refreshing = true;

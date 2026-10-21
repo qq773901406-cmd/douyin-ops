@@ -1,8 +1,27 @@
 {
-  "status": "ready-to-submit",
-  "approvedCredits": 10,
-  "model": "grok_video_v15_lite",
-  "params": {
+  "status": "blocked_by_account_plan",
+  "creditsAuthorized": 10,
+  "creditsSpent": 0,
+  "firstFrame": "two-cats-start.png",
+  "videoSubmitted": false,
+  "attempts": [
+    {
+      "model": "grok_video_v15_lite",
+      "duration": 10,
+      "resolution": "720p",
+      "quoteCredits": 10,
+      "error": "Requires basic plan or higher."
+    },
+    {
+      "model": "minimax_hailuo",
+      "variant": "minimax-2.3-fast",
+      "duration": 10,
+      "resolution": "768",
+      "quoteCredits": 7,
+      "error": "Requires basic plan or higher."
+    }
+  ],
+  "preparedParams": {
     "model": "grok_video_v15_lite",
     "duration": 10,
     "resolution": "720p",
@@ -17,5 +36,20 @@
     ],
     "prompt": "Animate the supplied first frame into one charming, genuinely moving, photorealistic 10-second vertical cat-comedy dance video. Preserve the exact two kittens, their fur patterns, furry feline paws, faces, warm apartment living room, sofa and natural sunlight. Only these two cats. The black-and-white kitten in front and the orange tabby behind remain upright on their hind paws and perform a lively synchronized dance with smooth full-body movement, balancing naturally and stepping on the wooden floor. 0-3 seconds: both bounce lightly to the beat, lift their forepaws beside their cheeks and alternate cute head tilts; the foreground kitten makes a delighted, comically open-mouthed expression. 3-7 seconds: they sway their shoulders and hips left and right, lower then raise their furry paws in matching rhythmic paw waves. The orange kitten playfully leans into view over the other kitten's left shoulder. 7-10 seconds: the camera gently pulls back so both dancing bodies and hind paws are visible; they take two tiny synchronized side steps and finish with a cheerful double-paw pose toward the camera. Continuous realistic motion and expressive faces, slightly goofy candid smartphone video energy, consistent identities and proportions, subtle fur and tail movement. One continuous low-angle shot with minimal camera shake. Keep paws feline, no human fingers, no new limbs, no morphing, no extra animals, no clothing, no accessories, no cuts, no writing, no watermark, no social-media interface. Audio: an original cheerful bouncy electronic instrumental groove with crisp light percussion around 120 BPM, with a couple of soft playful meows, no speech, no vocals, and no recognizable copyrighted melody."
   },
-  "createdAt": "2026-10-20T09:24:57.131Z"
+  "fallbackParams": {
+    "model": "minimax_hailuo",
+    "duration": 10,
+    "resolution": "768",
+    "count": 1,
+    "use_unlim": false,
+    "medias": [
+      {
+        "role": "start_image",
+        "value": "e36a1440-e197-4d2a-a85a-aa8c03077b9e"
+      }
+    ],
+    "prompt": "Animate the supplied first frame into one charming, genuinely moving, photorealistic 10-second vertical cat-comedy dance video. Preserve the exact two kittens, their fur patterns, furry feline paws, faces, warm apartment living room, sofa and natural sunlight. Only these two cats. The black-and-white kitten in front and the orange tabby behind remain upright on their hind paws and perform a lively synchronized dance with smooth full-body movement, balancing naturally and stepping on the wooden floor. 0-3 seconds: both bounce lightly to the beat, lift their forepaws beside their cheeks and alternate cute head tilts; the foreground kitten makes a delighted, comically open-mouthed expression. 3-7 seconds: they sway their shoulders and hips left and right, lower then raise their furry paws in matching rhythmic paw waves. The orange kitten playfully leans into view over the other kitten's left shoulder. 7-10 seconds: the camera gently pulls back so both dancing bodies and hind paws are visible; they take two tiny synchronized side steps and finish with a cheerful double-paw pose toward the camera. Continuous realistic motion and expressive faces, slightly goofy candid smartphone video energy, consistent identities and proportions, subtle fur and tail movement. One continuous low-angle shot with minimal camera shake. Keep paws feline, no human fingers, no new limbs, no morphing, no extra animals, no clothing, no accessories, no cuts, no writing, no watermark, no social-media interface.",
+    "variant": "minimax-2.3-fast"
+  },
+  "updatedAt": "2026-10-20T09:26:37.099Z"
 }

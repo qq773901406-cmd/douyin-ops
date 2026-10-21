@@ -9,6 +9,8 @@ import { normalizeState } from '../workbuddy/connector/lib/workspace-model.mjs';
 import { BackupStore } from '../workbuddy/connector/lib/backup-store.mjs';
 import { AutomationService } from './automation-service.mjs';
 import { DailyProduction } from './daily-production.mjs';
+import { DouyinInspector } from './douyin-inspector.mjs';
+import { DouyinTracking } from './douyin-tracking.mjs';
 
 const root = resolve(fileURLToPath(new URL('../', import.meta.url)));
 const { version } = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
@@ -32,11 +34,18 @@ const jobsStore = new JsonStore(jobsFile, [], validateList);
 const activityStore = new JsonStore(activityFile, [], validateList);
 const automation = new AutomationService(runtimeDir);
 const dailyProduction = new DailyProduction(runtimeDir, stateStore, automation);
+const douyinInspector = new DouyinInspector({ publisher: automation.publisher });
+const douyinTracking = new DouyinTracking(runtimeDir, {
+  workspace: stateStore, automation, dailyProduction,
+  inspect: target => douyinInspector.inspect(target),
+  discover: target => douyinInspector.discover(target),
+});
 const publicFiles = new Set(['index.html', 'app.css', 'app.js', 'state-sync.js', 'video-studio.js', 'workbuddy/connector/lib/workspace-model.mjs', 'workbuddy/connector/lib/video-projects.mjs']);
 for (const file of ['product.css', 'workspace-ui.js', 'content-library.js', 'publish-planner.js', 'data-center.js', 'dashboard.js', 'legacy-pages.js', 'workbuddy/connector/lib/workspace-actions.mjs']) publicFiles.add(file);
 for (const file of ['shop-workspace.js', 'shop-import.js', 'shop-cards.js', 'shop.css', 'workbuddy/connector/lib/shop-products.mjs']) publicFiles.add(file);
 for (const file of ['automation.js', 'automation.css', 'automation-model.mjs']) publicFiles.add(file);
 publicFiles.add('daily-production.js');
+publicFiles.add('douyin-tracking.js');
 publicFiles.add('shared/automation-model.mjs');
 // Keep browser URLs stable while serving only explicitly allowed source files.
 const publicPaths = new Map([...publicFiles].map(file => [file, resolve(root,
@@ -59,6 +68,9 @@ async function bodyJson(req, maxBytes = 8 * 1024 * 1024) {
   return parsed;
 }
 function sameOrigin(req) { return !req.headers.origin || localOrigins.has(req.headers.origin); }
+async function trackingSnapshot() {
+  return { ...(await douyinTracking.snapshot()), targets: await douyinTracking.targets() };
+}
 async function addActivity(entry) {
   await activityStore.update(activity => {
     activity.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, at: new Date().toISOString(), ...entry });
@@ -73,6 +85,26 @@ const server = createServer(async (req, res) => {
   if (url.pathname.startsWith('/api/')) {
     if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, message: '请求来源不受信任。' }); return; }
     try {
+      if (url.pathname === '/api/douyin-tracking' || url.pathname.startsWith('/api/douyin-tracking/')) {
+        const route = url.pathname.slice('/api/douyin-tracking'.length);
+        if (req.method === 'GET' && route === '') { sendJson(res, 200, { ok: true, ...(await trackingSnapshot()) }); return; }
+        if (req.method === 'POST' && ['/check', '/bind'].includes(route)) {
+          const input = await bodyJson(req, 4096);
+          const allowed = route === '/bind' ? ['targetRef', 'workURL'] : ['targetRef'];
+          if (Object.keys(input).some(key => !allowed.includes(key))
+            || input.targetRef !== undefined && (typeof input.targetRef !== 'string' || !/^(?:daily|queue):[A-Za-z0-9_-]{1,160}$/.test(input.targetRef))) {
+            throw Object.assign(new Error('回采请求只接受提交记录编号和作品链接。'), { status: 400 });
+          }
+          if (route === '/bind' && (!input.targetRef || typeof input.workURL !== 'string' || !input.workURL.trim())) {
+            throw Object.assign(new Error('绑定需要提交记录编号和完整作品链接。'), { status: 400 });
+          }
+          const result = route === '/bind'
+            ? await douyinTracking.bind(input.targetRef, input.workURL)
+            : await douyinTracking.checkNow(input.targetRef);
+          sendJson(res, 200, { ok: true, result, ...(await trackingSnapshot()) }); return;
+        }
+        sendJson(res, 404, { ok: false, message: '抖音回采接口不存在。' }); return;
+      }
       if (url.pathname.startsWith('/api/daily-production')) {
         const route = url.pathname.slice('/api/daily-production'.length);
         if (req.method === 'GET' && route === '') { sendJson(res, 200, { ok: true, ...(await dailyProduction.snapshot()) }); return; }
@@ -205,12 +237,15 @@ const server = createServer(async (req, res) => {
 server.on('error', error => { if (error.code === 'EADDRINUSE') { console.error(`端口 ${port} 已被占用。请关闭旧服务，或设置其他端口后重新运行。`); process.exitCode = 1; return; } throw error; });
 server.listen(port, host, () => {
   console.log(`豆蜂 WorkBuddy 运营工作台已就绪：${address}`);
-  void automation.start().catch(error => { automation.lastError = error.message; console.error('自动发布调度未启动：' + error.message); });
-  void dailyProduction.start().catch(error => { dailyProduction.error = error.message; console.error('每日生产调度未启动：' + error.message); });
+  void Promise.all([
+    automation.start().catch(error => { automation.lastError = error.message; console.error('自动发布调度未启动：' + error.message); }),
+    dailyProduction.start().catch(error => { dailyProduction.error = error.message; console.error('每日生产调度未启动：' + error.message); }),
+  ]).then(() => douyinTracking.start()).catch(error => { douyinTracking.error = error.message; console.error('抖音回采调度未启动：' + error.message); });
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
   automation.stop();
   dailyProduction.stop();
+  douyinTracking.stop();
   server.close(() => { process.exitCode = 0; });
   server.closeIdleConnections();
 });

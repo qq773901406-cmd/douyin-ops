@@ -15,3 +15,6 @@ knowledge-base/**
 
 output
 .codex_tmp/
+
+# Local videos, downloaded dependencies, account state and run receipts.
+/runtime/

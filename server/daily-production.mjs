@@ -85,7 +85,7 @@ export class DailyProduction {
       readiness: await this.readiness(value, eligible), nextRunAt: config.enabled ? dayStartISO(nextDay, config.startTime) : '',
       source: newsMode ? '公开 RSS / Atom 资讯' : '本地选品日报＋商品库', sourceConnected: !!(newsMode ? value.newsLastSync : value.lastSync),
       sourceMessage: newsMode ? `每天采集 ${config.newsFeedUrl} 最近 48 小时的资讯标题与出处，去重后最多选 3 条制作一条视频；没有新资讯则跳过。当前不提供热度排名。` : `每天开工前自动同步日报目录：${config.sourceFolder}。1688 联网采集尚未接入。`,
-      metricsMessage: '播放量和互动数据尚未自动回采；提交成功不代表平台审核通过。' };
+      metricsMessage: '在效果追踪中核实并绑定作品后，每 15 分钟自动检查审核与可见指标；提交成功不代表平台审核通过。' };
   }
   async readiness(state, eligible) {
     const checks = [];

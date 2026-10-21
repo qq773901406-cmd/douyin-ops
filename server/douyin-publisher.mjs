@@ -4,11 +4,12 @@ import { runBsk, parseBskJson, BSK_TIMEOUTS } from '../lib/bsk-client.mjs';
 
 const creatorHome = 'https://creator.douyin.com/creator-micro/home';
 const videoUpload = 'https://creator.douyin.com/creator-micro/content/upload';
-const cleanText = text => String(text || '').replace(/\r\n/g, '\n').replace(/\u00a0/g, ' ').trim();
+const cleanText = text => String(text || '').replace(/\r\n?/g, '\n').replace(/\u200b/g, '').replace(/\u00a0/g, ' ')
+  .split('\n').filter(line => line.trim()).join('\n').trim();
 const isVideoEditor = url => /\/creator-micro\/content\/(?:post\/video|publish)(?:[/?#]|$)/.test(url);
 
 // Fixed, read-only DOM inspection. It never reads cookies, storage or page JS state.
-function inspectCreatorDOM() {
+export function inspectCreatorDOM() {
   const visible = el => !!el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none';
   const text = el => String(el.innerText || el.textContent || '').trim();
   const selector = el => {
@@ -30,7 +31,7 @@ function inspectCreatorDOM() {
   const titles = [...document.querySelectorAll('input,textarea')].filter(el => visible(el) && !el.disabled && /作品标题|添加.*标题|填写.*标题/.test(el.getAttribute('placeholder') || el.getAttribute('aria-label') || ''));
   const captions = [...document.querySelectorAll('[contenteditable="true"],textarea')].filter(el => visible(el) && !el.disabled && !titles.includes(el));
   const publish = [...document.querySelectorAll('button,[role="button"]')].filter(el => visible(el) && text(el) === '发布' && !el.disabled && el.getAttribute('aria-disabled') !== 'true');
-  const choices = [...document.querySelectorAll('input[type="radio"]:checked,[role="radio"][aria-checked="true"],label:has(input[type="radio"]:checked),[class*="radio"][class*="checked"],[role="combobox"],[class*="select-selection"],[class*="selectSelection"],select')].filter(visible).map(el => el.tagName === 'INPUT' ? [...(el.labels || [])].map(text).join(' ') : el.tagName === 'SELECT' ? text(el.selectedOptions[0] || el) : text(el));
+  const choices = [...document.querySelectorAll('input[type="radio"]:checked,input[type="checkbox"]:checked,[role="radio"][aria-checked="true"],label:has(input[type="radio"]:checked),label:has(input[type="checkbox"]:checked),[class*="radio"][class*="checked"],[role="combobox"],[class*="select-selection"],[class*="selectSelection"],select')].filter(visible).map(el => el.tagName === 'INPUT' ? [...(el.labels || [])].filter(visible).map(text).join(' ') : el.tagName === 'SELECT' ? text(el.selectedOptions[0] || el) : text(el));
   return {
     url: location.href, accountIds: accounts, needsHuman,
     upload: uploads.length === 1 ? selector(uploads[0]) : null,
@@ -47,14 +48,18 @@ function inspectCreatorDOM() {
 }
 
 export class DouyinPublisher {
+  constructor({ run = runBsk } = {}) { this.run = run; }
   async command(args, timeout = BSK_TIMEOUTS.DEFAULT_MS) {
-    const result = await runBsk(args, { timeout });
+    const result = await this.run(args, { timeout });
+    const parsed = parseBskJson(result.stdout);
     if (!result.ok) {
       // Do not expose command lines containing captions, file names or page dumps.
       if (result.code === 'BSK_NOT_FOUND') throw new Error('未找到 BrowserSkill，请在应用接入中完成安装和浏览器扩展连接。');
-      throw new Error(`浏览器步骤 ${args[0]} 未完成（${result.message}）。请检查扩展、登录状态和页面；系统不会盲目重试。`);
+      if (args[0] === 'fill' && parsed?.data?.reason === 'fill_value_mismatch') {
+        throw Object.assign(new Error('浏览器填写结果需要重新读取页面核对。'), { code: 'fill_value_mismatch' });
+      }
+      throw new Error(`浏览器步骤 ${args[0]} 未完成。请检查扩展、登录状态和页面；系统不会盲目重试。`);
     }
-    const parsed = parseBskJson(result.stdout);
     if (!parsed || parsed.ok === false || parsed.error || parsed.success === false) throw new Error(`浏览器步骤 ${args[0]} 被拒绝或未完成，请在浏览器中检查。`);
     return parsed;
   }
@@ -113,6 +118,20 @@ export class DouyinPublisher {
       return account;
     });
   }
+  async fill(session, field, selector, value) {
+    try {
+      await this.command(['fill', '--selector', selector, '--value', value, '--session', session]);
+      return null;
+    } catch (error) {
+      if (error.code !== 'fill_value_mismatch') throw error;
+      // Some Slate editors normalize blank paragraphs and insert U+200B. Do not
+      // retry a write: inspect the same visible field immediately and compare it.
+      const page = await this.page(session);
+      if (!isVideoEditor(page.url) || page.validationError || page[field]?.selector !== selector
+        || cleanText(page[field]?.value) !== cleanText(value)) throw new Error('页面填写结果与审批内容不一致，已停止。');
+      return page;
+    }
+  }
   async publish(item, { guard, beforeSubmit }) {
     const approval = item.approval;
     return this.session(approval.browserId, async session => {
@@ -125,10 +144,9 @@ export class DouyinPublisher {
       await this.command(['upload', '--selector', uploadPage.upload, '--file', approval.asset, '--session', session, '--timeout', '10m'], BSK_TIMEOUTS.UPLOAD_MS);
       let page = await this.waitPage(session, page => isVideoEditor(page.url) && page.uploaded && !page.uploading && page.title && page.caption, guard, BSK_TIMEOUTS.WAIT_UPLOAD_MS);
       await guard();
-      await this.command(['fill', '--selector', page.title.selector, '--value', approval.title, '--session', session]);
-      page = await this.page(session);
+      page = await this.fill(session, 'title', page.title.selector, approval.title) || await this.page(session);
       if (!page.caption) throw new Error('无法唯一识别视频文案输入框，已停止。');
-      await this.command(['fill', '--selector', page.caption.selector, '--value', approval.caption, '--session', session]);
+      await this.fill(session, 'caption', page.caption.selector, approval.caption);
       // The whole publish flow runs in this single persistent session, so the
       // logged-in account cannot switch without a re-login — which page() already
       // catches via needsHuman / login redirection. Re-checking the account in a
@@ -136,7 +154,7 @@ export class DouyinPublisher {
       // form, so we validate the account on the current editor page instead.
       page = await this.waitPage(session, page => !!page.publish && page.uploaded && !page.uploading, guard, BSK_TIMEOUTS.WAIT_PAGE_MS);
       const validateSubmission = page => {
-        if (!isVideoEditor(page.url) || !page.publish || !page.uploaded || page.uploading || cleanText(page.title?.value) !== cleanText(approval.title) || cleanText(page.caption?.value) !== cleanText(approval.caption)) throw new Error('页面视频标题、文案或上传状态与审批内容不一致，已停止。');
+        if (!isVideoEditor(page.url) || !page.publish || !page.uploaded || page.uploading || !page.title || !page.caption || cleanText(page.title.value) !== cleanText(approval.title) || cleanText(page.caption.value) !== cleanText(approval.caption)) throw new Error('页面视频标题、文案或上传状态与审批内容不一致，已停止。');
         if (page.accountIds.length && !page.accountIds.includes(approval.accountId)) throw new Error('发布页面账号与审批记录不符。');
         if (!page.publicVisible) throw new Error('无法确认页面已选择公开可见，已停止。请检查抖音发布页的可见范围。');
         if (!page.immediateVisible) throw new Error('无法确认抖音页面已选择立即发布，已停止。豆蜂已负责排期，请检查平台发布方式。');
