@@ -8,6 +8,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { productVideoPython } from '../server/product-video.mjs';
 import { DailyProduction } from '../server/daily-production.mjs';
+import { buildNewsVideoMetadata, selectNewsForVideo } from '../server/news-video.mjs';
 
 const execute = promisify(execFile);
 const parser = fileURLToPath(new URL('../tools/news_feed/parse.py', import.meta.url));
@@ -88,4 +89,27 @@ test('已提交新闻修改标题后仍按 URL 排除，并兼容旧 ID 记录',
   assert.deepEqual((await daily.candidates(state)).map(item => item.id), ['fresh-id']);
   state.runs = [{ status: 'submitted', newsItemIds: ['fresh-id'] }];
   assert.deepEqual((await daily.candidates(state)).map(item => item.id), ['old-id']);
+});
+
+test('资讯发布产物在审批前固定单段文案、保留完整出处并标记站外取材', () => {
+  const items = [
+    { id: 'first', title: 'AI 新进展', url: 'https://www.ithome.com/news/1?source=rss&keep=full', publishedAt: now, sourceName: '测试资讯', sourceUrl: feedUrl },
+    { id: 'second', title: '第二条\n完整标题', url: 'https://www.ithome.com/news/2', publishedAt: now, sourceName: '另一来源', sourceUrl: feedUrl }
+  ];
+  const result = buildNewsVideoMetadata(items, { day: '2026-10-22' });
+  assert.equal(result.title, '10月22日资讯速览');
+  assert.equal(result.contentDeclaration, 'external-source');
+  assert.equal(result.caption, '10月22日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. AI 新进展 来源：测试资讯 https://www.ithome.com/news/1?source=rss&keep=full 2. 第二条 完整标题 来源：另一来源 https://www.ithome.com/news/2');
+  assert.ok(!/[\r\n]/u.test(result.caption));
+  assert.equal(items[1].title, '第二条\n完整标题');
+});
+
+test('单段文案仍拒绝截断超预算出处，选材跳过超长链接后保留后续完整文章', () => {
+  const item = { id: 'long', title: '完整标题', url: `https://www.ithome.com/news/1?q=${'a'.repeat(1000)}`, publishedAt: now, sourceName: '测试资讯', sourceUrl: feedUrl };
+  assert.throws(() => buildNewsVideoMetadata([item], { day: '2026-10-22' }), /完整来源链接超过 1000/);
+  const short = { ...item, id: 'short', url: 'https://www.ithome.com/news/2?q=all&keep=full' };
+  const selected = selectNewsForVideo([item, short], { day: '2026-10-22' });
+  assert.deepEqual(selected.items.map(value => value.url), [short.url]);
+  assert.equal(selected.warnings.length, 1);
+  assert.ok(buildNewsVideoMetadata(selected.items, { day: '2026-10-22' }).caption.endsWith(short.url));
 });

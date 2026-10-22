@@ -128,6 +128,7 @@ test('publish revalidates the normalized full caption before its single submit c
     upload: '#upload', uploaded: true, uploading: false, publish: '#publish',
     publicVisible: true, immediateVisible: true, success: ''
   };
+  page.settings = { covers: { vertical: { saved: true }, horizontal: { saved: true } }, noCrosspost: true, declaration: { open: false } };
   publisher.session = async (_browser, action) => action('test-session');
   publisher.accountInSession = async () => ({ accountId: 'account' });
   publisher.page = async () => structuredClone(page);
@@ -144,4 +145,10 @@ test('publish revalidates the normalized full caption before its single submit c
   assert.equal(calls.filter(args => args[0] === 'click').length, 1);
   assert.equal(calls.filter(args => args[0] === 'fill' && args.includes('#caption')).length, 1);
   assert.equal(result.evidence.text, '提交成功');
+  assert.equal(result.evidence.publicationSettings.covers, 'confirmed-existing');
+  assert.equal(result.evidence.publicationSettings.verticalCoverSaved, true);
+  assert.equal(result.evidence.publicationSettings.horizontalCoverSaved, true);
+  assert.equal(result.evidence.publicationSettings.noCrosspost, true);
+  assert.ok(Number.isFinite(Date.parse(result.evidence.publicationSettings.checkedAt)));
+  assert.ok(!JSON.stringify(result.evidence.publicationSettings).includes(approval.asset));
 });

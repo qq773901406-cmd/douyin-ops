@@ -41,7 +41,7 @@ function dayInShanghai(value) {
   return day;
 }
 
-function buildNewsVideoMetadata(items, { day } = {}) {
+export function buildNewsVideoMetadata(items, { day } = {}) {
   if (!Array.isArray(items) || items.length < 1 || items.length > 3) throw new Error('每条资讯视频需要 1–3 条有来源的资讯。');
   const date = dayInShanghai(day);
   const sources = items.map((item, index) => {
@@ -68,10 +68,10 @@ function buildNewsVideoMetadata(items, { day } = {}) {
   const caption = [
     `${title}｜资讯标题速览·非现场画面`,
     '根据来源公开标题制作图卡，完整内容以原文为准。',
-    ...sources.map((item, index) => `${index + 1}. ${item.title}\n来源：${item.sourceName}\n${item.url}`)
-  ].join('\n\n');
+    ...sources.map((item, index) => `${index + 1}. ${item.title} 来源：${item.sourceName} ${item.url}`)
+  ].join(' ');
   if (caption.length > 1000) throw new Error('资讯说明和完整来源链接超过 1000 字符，请减少资讯条数或选择链接较短的资讯；不能省略出处。');
-  return { day: date, items: sources, title, caption };
+  return { day: date, items: sources, title, caption, contentDeclaration: 'external-source' };
 }
 
 /** Choose in source order while retaining complete attribution within the caption budget. */
@@ -99,13 +99,13 @@ export function selectNewsForVideo(candidates, { day } = {}) {
 /** Render supplied source headlines as original graphics; never fetch source bodies or media. */
 export async function renderNewsVideo(items, outputRoot, { day } = {}) {
   if (typeof outputRoot !== 'string' || !outputRoot.trim()) throw new Error('资讯视频输出目录不能为空。');
-  const { day: date, items: sources, title, caption } = buildNewsVideoMetadata(items, { day });
+  const { day: date, items: sources, title, caption, contentDeclaration } = buildNewsVideoMetadata(items, { day });
   const root = resolve(outputRoot);
   await mkdir(root, { recursive: true });
   const directory = join(root, randomUUID());
   await mkdir(directory);
   const config = join(directory, 'input.json'), asset = join(directory, 'video.mp4');
-  const input = { schemaVersion: 1, day: date, title, caption, items: sources };
+  const input = { schemaVersion: 1, day: date, title, caption, contentDeclaration, items: sources };
   await writeFile(config, `${JSON.stringify(input, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
   await writeFile(join(directory, 'sources.json'), `${JSON.stringify({
     schemaVersion: 1, createdAt: new Date().toISOString(), day: date, sources
@@ -128,5 +128,5 @@ export async function renderNewsVideo(items, outputRoot, { day } = {}) {
   if (metadata?.seconds !== 12 + sources.length * 8 || metadata.width !== 720 || metadata.height !== 1280) {
     throw new Error('资讯合成返回的时长或尺寸无效。');
   }
-  return { asset, title, caption, directory, seconds: metadata.seconds };
+  return { asset, title, caption, contentDeclaration, directory, seconds: metadata.seconds };
 }

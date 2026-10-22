@@ -5,6 +5,19 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { BackupStore } from './backup-store.mjs';
 import { join } from 'node:path';
 
+// Windows may briefly deny replacing an existing file while another reader or
+// scanner holds it open. Retry only the rename of the already flushed temp file;
+// the caller keeps its write lock and its business callback is never replayed.
+export async function renameWithRetry(source, destination, { renameFile = rename, wait = delay, platform = process.platform } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await renameFile(source, destination); }
+    catch (error) {
+      if (platform !== 'win32' || !['EPERM', 'EBUSY', 'EACCES'].includes(error.code) || attempt >= 7) throw error;
+      await wait(Math.min(10 * 2 ** attempt, 160));
+    }
+  }
+}
+
 // HTTP and stdio processes share this lock; the JSON format stays readable by hand.
 export class JsonStore {
   constructor(path, fallback, validate = value => value, { snapshots = false } = {}) {
@@ -78,7 +91,7 @@ export class JsonStore {
       await file.writeFile(raw, 'utf8');
       await file.sync();
       await file.close(); file = null;
-      await rename(temporary, path);
+      await renameWithRetry(temporary, path);
     } finally {
       if (file) await file.close();
       await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });

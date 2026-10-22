@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { runBsk, parseBskJson, BSK_TIMEOUTS } from '../lib/bsk-client.mjs';
+import { inspectPublishSettingsDOM, preparePublicationSettings, validatePublicationSettings } from './douyin-publish-settings.mjs';
 
 const creatorHome = 'https://creator.douyin.com/creator-micro/home';
 const videoUpload = 'https://creator.douyin.com/creator-micro/content/upload';
@@ -87,7 +88,7 @@ export class DouyinPublisher {
     }
   }
   async page(session) {
-    const result = await this.command(['evaluate', `(${inspectCreatorDOM.toString()})()`, '--session', session, '--timeout', '10s'], BSK_TIMEOUTS.EVALUATE_MS);
+    const result = await this.command(['evaluate', `({...(${inspectCreatorDOM.toString()})(),settings:(${inspectPublishSettingsDOM.toString()})()})`, '--session', session, '--timeout', '10s'], BSK_TIMEOUTS.EVALUATE_MS);
     const value = result.value;
     if (!value || typeof value.url !== 'string') throw new Error('无法观察抖音页面，请检查浏览器连接。');
     let url; try { url = new URL(value.url); } catch {}
@@ -132,6 +133,9 @@ export class DouyinPublisher {
       return page;
     }
   }
+  async preparePublicationSettings(session, approval, guard) {
+    return preparePublicationSettings(this, session, approval, guard);
+  }
   async publish(item, { guard, beforeSubmit }) {
     const approval = item.approval;
     return this.session(approval.browserId, async session => {
@@ -147,6 +151,7 @@ export class DouyinPublisher {
       page = await this.fill(session, 'title', page.title.selector, approval.title) || await this.page(session);
       if (!page.caption) throw new Error('无法唯一识别视频文案输入框，已停止。');
       await this.fill(session, 'caption', page.caption.selector, approval.caption);
+      const preparedSettings = await this.preparePublicationSettings(session, approval, guard);
       // The whole publish flow runs in this single persistent session, so the
       // logged-in account cannot switch without a re-login — which page() already
       // catches via needsHuman / login redirection. Re-checking the account in a
@@ -158,6 +163,7 @@ export class DouyinPublisher {
         if (page.accountIds.length && !page.accountIds.includes(approval.accountId)) throw new Error('发布页面账号与审批记录不符。');
         if (!page.publicVisible) throw new Error('无法确认页面已选择公开可见，已停止。请检查抖音发布页的可见范围。');
         if (!page.immediateVisible) throw new Error('无法确认抖音页面已选择立即发布，已停止。豆蜂已负责排期，请检查平台发布方式。');
+        validatePublicationSettings(page, approval, preparedSettings);
       };
       validateSubmission(page);
       await beforeSubmit();
@@ -165,7 +171,7 @@ export class DouyinPublisher {
       // One submission only. Any failure from here is reconciled by the user.
       await this.command(['click', '--selector', page.publish, '--session', session], BSK_TIMEOUTS.CLICK_MS);
       const result = await this.waitPage(session, page => !!page.success, async () => {}, BSK_TIMEOUTS.SUCCESS_MS);
-      return { message: '抖音页面已显示提交成功，仍需等待平台审核；可在队列中记录最终作品链接。', evidence: { kind: 'platform-message', text: result.success, url: result.url, checkedAt: new Date().toISOString() } };
+      return { message: '抖音页面已显示提交成功，仍需等待平台审核；系统会自动核对并绑定作品链接。', evidence: { kind: 'platform-message', text: result.success, url: result.url, checkedAt: new Date().toISOString(), publicationSettings: preparedSettings } };
     });
   }
 }

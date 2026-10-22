@@ -17,8 +17,8 @@ export function createDouyinTracking({ notify, refreshWorkspace }) {
   function markup() {
     const disabled = busy || loading || snapshot?.scheduler.busy;
     const header = `<div class="card-title"><h3>抖音审核与自动回采</h3><span class="pill">${snapshot?.scheduler.running ? '每 15 分钟检查' : '服务未运行'}</span></div>
-      <p class="form-hint">先将提交记录绑定到对应的抖音作品。服务会核对账号与作品链接，再自动更新审核状态和可见指标。电脑、本地服务和浏览器扩展需保持运行。</p>
-      <div class="form-actions"><button type="button" class="button button-green" data-douyin-tracking="check" ${disabled || !snapshot?.targets.some(target => target.boundWorkId) ? 'disabled' : ''}>立即回采已绑定作品</button><button type="button" class="button button-light" data-douyin-tracking="refresh" ${disabled ? 'disabled' : ''}>刷新状态</button></div>`;
+      <p class="form-hint">提交成功后，服务会自动核对账号、完整文案、提交时间和作品链接，唯一匹配后建立绑定并回采审核状态与可见指标。电脑、本地服务和浏览器扩展需保持运行。</p>
+      <div class="form-actions"><button type="button" class="button button-green" data-douyin-tracking="check" ${disabled || !snapshot?.targets.some(target => target.boundWorkId || ['submitted', 'published'].includes(target.status)) ? 'disabled' : ''}>立即识别并回采作品</button><button type="button" class="button button-light" data-douyin-tracking="refresh" ${disabled ? 'disabled' : ''}>刷新状态</button></div>`;
     const warning = problem || snapshot?.scheduler.error;
     if (!snapshot) return `<section class="card">${header}<p role="status">${esc(problem || '正在读取回采状态…')}</p></section>`;
     const targets = snapshot.targets || [];
@@ -32,9 +32,11 @@ export function createDouyinTracking({ notify, refreshWorkspace }) {
         ${target.boundWorkId
           ? `<p>${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer">查看已绑定作品 ${esc(target.boundWorkId)}</a>` : `作品 ${esc(target.boundWorkId)}`} · <b>${esc(reviewLabels[observation?.reviewState] || '等待回采')}</b></p>
              <p>播放 ${metric(observation?.metrics.plays)} · 点赞 ${metric(observation?.metrics.likes)} · 评论 ${metric(observation?.metrics.mComments)} · 完播 ${metric(observation?.metrics.completion, '%')}</p>
-             <p class="form-hint">最近观察：${when(observation?.observedAt)}${pending ? ' · 效果记录待同步' : ''}</p>
+             <p class="form-hint">${record?.binding?.source === 'automatic' ? '自动核实绑定 · ' : record?.binding?.source === 'manual' ? '通过提供的链接核实绑定 · ' : ''}最近观察：${when(observation?.observedAt)}${pending ? ' · 效果记录待同步' : ''}</p>
              <button type="button" class="button button-light" data-douyin-tracking="check-one" ${disabled ? 'disabled' : ''}>回采这条作品</button>`
-          : `<div class="field"><label>已提交作品的完整链接</label><input type="url" data-tracking-url placeholder="https://www.douyin.com/video/…" value="${esc(drafts.get(target.ref) || '')}" ${disabled ? 'disabled' : ''}></div>
+          : `<p class="form-hint">${target.status === 'uncertain' ? '提交结果不确定，请先核实作品。提供完整链接后可继续回采。' : '等待自动识别。作品尚不可见或存在多个匹配时会保留未绑定状态；也可提供链接辅助核实。'}</p>
+             ${target.status === 'uncertain' ? '' : `<button type="button" class="button button-light" data-douyin-tracking="check-one" ${disabled ? 'disabled' : ''}>立即识别这条作品</button>`}
+             <div class="field"><label>手动辅助核实：作品完整链接</label><input type="url" data-tracking-url placeholder="https://www.douyin.com/video/…" value="${esc(drafts.get(target.ref) || '')}" ${disabled ? 'disabled' : ''}></div>
              <button type="button" class="button button-green" data-douyin-tracking="bind" ${disabled ? 'disabled' : ''}>核实并绑定作品</button>`}
         ${record?.projectionError ? `<p class="form-error">${esc(record.projectionError)}</p>` : ''}
       </article>`;
@@ -74,7 +76,9 @@ export function createDouyinTracking({ notify, refreshWorkspace }) {
       await refreshWorkspace();
       const errors = [...(snapshot.result?.results || []), ...(snapshot.result?.projections || [])].filter(item => item.error);
       problem = errors.map(item => item.error).join('；') || snapshot.scheduler.error || '';
-      notify(problem ? '检查已完成，部分作品需要处理' : action === 'bind' ? '作品已核实绑定，后续自动回采' : '回采检查完成');
+      const unresolved = (snapshot.result?.results || []).some(item => item.unresolved);
+      const automaticallyBound = (snapshot.result?.results || []).some(item => item.automaticallyBound);
+      notify(unresolved ? '部分作品暂未核实，已保留原状态和数据' : problem ? '检查已完成，部分作品需要处理' : action === 'bind' || automaticallyBound ? '作品已核实绑定，后续自动回采' : '回采检查完成');
     } catch (error) { problem = error.message; notify(problem); }
     finally { busy = false; paint(); }
   });

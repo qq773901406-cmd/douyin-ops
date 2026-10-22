@@ -44,8 +44,9 @@ export function readDouyinManageDOM() {
   }).filter(Boolean);
   const password = [...document.querySelectorAll('input[type="password"]')].some(visible);
   const dialogs = [...document.querySelectorAll('[role="dialog"],dialog,[class*="captcha"],[id*="captcha"]')].filter(visible).map(text);
+  const searches = [...document.querySelectorAll('input[placeholder="搜索作品"]')].filter(node => visible(node) && !node.disabled);
   return {
-    url: location.href, accountIds, cards,
+    url: location.href, accountIds, cards, search: searches.length === 1 ? selector(searches[0]) : null,
     needsHuman: password || /\/login(?:[/?#]|$)/.test(location.href) || dialogs.some(value => /验证|扫码|登录|滑块|安全|授权/.test(value)),
   };
 }
@@ -58,8 +59,8 @@ export function readDouyinProfileDOM() {
   const bodyText = String(document.body?.innerText || '');
   const accountIds = [...new Set([...bodyText.matchAll(/(?:^|\n)\s*抖音号\s*[：:]?\s*([A-Za-z0-9_.-]+)(?=\s|$)/g)].map(match => match[1]))];
   const items = [...document.querySelectorAll('ul[data-e2e="scroll-list"] a[href]')].filter(visible).map(anchor => {
-    const title = anchor.querySelector('p');
-    return visible(title) && text(title) ? { title: text(title), url: anchor.href } : null;
+    const titles = [...new Set([...anchor.querySelectorAll('p')].filter(visible).map(text).filter(Boolean))];
+    return titles.length === 1 ? { title: titles[0], url: anchor.href } : null;
   }).filter(Boolean);
   return { url: location.href, accountIds, items };
 }
@@ -106,14 +107,18 @@ export function douyinWorkIdFromUrl(value) {
   return video || (/^\/user\/[^/]+\/?$/.test(url.pathname) && modal.length === 1 ? modal[0] : null);
 }
 
-export function selectDouyinCard(cards, target, windowMs = 15 * 60000) {
+function matchingDouyinCards(cards, target, windowMs) {
   const expected = new Set([compact(target.title), compact(String(target.title || '') + String(target.caption || ''))].filter(Boolean));
   const submitted = Date.parse(target.submitStartedAt);
-  if (!expected.size || !Number.isFinite(submitted)) return null;
-  const matches = cards.filter(card => {
+  if (!expected.size || !Number.isFinite(submitted)) return [];
+  return cards.filter(card => {
     const time = parseDouyinCardTime(card.time);
     return expected.has(compact(card.title)) && time && Math.abs(Date.parse(time) - submitted) <= windowMs;
   });
+}
+
+export function selectDouyinCard(cards, target, windowMs = 15 * 60000) {
+  const matches = matchingDouyinCards(cards, target, windowMs);
   return matches.length === 1 ? matches[0] : null;
 }
 
@@ -144,20 +149,24 @@ export function selectDouyinProfileWork(page, title, accountId) {
 }
 
 export class DouyinInspector {
-  constructor({ publisher = new DouyinPublisher(), previewReader, pause = delay, stableSamples = 3, sampleDelayMs = 1000, pageAttempts = 5, matchWindowMs = 15 * 60000 } = {}) {
+  constructor({ publisher = new DouyinPublisher(), previewReader, pause = delay, now = () => Date.now(), manageTimeoutMs = 30000, stableSamples = 3, sampleDelayMs = 1000, pageAttempts = 5, matchWindowMs = 15 * 60000 } = {}) {
+    if (typeof now !== 'function' || !Number.isSafeInteger(manageTimeoutMs) || manageTimeoutMs < 1) throw new Error('作品管理页等待配置无效。');
     this.publisher = publisher;
     this.previewReader = previewReader || (async session => {
       const result = await this.publisher.command(['evaluate', `(${readDouyinProfileDOM.toString()})()`, '--session', session, '--timeout', '10s'], BSK_TIMEOUTS.EVALUATE_MS);
       return result.value;
     });
     this.pause = pause;
+    this.now = now;
+    this.manageTimeoutMs = manageTimeoutMs;
     this.stableSamples = Math.max(2, stableSamples);
     this.sampleDelayMs = sampleDelayMs;
     this.pageAttempts = pageAttempts;
     this.matchWindowMs = matchWindowMs;
   }
-  async managePage(session) {
-    const result = await this.publisher.command(['evaluate', `(${readDouyinManageDOM.toString()})()`, '--session', session, '--timeout', '10s'], BSK_TIMEOUTS.EVALUATE_MS);
+  async managePage(session, remainingMs = BSK_TIMEOUTS.EVALUATE_MS) {
+    const timeout = Math.max(1, Math.min(10000, Math.ceil(remainingMs)));
+    const result = await this.publisher.command(['evaluate', `(${readDouyinManageDOM.toString()})()`, '--session', session, '--timeout', `${timeout}ms`], Math.max(1, Math.min(BSK_TIMEOUTS.EVALUATE_MS, Math.ceil(remainingMs))));
     const page = result.value;
     let url;
     try { url = new URL(page?.url); } catch {}
@@ -165,6 +174,55 @@ export class DouyinInspector {
     if (page.needsHuman) throw new Error('抖音需要登录或人工验证，请完成后再检查作品。');
     if (!Array.isArray(page.cards) || !Array.isArray(page.accountIds)) throw new Error('作品管理页结构无法确认。');
     return page;
+  }
+  async findManageCard(session, target) {
+    // Loading the controls and waiting for the search response are separate
+    // phases, bounded by one wall-clock deadline instead of five shared reads.
+    const deadline = this.now() + this.manageTimeoutMs;
+    let stage = '作品管理页加载';
+    const timedOut = () => new Error(`抖音${stage}超时，尚未唯一核实目标作品；保留原绑定和数据，下次检查会重试。`);
+    const read = async () => {
+      const remaining = deadline - this.now();
+      if (remaining <= 0) throw timedOut();
+      let page;
+      try { page = await this.managePage(session, remaining); }
+      catch (error) { if (this.now() >= deadline) throw timedOut(); throw error; }
+      if (this.now() >= deadline) throw timedOut();
+      if (page.accountIds.length && (page.accountIds.length !== 1 || page.accountIds[0] !== target.accountId)) throw new Error('作品管理页显示的抖音账号与绑定不一致。');
+      return page;
+    };
+    const pause = async () => {
+      const remaining = deadline - this.now();
+      if (remaining <= 0) throw timedOut();
+      await this.pause(Math.min(Math.max(1, this.sampleDelayMs), remaining));
+    };
+    let page;
+    while (true) {
+      page = await read();
+      if (page.search) break;
+      const matches = matchingDouyinCards(page.cards, target, this.matchWindowMs);
+      if (matches.length > 1) return null;
+      if (matches.length === 1) return matches[0];
+      await pause();
+    }
+    stage = '作品搜索结果等待';
+    const searchCommand = async args => {
+      const remaining = deadline - this.now();
+      if (remaining <= 0) throw timedOut();
+      try { await this.publisher.command([...args, '--session', session, '--timeout', `${Math.ceil(remaining)}ms`], Math.ceil(remaining)); }
+      catch (error) { if (this.now() >= deadline) throw timedOut(); throw error; }
+    };
+    await searchCommand(['fill', '--selector', page.search, '--value', target.title]);
+    await searchCommand(['press', 'Enter', '--selector', page.search]);
+    while (true) {
+      await pause();
+      page = await read();
+      const matches = matchingDouyinCards(page.cards, target, this.matchWindowMs);
+      if (matches.length > 1) return null;
+      if (matches.length === 1) return matches[0];
+      // A nonempty render can still contain pre-search cards. Continue waiting
+      // without widening title/content or submission-time matching rules.
+    }
   }
   async stablePreview(session, card, accountId) {
     let previous = null;
@@ -195,15 +253,7 @@ export class DouyinInspector {
       const account = await this.publisher.accountInSession(session);
       if (account.accountId !== target.accountId) throw new Error('当前登录抖音账号与目标作品绑定不一致。');
       await this.publisher.command(['navigate', manageUrl, '--session', session, '--timeout', '60s'], BSK_TIMEOUTS.NAVIGATE_PUBLISHER_MS);
-      let card;
-      for (let attempt = 0; attempt < this.pageAttempts; attempt++) {
-        const page = await this.managePage(session);
-        if (page.accountIds.length && (page.accountIds.length !== 1 || page.accountIds[0] !== target.accountId)) throw new Error('作品管理页显示的抖音账号与绑定不一致。');
-        card = selectDouyinCard(page.cards, target, this.matchWindowMs);
-        if (card) break;
-        if (page.cards.length) return null;
-        if (attempt + 1 < this.pageAttempts) await this.pause(this.sampleDelayMs);
-      }
+      const card = await this.findManageCard(session, target);
       if (!card?.cover) return null;
       const before = agentTabs(await this.publisher.command(['tab', 'list', '--session', session, '--scope', 'agent']));
       const previousIds = new Set(before.map(tab => tab.tab_id));
@@ -232,13 +282,23 @@ export class DouyinInspector {
       const fresh = selectDouyinCard(freshPage.cards, target, this.matchWindowMs);
       if (!fresh || compact(fresh.title) !== compact(card.title) || fresh.time !== card.time) return null;
       const observedAt = new Date().toISOString();
+      // This proposal is not itself a binding. The tracker independently checks
+      // the complete content and submission identity before automatic linking.
+      const bindingProof = {
+        kind: 'douyin-rendered-dom-v1', targetRef: target.ref, browserId: target.browserId,
+        assetSha256: target.sha256, submittedAt: target.submitStartedAt,
+        accountId: account.accountId, workId: preview.workId,
+        cardTitle: fresh.title, cardTime: parseDouyinCardTime(fresh.time),
+        previewTitle: preview.title, previewUrl: preview.url, profileUrl: preview.profileUrl,
+        cardMatches: 1, profileMatches: 1, stableSamples: this.stableSamples,
+      };
       const evidence = {
         url: preview.url,
         text: JSON.stringify({
           accountId: target.accountId, cardTitle: fresh.title, cardTime: fresh.time,
           cardStatus: fresh.status, previewTitle: preview.title,
           previewUrl: preview.url, profileUrl: preview.profileUrl,
-          stableSamples: this.stableSamples, rawMetrics: fresh.metrics,
+          stableSamples: this.stableSamples, rawMetrics: fresh.metrics, bindingProof,
         }),
       };
       const observation = {
@@ -251,6 +311,7 @@ export class DouyinInspector {
       return discovery ? {
         requiresExplicitBinding: true, candidate: observation,
         metadata: { cardTitle: fresh.title, cardTime: fresh.time, previewTitle: preview.title },
+        bindingProof,
       } : observation;
       // publisher.session owns this window and always stops its own session.
       // No user tab is borrowed or closed, including on ambiguity or failure.

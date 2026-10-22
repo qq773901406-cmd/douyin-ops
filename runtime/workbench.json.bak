@@ -3,6 +3,20 @@
   "persona": "30秒内讲清一个热点；前三秒直接给结果；AI图文混剪与配音；结尾用自然问题引导关注，不照搬原视频。",
   "audience": "泛人群；首阶段重点测试18—35岁、喜欢视觉新鲜感与轻情绪内容的用户",
   "pillars": "热点视觉化、季节与旅行氛围、情绪与怀旧共鸣",
+  "diagnosis": {
+    "scores": [
+      1,
+      1,
+      2,
+      1,
+      1
+    ],
+    "strength": "待补充",
+    "weakness": "待补充",
+    "next": "待补充",
+    "sample": "",
+    "date": "2026/10/12"
+  },
   "records": [
     {
       "id": "mv5dgsi7gzwovb",
@@ -27,6 +41,14 @@
       "category": "模式",
       "title": "抖音热榜内容方向观察 2026-10-12",
       "summary": "钩子：季节感、城市体验、视觉反差、怀旧记忆等主题在榜单中反复出现\n结构：前三秒展示强视觉或结论，中段用3个信息点推进，结尾用低门槛问题引导互动\n可借鉴：新账号采用统一的30秒热点视觉化栏目；只借鉴主题和结构，使用原创脚本与AI素材，不复制原视频表达"
+    },
+    {
+      "id": "mvjbdnh01znnfp",
+      "date": "2026/10/22",
+      "type": "发布准备",
+      "category": "动作",
+      "title": "两只小猫的20秒下班舞",
+      "summary": "形式：AI萌宠竖屏视频 · 20秒\n素材：D:/ai/runtime/video-quality-implementation/cat-duet-extended/assembly-cat-duet-20s.mp4\n封面：待补"
     }
   ],
   "drafts": [
@@ -41,9 +63,117 @@
       "topics": "#桂花 #秋天 #城市记忆 #AI视频 #热点橙一下",
       "scheduledAt": "",
       "status": "待审核"
+    },
+    {
+      "id": "catclip-meowaligado-v1",
+      "date": "2026/10/16",
+      "pubTitle": "橘猫捡到发夹跳喵阿里嘎多",
+      "format": "AI 视频 · 9:16",
+      "asset": "D:\\ai\\runtime\\ai_gen\\videos\\cat-clip-final.mp4",
+      "cover": "",
+      "caption": "谁家小猫捡到发夹直接跳起喵阿里嘎多～戴上就停不下来，猫爪一抬整个上头。你家的主子也会这样吗？",
+      "topics": "#喵阿里嘎多 #橘猫 #AI视频 #萌宠跳舞 #热点橙一下",
+      "hashtags": "#喵阿里嘎多 #橘猫 #AI视频 #萌宠跳舞 #热点橙一下",
+      "scheduledAt": "2026/10/16",
+      "publishedAt": "2026/10/16",
+      "status": "已发布",
+      "ck1": true,
+      "ck2": true,
+      "ck3": true
+    },
+    {
+      "id": "cf4ad2c6-8403-4724-8268-9ec993084865",
+      "title": "10月22日资讯速览",
+      "pubTitle": "10月22日资讯速览",
+      "caption": "10月22日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. Sunbeam 推出 F1 Pro Poplar / Walnut 翻盖手机:联发科 MT6739 芯片,主打无浏览器无社交应用 来源：IT之家 https://www.ithome.com/1/016/495.htm 2. 铁三角开放式无线头戴降噪耳机 ATH-AL5NC 国行上市,1999 元 来源：IT之家 https://www.ithome.com/1/016/494.htm 3. 科大讯飞董事长刘庆峰:国产算力对标全球还有两代左右差距,一定会有并跑甚至领跑的一天 来源：IT之家 https://www.ithome.com/1/016/493.htm",
+      "asset": "D:\\ai\\runtime\\daily-production\\videos\\d604fe87-d8e5-4f6c-b7b9-efb065678bd2\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceVideoId": "b113af04-1342-49c7-b9ae-d34c5e65e8da",
+      "sourceProductionId": "90eb5d5e-e71e-4e6a-b6e1-f99c317ae2b7",
+      "sourceMode": "news",
+      "sourceArticles": [
+        {
+          "id": "314b4857e49fddf9362893c9858968b673d8680ac0c715f6bd867c52923faa05",
+          "title": "Sunbeam 推出 F1 Pro Poplar / Walnut 翻盖手机:联发科 MT6739 芯片,主打无浏览器无社交应用",
+          "url": "https://www.ithome.com/1/016/495.htm",
+          "publishedAt": "2026-10-22T08:09:24.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        },
+        {
+          "id": "a47f1d765f19c84551881698c624ae789642fb67435aa20ce0360e1e21dc0894",
+          "title": "铁三角开放式无线头戴降噪耳机 ATH-AL5NC 国行上市,1999 元",
+          "url": "https://www.ithome.com/1/016/494.htm",
+          "publishedAt": "2026-10-22T08:04:26.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        },
+        {
+          "id": "64702d1c3f76902ea30c26b6beb0f92ec9d6bc0de27064292266b4ee8dece3c8",
+          "title": "科大讯飞董事长刘庆峰:国产算力对标全球还有两代左右差距,一定会有并跑甚至领跑的一天",
+          "url": "https://www.ithome.com/1/016/493.htm",
+          "publishedAt": "2026-10-22T08:01:05.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        }
+      ],
+      "createdAt": "2026-10-22T08:17:33.014Z",
+      "updatedAt": "2026-10-22T08:17:33.027Z",
+      "productionStatus": "preview",
+      "productionMessage": "成片已生成，仅预览，没有发布。"
+    },
+    {
+      "id": "mvjbdnfk4v6224",
+      "date": "2026/10/22",
+      "pubTitle": "两只小猫的20秒下班舞",
+      "platform": "douyin",
+      "format": "AI萌宠竖屏视频 · 20秒",
+      "asset": "D:/ai/runtime/video-quality-implementation/cat-duet-extended/assembly-cat-duet-20s.mp4",
+      "cover": "",
+      "caption": "一个负责领舞，一个负责可爱，最后一起坐下收工。本视频画面由AI生成，配乐为原创合成。 #AI萌宠 #猫咪跳舞 #萌宠日常",
+      "hashtags": "#AI萌宠 #猫咪跳舞 #萌宠日常",
+      "scheduledAt": "",
+      "status": "待发布（本次用户已授权）"
     }
   ],
-  "metrics": [],
+  "metrics": [
+    {
+      "id": "douyin-81e4410f8e0071a7aecc3faae7d4883e",
+      "source": "douyin-tracking",
+      "sourceTarget": "queue:16fe01a5-7131-492a-af6f-e77f1dc86632",
+      "accountId": "138528608",
+      "platform": "douyin",
+      "platformWorkId": "7699395315459198223",
+      "publishedUrl": "https://www.douyin.com/video/7699395315459198223",
+      "draftId": "",
+      "mTitle": "10月20日资讯速览",
+      "date": "2026-10-22",
+      "createdAt": "2026-10-22T07:49:05.271Z",
+      "plays": 12,
+      "likes": 0,
+      "mComments": 0,
+      "shares": 0,
+      "saves": 0,
+      "followers": 0,
+      "completion": 0,
+      "collectedAt": "2026-10-22T09:21:59.544Z",
+      "metricObservedAt": {
+        "plays": "2026-10-22T09:21:59.544Z",
+        "likes": "2026-10-22T09:21:59.544Z",
+        "mComments": "2026-10-22T09:21:59.544Z",
+        "shares": "2026-10-22T09:21:59.544Z",
+        "saves": "2026-10-22T09:21:59.544Z",
+        "followers": "2026-10-22T09:21:59.544Z",
+        "completion": "2026-10-22T09:21:59.544Z"
+      },
+      "evidence": {
+        "url": "https://www.douyin.com/video/7699395315459198223",
+        "text": "{\"accountId\":\"138528608\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026年10月22日 15:46\",\"cardStatus\":\"已发布\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"stableSamples\":3,\"rawMetrics\":{\"2秒跳出率\":\"53.85%\",\"分享\":\"0\",\"吸粉量\":\"0\",\"完播率\":\"0%\",\"播放\":\"12\",\"收藏\":\"0\",\"点赞\":\"0\",\"评论\":\"0\"},\"bindingProof\":{\"kind\":\"douyin-rendered-dom-v1\",\"targetRef\":\"queue:16fe01a5-7131-492a-af6f-e77f1dc86632\",\"browserId\":\"b31fc78b\",\"assetSha256\":\"ed9ab0a356f2845143cdd29238d95237b84f18a04a6c4de19f00e3482948fee5\",\"submittedAt\":\"2026-10-22T07:45:29.605Z\",\"accountId\":\"138528608\",\"workId\":\"7699395315459198223\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026-10-22T07:46:00.000Z\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"cardMatches\":1,\"profileMatches\":1,\"stableSamples\":3}}"
+      }
+    }
+  ],
   "ideas": [
     {
       "id": "mv613y1v11s21",
@@ -77,6 +207,39 @@
       "cta": "你现在最想解决哪一步？",
       "duration": "15–30 秒",
       "bgm": "温暖叙事"
+    },
+    {
+      "id": "mv9cfj3n340ih",
+      "date": "2026/10/15",
+      "title": "热点视觉化、季节与旅行氛围、情绪与怀旧共鸣：一个常见误区",
+      "angle": "反差切入",
+      "hook": "你以为一个常见但容易被忽略的问题只能这样？其实关键差在第一步。",
+      "script": "先给一个常见误区。\n再讲一个真实场景和可验证的做法。\n最后给观众一个今天就能试的小动作。",
+      "cta": "你之前也这样想吗？",
+      "duration": "15–30 秒",
+      "bgm": "轻快节奏"
+    },
+    {
+      "id": "mv9cfj3nt4hhd",
+      "date": "2026/10/15",
+      "title": "热点视觉化、季节与旅行氛围、情绪与怀旧共鸣：我试过之后",
+      "angle": "经验拆解",
+      "hook": "我试了一个常见但容易被忽略的问题一周，最有用的不是你想的那个。",
+      "script": "用具体经历开场。\n对比尝试前后的变化，并解释原因。\n给出一条简洁可执行的建议。",
+      "cta": "你还有什么更省事的方法？",
+      "duration": "15–30 秒",
+      "bgm": "克制氛围"
+    },
+    {
+      "id": "mv9cfj3niemgg",
+      "date": "2026/10/15",
+      "title": "热点视觉化、季节与旅行氛围、情绪与怀旧共鸣：先解决这个卡点",
+      "angle": "问题共鸣",
+      "hook": "如果你也被一个常见但容易被忽略的问题卡住，先别急着怪自己。",
+      "script": "描述观众熟悉的场景。\n拆出造成问题的两个原因。\n分享一个小步骤，说明适用边界。",
+      "cta": "你现在最想解决哪一步？",
+      "duration": "15–30 秒",
+      "bgm": "温暖叙事"
     }
   ],
   "research": [
@@ -93,18 +256,43 @@
     }
   ],
   "comments": [],
-  "diagnosis": {
-    "scores": [
-      1,
-      1,
-      2,
-      1,
-      1
-    ],
-    "strength": "待补充",
-    "weakness": "待补充",
-    "next": "待补充",
-    "sample": "",
-    "date": "2026/10/12"
-  }
+  "videos": [
+    {
+      "title": "10月22日资讯速览",
+      "subject": "每日资讯标题速览",
+      "setting": "",
+      "style": "",
+      "referenceVideo": "",
+      "characterReference": "",
+      "visualIdentity": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地资讯图卡字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\daily-production\\videos\\d604fe87-d8e5-4f6c-b7b9-efb065678bd2\\video.mp4",
+      "blocker": "",
+      "notes": "公开资讯标题编排为原创信息卡画面，非现场画面，不含热度排名。\nIT之家：Sunbeam 推出 F1 Pro Poplar / Walnut 翻盖手机:联发科 MT6739 芯片,主打无浏览器无社交应用\nhttps://www.ithome.com/1/016/495.htm\nIT之家：铁三角开放式无线头戴降噪耳机 ATH-AL5NC 国行上市,1999 元\nhttps://www.ithome.com/1/016/494.htm\nIT之家：科大讯飞董事长刘庆峰:国产算力对标全球还有两代左右差距,一定会有并跑甚至领跑的一天\nhttps://www.ithome.com/1/016/493.htm",
+      "shots": [
+        {
+          "id": "legacy-shot-1",
+          "seconds": 36,
+          "action": "按资讯逐条展示信息卡、标题、发布日期和来源，附字幕说明。",
+          "camera": "竖屏资讯图卡",
+          "referenceImage": "",
+          "startState": "",
+          "endState": "",
+          "asset": "",
+          "reviewStatus": "pending",
+          "reviewNotes": ""
+        }
+      ],
+      "id": "b113af04-1342-49c7-b9ae-d34c5e65e8da",
+      "createdAt": "2026-10-22T08:17:33.014Z",
+      "updatedAt": "2026-10-22T08:17:33.014Z"
+    }
+  ],
+  "schemaVersion": 5,
+  "trash": [],
+  "products": []
 }

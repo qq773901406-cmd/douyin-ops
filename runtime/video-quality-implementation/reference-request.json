@@ -54,14 +54,46 @@
       "proofImage": "D:/ai/runtime/video-quality-implementation/studio-reference-workflow.png"
     }
   },
-  "productionStatus": "reference_visual_direction_verified",
-  "generationSubmitted": false,
+  "productionStatus": "twenty_second_edit_completed",
+  "generationSubmitted": true,
+  "videoProduced": true,
+  "fullReferenceQualityAchieved": false,
+  "extensionRequest": {
+    "requestedOn": "2026-10-22",
+    "reason": "用户认为5秒样片太短",
+    "targetDurationSeconds": 20,
+    "status": "completed",
+    "plan": "D:/ai/runtime/video-quality-implementation/cat-duet-extended/production-plan.json",
+    "additionalVideoProduced": true,
+    "actualDurationSeconds": 20,
+    "outputFile": "D:\\ai\\runtime\\video-quality-implementation\\cat-duet-extended\\assembly-cat-duet-20s.mp4",
+    "verification": "D:\\ai\\runtime\\video-quality-implementation\\cat-duet-extended\\assembly-verification.json"
+  },
   "publishingAuthorized": false,
-  "nextRequiredInput": "参考视频已取得；后续先准备干净的原创双猫角色参考与短片制作方案，生成费用尚未确认。",
-  "nextSteps": [
-    "固定原创黑白幼猫与橘色虎斑幼猫的角色参考和家居场景",
-    "准备6–8秒的双猫表演测试，检验前爪遮脸、前后景关系和脚掌接地",
-    "确认完整生成输入与报价后生成测试，实际验收通过再扩展成片"
-  ],
+  "latestUserConstraint": "使用免费替代方案，不开通订阅或付费试用",
+  "nextRequiredInput": null,
+  "freeSample": {
+    "provider": "Hugging Face public ZeroGPU Space / Wan2.2",
+    "space": "zerogpu-aoti/wan2-2-fp8da-aoti-faster",
+    "anonymous": true,
+    "paidSubscriptionOrTrial": false,
+    "receipt": "D:/ai/runtime/video-quality-implementation/cat-duet-sample/free-wan-request.json",
+    "original": "D:/ai/runtime/video-quality-implementation/cat-duet-sample/cat-duet-wan-v1.mp4",
+    "preview": "D:/ai/runtime/video-quality-implementation/cat-duet-sample/cat-duet-free-preview.mp4",
+    "durationSeconds": 5.0625,
+    "previewDimensions": [
+      468,
+      832
+    ],
+    "frameRate": 16,
+    "review": "D:/ai/runtime/video-quality-implementation/cat-duet-sample/preview-edit.json",
+    "decodeCheck": {
+      "checkedOn": "2026-10-22",
+      "command": "ffmpeg -v error -i cat-duet-free-preview.mp4 -f null -",
+      "exitCode": 0
+    },
+    "limitations": "后景橘猫动作偏小、16fps流畅度有限。已抽帧检查，但未逐帧排除变形，配乐未听音验收。当前为动作样片，未达到参考完整成片质量。"
+  },
+  "nextSteps": [],
   "lastRetryAt": "2026-10-20T15:27:51.0892512+08:00"
 }

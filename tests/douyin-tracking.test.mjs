@@ -17,6 +17,21 @@ const deferred = () => {
   return { promise, resolve };
 };
 
+function automaticProposal(target, observation, proofPatch = {}) {
+  const content = `${target.title} ${target.caption}`;
+  const bindingProof = {
+    kind: 'douyin-rendered-dom-v1', targetRef: target.ref, browserId: target.browserId,
+    assetSha256: target.sha256, submittedAt: target.submitStartedAt,
+    accountId: target.accountId, workId: observation.workId,
+    cardTitle: content, cardTime: target.submitStartedAt, previewTitle: content,
+    previewUrl: observation.url, profileUrl: `https://www.douyin.com/user/self?modal_id=${observation.workId}`,
+    cardMatches: 1, profileMatches: 1, stableSamples: 3, ...proofPatch,
+  };
+  return { requiresExplicitBinding: true, bindingProof, candidate: {
+    ...observation, evidence: { url: observation.url, text: JSON.stringify({ bindingProof }) },
+  } };
+}
+
 async function fixture(t) {
   const temporaryRoot = resolve(tmpdir());
   const directory = await mkdtemp(join(temporaryRoot, 'doufeng-tracking-'));
@@ -166,6 +181,7 @@ test('newer observations win across tracker instances and stale deliveries do no
 
 test('a manual result changed during inspection is preserved and the observation remains recoverable', async t => {
   const f = await fixture(t), entered = deferred(), resume = deferred();
+  await f.tracking.recordObservation(f.ref, f.observation({ observedAt: f.at(20) }));
   f.tracking.inspect = async target => {
     assert.equal(target.ref, f.ref);
     entered.resolve(); await resume.promise;
@@ -241,23 +257,172 @@ test('projection writes independent evidence fields without overwriting a manual
   assert.equal(draft.platformReview.state, 'published');
 });
 
-test('explicit binding verifies the supplied work against discovery and automatic checks only inspect bound targets', async t => {
+test('explicit binding remains available when discovery lacks proof for automatic linking', async t => {
   const f = await fixture(t), inspected = [];
   f.tracking.inspect = async target => { inspected.push(target.ref); return f.observation({ observedAt: f.at(50) }); };
   f.tracking.discover = async target => {
     assert.equal(target.ref, f.ref);
     return { requiresExplicitBinding: true, candidate: f.observation() };
   };
-  await f.tracking.checkNow();
+  const before = await f.tracking.checkNow(f.ref);
   assert.deepEqual(inspected, []);
+  assert.match(before.results[0].error, /身份凭据不足/);
   await assert.rejects(f.tracking.bind(f.ref, 'https://www.douyin.com/video/999'), /未能唯一核实/);
   assert.equal((await f.tracking.snapshot()).records.length, 0);
   const bound = await f.tracking.bind(f.ref, f.observation().url);
   assert.equal(bound.projections[0].applied, true);
-  await f.tracking.checkNow();
+  assert.equal((await f.tracking.snapshot()).records[0].binding.source, 'manual');
+  await f.tracking.checkNow(f.ref);
   assert.deepEqual(inspected, [f.ref]);
   assert.equal((await f.workspace.read()).value.metrics.length, 1);
   await assert.rejects(f.tracking.bind(f.ref, 'https://www.douyin.com/video/999'), /已经绑定/);
   const release = await f.automation.lease();
   await release();
+});
+
+test('automatic checks discover confirmed submissions, project immediately, and resume bound sampling after restart', async t => {
+  const f = await fixture(t), discovered = [], inspected = [];
+  await f.automation.store.update(state => {
+    state.items[0].status = 'published';
+    state.items[0].caption = '队列完整文案';
+    state.items[0].approval.caption = '队列完整文案';
+  });
+  const queueWorkId = '7584000000000000002';
+  const observe = (target, at = 30) => f.observation({
+    workId: target.ref === f.ref ? workId : queueWorkId,
+    url: `https://www.douyin.com/video/${target.ref === f.ref ? workId : queueWorkId}`,
+    observedAt: f.at(at),
+  });
+  f.tracking.inspect = async () => { throw new Error('Unbound records must use discovery'); };
+  f.tracking.discover = async target => { discovered.push(target.ref); return automaticProposal(target, observe(target)); };
+  const first = await f.tracking.checkNow();
+  assert.deepEqual(discovered.sort(), [f.ref, f.queueRef].sort());
+  assert.ok(first.results.every(row => row.accepted && row.automaticallyBound));
+  assert.ok(first.projections.every(row => row.applied));
+  const initial = await f.tracking.snapshot();
+  assert.ok(initial.records.every(row => row.binding.source === 'automatic' && row.sequence === row.projectedSequence));
+  assert.equal((await f.workspace.read()).value.metrics.length, 2);
+  assert.equal((await f.dailyProduction.store.read()).value.runs[0].status, 'submitted');
+  assert.equal((await f.automation.store.read()).value.items[0].status, 'published');
+
+  const restarted = new DouyinTracking(f.directory, { ...f.options,
+    inspect: async target => { inspected.push(target.ref); return observe(target, 50); },
+    discover: async () => { throw new Error('Bound records must not be discovered again'); },
+  });
+  const second = await restarted.checkNow();
+  assert.deepEqual(inspected.sort(), [f.ref, f.queueRef].sort());
+  assert.ok(second.results.every(row => row.accepted && !row.automaticallyBound));
+  const resumed = await restarted.snapshot();
+  for (const record of resumed.records) {
+    assert.equal(record.sequence, 2);
+    assert.equal(record.projectedSequence, 2);
+    assert.deepEqual(record.binding, initial.records.find(row => row.target.ref === record.target.ref).binding);
+  }
+  assert.equal((await f.workspace.read()).value.metrics.length, 2);
+});
+
+test('automatic first binding requires complete matching content, account, time, identity and DOM evidence', async t => {
+  const f = await fixture(t);
+  f.tracking.inspect = async () => { throw new Error('Unexpected inspection'); };
+  const malformed = [
+    { kind: 'untrusted' }, { accountId: 'other' }, { workId: '999' }, { targetRef: f.queueRef },
+    { browserId: 'other-browser' }, { assetSha256: 'c'.repeat(64) }, { submittedAt: f.at(1) },
+    { cardTitle: '测试资讯' }, { previewTitle: '测试资讯' }, { cardTime: f.at(-61) },
+    { cardTime: f.at(901) }, { cardMatches: 2 }, { profileMatches: 2 }, { stableSamples: 2 },
+    { previewUrl: 'https://www.douyin.com/video/999' }, { profileUrl: 'https://www.douyin.com/user/other' },
+    { previewUrl: `https://www.douyin.com/video/${workId}?modal_id=999` },
+  ];
+  for (const patch of malformed) {
+    f.tracking.discover = async target => automaticProposal(target, f.observation(), patch);
+    const result = await f.tracking.checkNow(f.ref);
+    assert.ok(result.results[0].error, JSON.stringify(patch));
+    assert.equal((await f.tracking.snapshot()).records.length, 0);
+  }
+  for (const tamper of [proposal => { delete proposal.bindingProof; }, proposal => { proposal.candidate.evidence.text = '{}'; }]) {
+    f.tracking.discover = async target => { const proposal = automaticProposal(target, f.observation()); tamper(proposal); return proposal; };
+    assert.ok((await f.tracking.checkNow(f.ref)).results[0].error);
+    assert.equal((await f.tracking.snapshot()).records.length, 0);
+  }
+  assert.equal((await f.workspace.read()).value.metrics.length, 0);
+});
+
+test('uncertain, preview and missing submission credentials never enter automatic discovery', async t => {
+  const f = await fixture(t), discovered = [];
+  await f.dailyProduction.store.update(state => {
+    const source = state.runs[0];
+    source.status = 'uncertain';
+    state.runs.push({ ...source, id: randomUUID(), status: 'submitted', previewOnly: true });
+    state.runs.push({ ...source, id: randomUUID(), status: 'submitted', submitStartedAt: '' });
+    state.runs.push({ ...source, id: randomUUID(), status: 'submitted', sha256: '' });
+  });
+  await f.automation.store.update(state => { state.items[0].status = 'uncertain'; });
+  f.tracking.inspect = async () => { throw new Error('Unexpected inspection'); };
+  f.tracking.discover = async target => { discovered.push(target.ref); return automaticProposal(target, f.observation()); };
+  assert.deepEqual((await f.tracking.checkNow()).results, []);
+  assert.match((await f.tracking.checkNow(f.ref)).results[0].error, /提交结果不确定/);
+  assert.deepEqual(discovered, []);
+  assert.equal((await f.tracking.snapshot()).records.length, 0);
+  // Explicit recovery remains allowed for an uncertain submission.
+  await f.tracking.bind(f.ref, f.observation().url);
+  assert.equal((await f.tracking.snapshot()).records[0].binding.source, 'manual');
+  assert.equal((await f.dailyProduction.store.read()).value.runs[0].status, 'uncertain');
+});
+
+test('automatic binding keeps cross-target duplicate protection and does not accept title-only posts', async t => {
+  const f = await fixture(t);
+  f.tracking.inspect = async () => { throw new Error('Unexpected inspection'); };
+  f.tracking.discover = async target => automaticProposal(target, f.observation());
+  const titleOnly = await f.tracking.checkNow(f.queueRef);
+  assert.match(titleOnly.results[0].error, /身份凭据不足/);
+  assert.equal((await f.tracking.snapshot()).records.length, 0);
+  await f.automation.store.update(state => {
+    state.items[0].caption = '队列完整文案'; state.items[0].approval.caption = '队列完整文案';
+  });
+  const result = await f.tracking.checkNow();
+  assert.equal(result.results.find(row => row.ref === f.ref).automaticallyBound, true);
+  assert.match(result.results.find(row => row.ref === f.queueRef).error, /另一条提交记录/);
+  assert.equal((await f.tracking.snapshot()).records.length, 1);
+  assert.equal((await f.workspace.read()).value.metrics.length, 1);
+});
+
+test('unavailable discovery keeps the target unbound and a changed submission cannot acquire an automatic binding', async t => {
+  const f = await fixture(t), entered = deferred(), resume = deferred();
+  f.tracking.inspect = async () => { throw new Error('Unexpected inspection'); };
+  f.tracking.discover = async () => null;
+  const unavailable = await f.tracking.checkNow(f.ref);
+  assert.equal(unavailable.results[0].unresolved, true);
+  assert.match(unavailable.results[0].error, /尚未自动绑定/);
+  assert.equal((await f.tracking.snapshot()).records.length, 0);
+  f.tracking.discover = async target => { entered.resolve(); await resume.promise; return automaticProposal(target, f.observation()); };
+  const running = f.tracking.checkNow(f.ref);
+  await entered.promise;
+  await f.dailyProduction.store.update(state => { state.runs[0].status = 'uncertain'; });
+  resume.resolve();
+  const changed = await running;
+  assert.match(changed.results[0].error, /检查期间已变化/);
+  assert.equal((await f.tracking.snapshot()).records.length, 0);
+  assert.equal((await f.workspace.read()).value.metrics.length, 0);
+});
+
+test('unresolved checks visibly report stale data and preserve the last verified observation', async t => {
+  const f = await fixture(t);
+  await f.tracking.recordObservation(f.ref, f.observation());
+  await f.tracking.projectPending();
+  const previousRecord = (await f.tracking.snapshot()).records[0];
+  const previousWorkspace = (await f.workspace.read()).value;
+  f.tracking.inspect = async () => null;
+
+  const result = await f.tracking.checkNow(f.ref);
+  assert.equal(result.results[0].accepted, false);
+  assert.equal(result.results[0].unresolved, true);
+  assert.match(result.results[0].error, /未采到.*保留上次数据/);
+  const snapshot = await f.tracking.snapshot();
+  assert.match(snapshot.scheduler.error, /未采到.*保留上次数据/);
+  assert.deepEqual(snapshot.records[0], previousRecord);
+  assert.deepEqual((await f.workspace.read()).value, previousWorkspace);
+
+  f.tracking.inspect = async () => f.observation({ observedAt: f.at(50), metrics: { plays: 25 } });
+  assert.equal((await f.tracking.checkNow(f.ref)).results[0].accepted, true);
+  assert.equal((await f.tracking.snapshot()).scheduler.error, '');
+  assert.equal((await f.workspace.read()).value.metrics[0].plays, 25);
 });

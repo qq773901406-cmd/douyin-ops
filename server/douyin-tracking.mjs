@@ -12,6 +12,8 @@ const digest = value => createHash('sha256').update(JSON.stringify(value)).diges
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const validTime = value => typeof value === 'string' && Number.isFinite(Date.parse(value));
 const sameOrNewer = (a, b) => validTime(a) && Date.parse(a) >= Date.parse(b);
+const compact = value => String(value || '').replace(/\s+/g, '');
+const automaticStatuses = new Set(['submitted', 'published']);
 
 function workUrl(input, workId) {
   let url;
@@ -69,14 +71,47 @@ function targetFrom(kind, row) {
     ref: `${kind}:${row.id}`, kind, id: row.id, accountId: binding.accountId, browserId: binding.browserId,
     sha256: kind === 'daily' ? row.sha256 : binding.sha256, submitStartedAt: row.submitStartedAt,
     draftId: (kind === 'daily' ? row.draftId : row.sourceDraftId) || '',
-    title: row.title || binding.title || '', caption: row.caption || binding.caption || '',
+    title: (kind === 'queue' ? binding.title ?? row.title : row.title) || '',
+    caption: (kind === 'queue' ? binding.caption ?? row.caption : row.caption) || '',
     status: row.status, publishedUrl: row.publishedUrl || '',
     reconciledAt: row.reconciledAt || '', reconciledResult: row.reconciledResult || ''
   };
 }
 const identity = target => digest([target.ref, target.accountId, target.browserId, target.sha256, target.submitStartedAt, target.draftId]);
-const guardIdentity = target => digest([identity(target), target.status, target.publishedUrl, target.reconciledAt, target.reconciledResult]);
+const guardIdentity = target => digest([identity(target), target.title, target.caption, target.status, target.publishedUrl, target.reconciledAt, target.reconciledResult]);
 const sampleId = (accountId, workId, day) => `douyin-${digest([accountId, workId, day]).slice(0, 32)}`;
+
+function automaticProofFrom(proposal, target, observation) {
+  const proof = proposal?.bindingProof;
+  let profile, evidenceProof;
+  try { profile = new URL(proof?.profileUrl); } catch {}
+  try { evidenceProof = JSON.parse(observation.evidence.text).bindingProof; } catch {}
+  const content = compact(String(target.title || '') + String(target.caption || ''));
+  if (!object(proof) || proof.kind !== 'douyin-rendered-dom-v1'
+    || proof.targetRef !== target.ref || proof.browserId !== target.browserId || proof.assetSha256 !== target.sha256
+    || proof.submittedAt !== target.submitStartedAt || proof.accountId !== target.accountId || proof.workId !== observation.workId
+    || !compact(target.title) || !compact(target.caption) || compact(proof.cardTitle) !== content || compact(proof.previewTitle) !== content
+    || !validTime(proof.cardTime) || Date.parse(proof.cardTime) < Date.parse(target.submitStartedAt) - 60000
+    || Date.parse(proof.cardTime) > Date.parse(target.submitStartedAt) + 15 * 60000
+    || Date.parse(proof.cardTime) > Date.parse(observation.observedAt) + 60000
+    || proof.cardMatches !== 1 || proof.profileMatches !== 1 || !Number.isSafeInteger(proof.stableSamples) || proof.stableSamples < 3
+    || !profile || profile.protocol !== 'https:' || profile.username || profile.password || profile.port
+    || !['www.douyin.com', 'douyin.com'].includes(profile.hostname) || !/^\/user\/self\/?$/.test(profile.pathname)
+    || !object(evidenceProof) || digest(evidenceProof) !== digest(proof)) {
+    throw fail('作品身份凭据不足，未自动绑定；需要唯一匹配完整标题与文案、账号、提交时间和稳定作品链接。');
+  }
+  if (workUrl(proof.previewUrl, observation.workId) !== observation.url) throw fail('作品身份凭据中的链接不一致，未自动绑定。');
+  const modalIds = new URL(proof.previewUrl).searchParams.getAll('modal_id');
+  if (modalIds.length > 1 || modalIds.length === 1 && modalIds[0] !== observation.workId) throw fail('作品身份凭据中的链接不一致，未自动绑定。');
+  return structuredClone(proof);
+}
+
+function bindingFrom(input, target, observation) {
+  if (!object(input) || !['manual', 'automatic'].includes(input.source)) throw fail('作品绑定来源无效。', 400);
+  const binding = { source: input.source, at: observation.observedAt, evidence: structuredClone(observation.evidence) };
+  if (input.source === 'automatic') binding.proof = automaticProofFrom({ bindingProof: input.proof }, target, observation);
+  return binding;
+}
 
 function validate(state) {
   if (state?.version !== 1 || !Array.isArray(state.records)) throw new Error('抖音回采记录格式无效，请保留原文件。');
@@ -90,6 +125,13 @@ function validate(state) {
       || row.projectedSequence < 0 || row.projectedSequence > row.sequence
       || !Array.isArray(row.samples) || row.samples.length > 90) throw new Error('抖音回采目标记录无效。');
     const observation = observationFrom(row.observation);
+    if (row.binding !== undefined) {
+      if (!validTime(row.binding?.at)) throw new Error('抖音作品绑定时间无效。');
+      bindingFrom(row.binding, target, observationFrom({
+        accountId: observation.accountId, workId: observation.workId, url: observation.url,
+        reviewState: observation.reviewState, observedAt: row.binding.at, evidence: row.binding.evidence,
+      }));
+    }
     const workKey = JSON.stringify([observation.accountId, observation.workId]);
     if (observation.accountId !== target.accountId || refs.has(target.ref) || works.has(workKey)) throw new Error('抖音回采作品归属重复或不一致。');
     refs.add(target.ref); works.add(workKey);
@@ -127,7 +169,7 @@ export class DouyinTracking {
     return { ...value, revision, scheduler: { running: !!this.timer, busy: this.busy, error: this.error, intervalMs: this.intervalMs } };
   }
 
-  async recordObservation(ref, input, { target: inspectedTarget } = {}) {
+  async recordObservation(ref, input, { target: inspectedTarget, binding: bindingInput } = {}) {
     const target = inspectedTarget || (await this.targets()).find(item => item.ref === ref);
     if (!target || target.ref !== ref) throw fail('没有可回采的提交记录。');
     const observation = observationFrom(input);
@@ -138,6 +180,7 @@ export class DouyinTracking {
     // A previously confirmed canonical link is an additional binding, not a title hint.
     const known = /^https:\/\/(?:www\.)?douyin\.com\/video\/(\d+)(?:[?#].*)?$/.exec(target.publishedUrl);
     if (known && known[1] !== observation.workId) throw fail('观察作品与已核实链接不一致。');
+    const binding = bindingInput ? bindingFrom(bindingInput, target, observation) : null;
     const { result } = await this.store.update(state => {
       let record = state.records.find(row => row.target.ref === ref);
       if (record && (identity(record.target) !== identity(target) || record.observation.workId !== observation.workId)) throw fail('提交绑定或作品编号发生变化，不能重新归属旧回采记录。');
@@ -145,6 +188,7 @@ export class DouyinTracking {
       if (record && sameOrNewer(record.observation.observedAt, observation.observedAt)) return { accepted: false, sequence: record.sequence };
       if (!record) {
         record = { target, observation, sequence: 0, projectedSequence: 0, samples: [], projectionError: '' };
+        if (binding) record.binding = binding;
         state.records.push(record);
       }
       record.target = structuredClone(target); record.observation = observation; record.sequence++; record.projectionError = '';
@@ -222,6 +266,20 @@ export class DouyinTracking {
     return results;
   }
 
+  async recordAutomaticObservation(target, observation, binding) {
+    const ownerStore = target.kind === 'daily' ? this.dailyProduction.store : this.automation.store;
+    // Hold the owner's local write lock only while saving the verified binding,
+    // never during browser work. A concurrent manual reconciliation must not
+    // turn an uncertain submission into an automatically bound one.
+    const { result } = await ownerStore.update(async state => {
+      const owner = (target.kind === 'daily' ? state.runs : state.items).find(row => row.id === target.id);
+      const current = owner && targetFrom(target.kind, owner);
+      if (!current || guardIdentity(current) !== guardIdentity(target) || !automaticStatuses.has(current.status)) throw fail('提交记录在检查期间已变化，未自动绑定。');
+      return this.recordObservation(target.ref, observation, { target, binding });
+    });
+    return { ...result, automaticallyBound: true };
+  }
+
   async bind(ref, url, { discover = this.discover } = {}) {
     if (this.busy || this.stopping) throw fail('回采正在执行或已停止，请稍后再试。', 503);
     if (typeof discover !== 'function') throw fail('尚未接入已验证的抖音作品核对器。', 503);
@@ -239,7 +297,7 @@ export class DouyinTracking {
       if (target.boundWorkId && target.boundWorkId !== workId) throw fail('此提交已经绑定另一作品，不能自动更换归属。');
       const proposal = await discover(structuredClone(target));
       if (proposal?.requiresExplicitBinding !== true || proposal.candidate?.workId !== workId) throw fail('页面未能唯一核实指定作品，未保存绑定。');
-      const result = await this.recordObservation(ref, proposal.candidate, { target });
+      const result = await this.recordObservation(ref, proposal.candidate, { target, binding: { source: 'manual' } });
       const projections = await this.projectPending(ref);
       this.error = projections.filter(row => row.error).map(row => row.error).join('\n');
       return { ref, ...result, projections };
@@ -255,13 +313,28 @@ export class DouyinTracking {
     const results = [];
     try {
       release = await this.automation.lease();
-      const targets = (await this.targets()).filter(target => ref ? target.ref === ref : !!target.boundWorkId);
+      const targets = (await this.targets()).filter(target => ref ? target.ref === ref : target.boundWorkId || automaticStatuses.has(target.status));
       if (ref && !targets.length) throw fail('没有可回采的提交记录。');
       for (const target of targets) {
         if (this.stopping) break;
         try {
-          const observation = await this.inspect(structuredClone(target));
-          const result = observation ? await this.recordObservation(target.ref, observation, { target }) : { accepted: false, unresolved: true };
+          let observation, binding;
+          if (target.boundWorkId) observation = await this.inspect(structuredClone(target));
+          else if (automaticStatuses.has(target.status)) {
+            if (typeof this.discover !== 'function') throw fail('尚未接入作品自动识别，请核实并提供作品链接。', 503);
+            const proposal = await this.discover(structuredClone(target));
+            if (proposal) {
+              observation = observationFrom(proposal.candidate);
+              binding = { source: 'automatic', proof: automaticProofFrom(proposal, target, observation) };
+            }
+          }
+          const result = observation ? binding ? await this.recordAutomaticObservation(target, observation, binding)
+            : await this.recordObservation(target.ref, observation, { target }) : {
+            accepted: false, unresolved: true,
+            error: target.boundWorkId ? '本次未能唯一核实目标作品，未采到新的审核状态或指标；保留上次数据，请检查作品是否仍可见或存在同名作品。'
+              : target.status === 'uncertain' ? '提交结果不确定，不能自动建立首次绑定；请核实作品并提供完整链接。'
+                : '本次未能唯一核实新作品，尚未自动绑定；稍后会继续检查，也可提供完整作品链接核实。'
+          };
           results.push({ ref: target.ref, ...result });
         } catch (error) { results.push({ ref: target.ref, error: error.message }); }
       }
