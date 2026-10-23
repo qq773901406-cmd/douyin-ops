@@ -18,3 +18,4 @@ output
 
 # Local videos, downloaded dependencies, account state and run receipts.
 /runtime/
+/.runtime-backups/

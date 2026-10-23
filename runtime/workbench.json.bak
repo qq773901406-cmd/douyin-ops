@@ -206,6 +206,62 @@
       "updatedAt": "2026-10-22T22:00:28.636Z",
       "productionStatus": "failed",
       "productionMessage": "浏览器步骤 session 未完成。请检查扩展、登录状态和页面；系统不会盲目重试。"
+    },
+    {
+      "id": "9fe36433-23e7-4867-b544-9a972328c80e",
+      "title": "10月23日资讯速览",
+      "pubTitle": "10月23日资讯速览",
+      "caption": "10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm",
+      "asset": "D:\\ai\\runtime\\daily-production\\videos\\af26a556-7dae-478f-ac08-475f87853a3b\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceVideoId": "e27189bd-a24c-4fc6-b3e6-dc3f8cc1ef62",
+      "sourceProductionId": "0bb12014-39d6-4437-8715-410b30b8234a",
+      "sourceMode": "news",
+      "sourceArticles": [
+        {
+          "id": "358a968f2ee0f8842b4650d5c35a1cc57172ca938beeb0be12e4e8f85368b16a",
+          "title": "红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户",
+          "url": "https://www.ithome.com/1/017/031.htm",
+          "publishedAt": "2026-10-23T07:00:27.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        },
+        {
+          "id": "cd6a68dc4facf917f61183c91c7fe5e330fa0ec9a93334873cf73ed59bcb38fc",
+          "title": "明年开年生效,希腊通过 15 岁以下用户社交媒体禁令",
+          "url": "https://www.ithome.com/1/017/026.htm",
+          "publishedAt": "2026-10-23T06:58:40.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        },
+        {
+          "id": "abfb0c29c5c8f305cbb7d016ea942c263cd5bbedc8902c3f627fc0e062bc5d26",
+          "title": "芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树",
+          "url": "https://www.ithome.com/1/017/025.htm",
+          "publishedAt": "2026-10-23T06:57:05.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        }
+      ],
+      "createdAt": "2026-10-23T07:01:27.776Z",
+      "updatedAt": "2026-10-23T07:01:47.171Z",
+      "productionStatus": "submitted",
+      "productionMessage": "抖音页面已显示提交成功，仍需等待平台审核；系统会自动核对并绑定作品链接。",
+      "platformWorkId": "7699755152432975158",
+      "platformUrl": "https://www.douyin.com/video/7699755152432975158",
+      "platformReview": {
+        "state": "published",
+        "observedAt": "2026-10-23T10:04:45.666Z",
+        "evidence": {
+          "url": "https://www.douyin.com/video/7699755152432975158",
+          "text": "{\"accountId\":\"138528608\",\"cardTitle\":\"10月23日资讯速览 10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm\",\"cardTime\":\"2026年10月23日 15:02\",\"cardStatus\":\"已发布\",\"previewTitle\":\"10月23日资讯速览 10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699755152432975158\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699755152432975158\",\"stableSamples\":3,\"rawMetrics\":{\"2秒跳出率\":\"66.67%\",\"分享\":\"0\",\"吸粉量\":\"0\",\"完播率\":\"0%\",\"播放\":\"9\",\"收藏\":\"0\",\"点赞\":\"0\",\"评论\":\"0\"},\"bindingProof\":{\"kind\":\"douyin-rendered-dom-v1\",\"targetRef\":\"daily:0bb12014-39d6-4437-8715-410b30b8234a\",\"browserId\":\"b31fc78b\",\"assetSha256\":\"7cd9e1f4d3785f348f04cb2e05663d05b7190b9d581349966630732b0ca18174\",\"submittedAt\":\"2026-10-23T07:01:45.162Z\",\"accountId\":\"138528608\",\"workId\":\"7699755152432975158\",\"cardTitle\":\"10月23日资讯速览 10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm\",\"cardTime\":\"2026-10-23T07:02:00.000Z\",\"previewTitle\":\"10月23日资讯速览 10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699755152432975158\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699755152432975158\",\"cardMatches\":1,\"profileMatches\":1,\"stableSamples\":3}}"
+        }
+      },
+      "platformObservedAt": "2026-10-23T10:04:45.666Z",
+      "platformTrackingRef": "daily:0bb12014-39d6-4437-8715-410b30b8234a",
+      "platformPublishedAt": "2026-10-23T07:02:00.000Z"
     }
   ],
   "metrics": [
@@ -244,6 +300,40 @@
       }
     },
     {
+      "id": "douyin-044efc17b864e978ec0bf68e0e5732e5",
+      "source": "douyin-tracking",
+      "sourceTarget": "daily:0bb12014-39d6-4437-8715-410b30b8234a",
+      "accountId": "138528608",
+      "platform": "douyin",
+      "platformWorkId": "7699755152432975158",
+      "publishedUrl": "https://www.douyin.com/video/7699755152432975158",
+      "draftId": "9fe36433-23e7-4867-b544-9a972328c80e",
+      "mTitle": "10月23日资讯速览",
+      "date": "2026-10-23",
+      "createdAt": "2026-10-23T07:04:43.290Z",
+      "plays": 9,
+      "likes": 0,
+      "mComments": 0,
+      "shares": 0,
+      "saves": 0,
+      "followers": 0,
+      "completion": 0,
+      "collectedAt": "2026-10-23T10:04:45.666Z",
+      "metricObservedAt": {
+        "plays": "2026-10-23T10:04:45.666Z",
+        "likes": "2026-10-23T10:04:45.666Z",
+        "mComments": "2026-10-23T10:04:45.666Z",
+        "shares": "2026-10-23T10:04:45.666Z",
+        "saves": "2026-10-23T10:04:45.666Z",
+        "followers": "2026-10-23T10:04:45.666Z",
+        "completion": "2026-10-23T10:04:45.666Z"
+      },
+      "evidence": {
+        "url": "https://www.douyin.com/video/7699755152432975158",
+        "text": "{\"accountId\":\"138528608\",\"cardTitle\":\"10月23日资讯速览 10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm\",\"cardTime\":\"2026年10月23日 15:02\",\"cardStatus\":\"已发布\",\"previewTitle\":\"10月23日资讯速览 10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699755152432975158\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699755152432975158\",\"stableSamples\":3,\"rawMetrics\":{\"2秒跳出率\":\"66.67%\",\"分享\":\"0\",\"吸粉量\":\"0\",\"完播率\":\"0%\",\"播放\":\"9\",\"收藏\":\"0\",\"点赞\":\"0\",\"评论\":\"0\"},\"bindingProof\":{\"kind\":\"douyin-rendered-dom-v1\",\"targetRef\":\"daily:0bb12014-39d6-4437-8715-410b30b8234a\",\"browserId\":\"b31fc78b\",\"assetSha256\":\"7cd9e1f4d3785f348f04cb2e05663d05b7190b9d581349966630732b0ca18174\",\"submittedAt\":\"2026-10-23T07:01:45.162Z\",\"accountId\":\"138528608\",\"workId\":\"7699755152432975158\",\"cardTitle\":\"10月23日资讯速览 10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm\",\"cardTime\":\"2026-10-23T07:02:00.000Z\",\"previewTitle\":\"10月23日资讯速览 10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699755152432975158\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699755152432975158\",\"cardMatches\":1,\"profileMatches\":1,\"stableSamples\":3}}"
+      }
+    },
+    {
       "id": "douyin-fe2833bb79c1a443bc0712621e081785",
       "source": "douyin-tracking",
       "sourceTarget": "queue:16fe01a5-7131-492a-af6f-e77f1dc86632",
@@ -261,20 +351,20 @@
       "shares": 0,
       "saves": 0,
       "followers": 0,
-      "completion": 2,
-      "collectedAt": "2026-10-23T06:49:09.867Z",
+      "completion": 1.96,
+      "collectedAt": "2026-10-23T10:20:05.143Z",
       "metricObservedAt": {
-        "plays": "2026-10-23T06:49:09.867Z",
-        "likes": "2026-10-23T06:49:09.867Z",
-        "mComments": "2026-10-23T06:49:09.867Z",
-        "shares": "2026-10-23T06:49:09.867Z",
-        "saves": "2026-10-23T06:49:09.867Z",
-        "followers": "2026-10-23T06:49:09.867Z",
-        "completion": "2026-10-23T06:49:09.867Z"
+        "plays": "2026-10-23T10:20:05.143Z",
+        "likes": "2026-10-23T10:20:05.143Z",
+        "mComments": "2026-10-23T10:20:05.143Z",
+        "shares": "2026-10-23T10:20:05.143Z",
+        "saves": "2026-10-23T10:20:05.143Z",
+        "followers": "2026-10-23T10:20:05.143Z",
+        "completion": "2026-10-23T10:20:05.143Z"
       },
       "evidence": {
         "url": "https://www.douyin.com/video/7699395315459198223",
-        "text": "{\"accountId\":\"138528608\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026年10月22日 15:46\",\"cardStatus\":\"已发布\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"stableSamples\":3,\"rawMetrics\":{\"2秒跳出率\":\"55%\",\"分享\":\"0\",\"吸粉量\":\"0\",\"完播率\":\"2%\",\"播放\":\"49\",\"收藏\":\"0\",\"点赞\":\"0\",\"评论\":\"0\"},\"bindingProof\":{\"kind\":\"douyin-rendered-dom-v1\",\"targetRef\":\"queue:16fe01a5-7131-492a-af6f-e77f1dc86632\",\"browserId\":\"b31fc78b\",\"assetSha256\":\"ed9ab0a356f2845143cdd29238d95237b84f18a04a6c4de19f00e3482948fee5\",\"submittedAt\":\"2026-10-22T07:45:29.605Z\",\"accountId\":\"138528608\",\"workId\":\"7699395315459198223\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026-10-22T07:46:00.000Z\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"cardMatches\":1,\"profileMatches\":1,\"stableSamples\":3}}"
+        "text": "{\"accountId\":\"138528608\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026年10月22日 15:46\",\"cardStatus\":\"已发布\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"stableSamples\":3,\"rawMetrics\":{\"2秒跳出率\":\"55.74%\",\"分享\":\"0\",\"吸粉量\":\"0\",\"完播率\":\"1.96%\",\"播放\":\"49\",\"收藏\":\"0\",\"点赞\":\"0\",\"评论\":\"0\"},\"bindingProof\":{\"kind\":\"douyin-rendered-dom-v1\",\"targetRef\":\"queue:16fe01a5-7131-492a-af6f-e77f1dc86632\",\"browserId\":\"b31fc78b\",\"assetSha256\":\"ed9ab0a356f2845143cdd29238d95237b84f18a04a6c4de19f00e3482948fee5\",\"submittedAt\":\"2026-10-22T07:45:29.605Z\",\"accountId\":\"138528608\",\"workId\":\"7699395315459198223\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026-10-22T07:46:00.000Z\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"cardMatches\":1,\"profileMatches\":1,\"stableSamples\":3}}"
       }
     }
   ],
@@ -428,6 +518,40 @@
       "id": "43130230-e0cb-4b87-8636-7a0daf4f45fc",
       "createdAt": "2026-10-22T22:00:28.533Z",
       "updatedAt": "2026-10-22T22:00:28.533Z"
+    },
+    {
+      "title": "10月23日资讯速览",
+      "subject": "每日资讯标题速览",
+      "setting": "",
+      "style": "",
+      "referenceVideo": "",
+      "characterReference": "",
+      "visualIdentity": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地资讯图卡字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\daily-production\\videos\\af26a556-7dae-478f-ac08-475f87853a3b\\video.mp4",
+      "blocker": "",
+      "notes": "公开资讯标题编排为原创信息卡画面，非现场画面，不含热度排名。\nIT之家：红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户\nhttps://www.ithome.com/1/017/031.htm\nIT之家：明年开年生效,希腊通过 15 岁以下用户社交媒体禁令\nhttps://www.ithome.com/1/017/026.htm\nIT之家：芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树\nhttps://www.ithome.com/1/017/025.htm",
+      "shots": [
+        {
+          "id": "legacy-shot-1",
+          "seconds": 36,
+          "action": "按资讯逐条展示信息卡、标题、发布日期和来源，附字幕说明。",
+          "camera": "竖屏资讯图卡",
+          "referenceImage": "",
+          "startState": "",
+          "endState": "",
+          "asset": "",
+          "reviewStatus": "pending",
+          "reviewNotes": ""
+        }
+      ],
+      "id": "e27189bd-a24c-4fc6-b3e6-dc3f8cc1ef62",
+      "createdAt": "2026-10-23T07:01:27.776Z",
+      "updatedAt": "2026-10-23T07:01:27.776Z"
     }
   ],
   "schemaVersion": 5,

@@ -11,6 +11,7 @@ import { AutomationService } from './automation-service.mjs';
 import { DailyProduction } from './daily-production.mjs';
 import { DouyinInspector } from './douyin-inspector.mjs';
 import { DouyinTracking } from './douyin-tracking.mjs';
+import { assertDouyinVideoDraft } from '../shared/publish-target.mjs';
 
 const root = resolve(fileURLToPath(new URL('../', import.meta.url)));
 const { version } = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
@@ -47,6 +48,7 @@ for (const file of ['automation.js', 'automation.css', 'automation-model.mjs']) 
 publicFiles.add('daily-production.js');
 publicFiles.add('douyin-tracking.js');
 publicFiles.add('shared/automation-model.mjs');
+publicFiles.add('shared/publish-target.mjs');
 // Keep browser URLs stable while serving only explicitly allowed source files.
 const publicPaths = new Map([...publicFiles].map(file => [file, resolve(root,
   file.startsWith('workbuddy/') || file.startsWith('shared/') ? file
@@ -138,6 +140,7 @@ const server = createServer(async (req, res) => {
               const wb = await stateStore.read();
               const draft = wb.value?.drafts?.find(d => d.id === draftId);
               if (!draft) throw Object.assign(new Error('工作台草稿不存在。'), { status: 404 });
+              assertDouyinVideoDraft(draft);
               if (draft.sourceProductionId) throw Object.assign(new Error('此成片由每日生产管理，请到每日自动生产查看，不能重复加入另一条发布队列。'), { status: 409 });
               result = await automation.importDraft({ draftId, asset: draft.asset, title: draft.pubTitle || draft.title, caption: draft.caption, tags: draft.hashtags || draft.topics }, revision);
             }
