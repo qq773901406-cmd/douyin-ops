@@ -19,13 +19,35 @@ const DAILY_TICK_INTERVAL_MS = 30000;
 const dayStartISO = (day, startTime = '06:00') => `${day}T${startTime}:00+08:00`;
 const defaults = () => ({ version: 1, config: { enabled: false, startTime: '06:00', executionMode: 'daily', executionDate: '', accountId: '', browserId: '', authorizedAt: '', firstDay: '', sourceFolder: '', sourceMode: 'news', newsFeedUrl: defaultNewsFeed, newsKeywords: '' }, runs: [], lastSync: null, newsLastSync: null, newsItems: [] });
 const validDay = day => typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isFinite(Date.parse(`${day}T00:00:00Z`)) && new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) === day;
-const consumedOnce = state => state.config.executionMode === 'once' && state.runs.some(run => !run.previewOnly && run.day === state.config.executionDate);
-const completedOnce = state => state.config.executionMode === 'once' && state.runs.some(run => !run.previewOnly && run.day === state.config.executionDate && !active.includes(run.status));
+const submissionFields = ['submitStartedAt', 'evidence', 'publishedUrl', 'publishedAt', 'boundWorkId', 'boundUrl', 'platformWorkId', 'platformUrl', 'platformReview', 'platformObservedAt', 'platformPublishedAt', 'platformTrackingRef', 'reconciledAt', 'reconciledResult'];
+// An explicitly reauthorized one-time slot may exclude exactly one proven
+// pre-submit failure. The old receipt stays immutable; every new run still
+// consumes the day, including another failure, skip or uncertain submission.
+const retrySourceRun = state => {
+  if (state.config.executionMode !== 'once' || !state.config.retryOfRunId) return null;
+  const run = state.runs.find(item => item.id === state.config.retryOfRunId);
+  if (!run || run.previewOnly || run.status !== 'failed' || run.day !== state.config.executionDate
+    || !Number.isFinite(Date.parse(run.finishedAt)) || submissionFields.some(key => run[key])
+    || !run.binding || run.binding.accountId !== state.config.accountId
+    || ['sourceMode', 'newsFeedUrl', 'newsKeywords', 'sourceFolder'].some(key => (run.binding[key] || '') !== (state.config[key] || ''))) return null;
+  return run;
+};
+const dayRuns = (state, day) => {
+  const excluded = retrySourceRun(state)?.id;
+  return state.runs.filter(run => !run.previewOnly && run.day === day && run.id !== excluded);
+};
+const requireRetrySource = state => {
+  if (state.config.retryOfRunId && !retrySourceRun(state)) throw fail('重新排期只允许同账号、同来源、同日期且确认尚未提交的失败记录；请保留回执并核实。');
+};
+const consumedOnce = state => state.config.executionMode === 'once' && dayRuns(state, state.config.executionDate).length > 0;
+const completedOnce = state => state.config.executionMode === 'once' && dayRuns(state, state.config.executionDate).some(run => !active.includes(run.status));
 const queueSubmittedOn = (queue, accountId, day) => queue.items.some(item => ['submitted', 'published', 'uncertain'].includes(item.status) && item.approval?.accountId === accountId && shanghaiDay(Date.parse(item.submitStartedAt || item.startedAt || item.scheduledAt)) === day);
 function validate(state) {
   if (state?.version !== 1 || typeof state.config?.enabled !== 'boolean' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(state.config.startTime) || !Array.isArray(state.runs)) throw new Error('每日生产记录格式不正确，请保留原文件。');
   state.config.executionMode ??= 'daily';
   state.config.executionDate ??= '';
+  state.config.retryOfRunId ??= '';
+  if (typeof state.config.retryOfRunId !== 'string' || state.config.retryOfRunId.length > 100) throw new Error('重新排期的原执行记录标识无效。');
   if (!['daily', 'once'].includes(state.config.executionMode) || typeof state.config.executionDate !== 'string' || state.config.executionMode === 'once' && !validDay(state.config.executionDate)) throw new Error('生产计划的执行模式或单次日期无效。');
   if (state.config.enabled && (!state.config.authorizedAt || !state.config.accountId || !state.config.browserId || !/^\d{4}-\d{2}-\d{2}$/.test(state.config.firstDay))) throw new Error('每日生产缺少账号或启用记录。');
   if (state.config.enabled && state.config.executionMode === 'once' && state.config.firstDay !== state.config.executionDate) throw new Error('单次生产的授权日期与计划不一致。');
@@ -85,11 +107,12 @@ export class DailyProduction {
     const now = this.now(), today = shanghaiDay(now), once = config.executionMode === 'once';
     const due = Date.parse(dayStartISO(once ? config.executionDate : today, config.startTime));
     const todayRun = value.runs.findLast(run => !run.previewOnly && run.day === today) || null;
+    const scheduledRun = once ? dayRuns(value, config.executionDate).at(-1) : todayRun;
     const running = value.runs.some(run => active.includes(run.status));
     const windowOpen = now <= due + 6 * 3600000;
     const nextDay = once ? config.executionDate : config.firstDay > today ? config.firstDay : !todayRun && windowOpen ? today : shanghaiDay(now + 86400000);
-    const scheduleState = running ? 'running' : !config.enabled ? 'paused' : todayRun ? 'done'
-      : config.firstDay > today || now < due ? 'waiting' : windowOpen ? 'due' : 'missed';
+    const scheduleState = running ? 'running' : !config.enabled ? 'paused'
+      : config.firstDay > today || now < due ? 'waiting' : scheduledRun ? 'done' : windowOpen ? 'due' : 'missed';
     const newsMode = config.sourceMode === 'news';
     return { ...value, config, revision, eligible, todayRun, scheduleState, busy: this.busy || running, error: this.error, environment: this.environment,
       lastSync: newsMode ? value.newsLastSync : value.lastSync,
@@ -144,8 +167,16 @@ export class DailyProduction {
         const executionMode = input.executionMode ?? state.config.executionMode;
         const executionDate = executionMode === 'once' ? input.executionDate ?? state.config.executionDate : '';
         if (!['daily', 'once'].includes(executionMode) || executionMode === 'once' && !validDay(executionDate)) throw fail('请选择有效的执行模式和单次执行日期。');
-        if (state.config.startTime === input.startTime && state.config.executionMode === executionMode && state.config.executionDate === executionDate) return;
-        Object.assign(state.config, { startTime: input.startTime, executionMode, executionDate, enabled: false, authorizedAt: '', firstDay: '' });
+        const retryOfRunId = input.retryOfRunId ?? '';
+        if (typeof retryOfRunId !== 'string' || retryOfRunId.length > 100) throw fail('请选择有效的原失败记录。');
+        if (retryOfRunId) {
+          if (input.authorizedRetry !== true || executionMode !== 'once') throw fail('请明确授权对尚未提交的失败记录重新安排一次单次验收。');
+          const proposed = { ...state, config: { ...state.config, executionMode, executionDate, retryOfRunId } };
+          requireRetrySource(proposed);
+          if (dayRuns(proposed, executionDate).length) throw fail('该日期已有其他生产或发布记录，不能重复重新排期。');
+        }
+        if (state.config.startTime === input.startTime && state.config.executionMode === executionMode && state.config.executionDate === executionDate && state.config.retryOfRunId === retryOfRunId) return;
+        Object.assign(state.config, { startTime: input.startTime, executionMode, executionDate, retryOfRunId, enabled: false, authorizedAt: '', firstDay: '' });
       }, revision);
     } finally { try { if (release) await release(); } finally { this.busy = false; } }
   }
@@ -162,8 +193,10 @@ export class DailyProduction {
       release = await this.automation.lease();
       await this.store.update(state => {
         if (state.runs.some(r => active.includes(r.status))) throw fail('请等当前任务完成后再更换来源。');
-        if (resolve(state.config.sourceFolder || this.inbox) !== resolved) { state.config.enabled = false; state.config.authorizedAt = ''; state.lastSync = null; }
-        state.config.sourceFolder = resolved;
+        if (resolve(state.config.sourceFolder || this.inbox) !== resolved) {
+          Object.assign(state.config, { sourceFolder: resolved, enabled: false, authorizedAt: '', firstDay: '', retryOfRunId: '' });
+          state.lastSync = null;
+        }
       }, revision);
     } finally { try { if (release) await release(); } finally { this.busy = false; } }
   }
@@ -178,7 +211,7 @@ export class DailyProduction {
         if (state.runs.some(run => active.includes(run.status))) throw fail('已有生产任务正在运行。');
         const changed = state.config.sourceMode !== input.mode || settings && (state.config.newsFeedUrl !== settings.feedUrl || state.config.newsKeywords !== settings.keywords);
         if (!changed) return;
-        Object.assign(state.config, { sourceMode: input.mode, enabled: false, authorizedAt: '', firstDay: '' });
+        Object.assign(state.config, { sourceMode: input.mode, enabled: false, authorizedAt: '', firstDay: '', retryOfRunId: '' });
         if (settings) Object.assign(state.config, { newsFeedUrl: settings.feedUrl, newsKeywords: settings.keywords });
         state.newsItems = []; state.newsLastSync = null;
       }, revision);
@@ -231,7 +264,7 @@ export class DailyProduction {
       const account = await this.automation.connect(queue.revision);
       await this.store.update(state => {
         if (state.runs.some(r => active.includes(r.status))) throw fail('已有生产任务运行，请稍后绑定。');
-        if (state.config.accountId !== account.accountId || state.config.browserId !== selected.id) state.config.enabled = false;
+        if (state.config.accountId !== account.accountId || state.config.browserId !== selected.id) Object.assign(state.config, { enabled: false, authorizedAt: '', firstDay: '', retryOfRunId: '' });
         Object.assign(state.config, { accountId: account.accountId, browserId: selected.id });
       }, revision);
     } finally { try { if (release) await release(); } finally { this.busy = false; } }
@@ -280,6 +313,7 @@ export class DailyProduction {
       binding = queue.config;
       if (!binding.accountId || !binding.browserId || !binding.verifiedAt) throw fail('请先点击“自动识别抖音账号”。');
       const current = (await this.store.read()).value;
+      requireRetrySource(current);
       if (current.config.accountId !== binding.accountId || current.config.browserId !== binding.browserId) throw fail('发布账号设置已变化，请重新识别并核对账号后再开启。');
       if (current.config.executionMode === 'once') {
         if (Date.parse(dayStartISO(current.config.executionDate, current.config.startTime)) <= this.now()) throw fail('单次执行时间已过，请重新保存一个未来时间；不会自动顺延或补发。');
@@ -292,6 +326,7 @@ export class DailyProduction {
       if (!this.environment.ok) throw fail(this.environment.message);
     }
     await this.store.update(state => {
+      if (input.enabled) requireRetrySource(state);
       if (input.enabled && state.runs.some(r => active.includes(r.status) || r.status === 'uncertain')) throw fail('请先处理正在运行或结果待核实的任务。');
       if (input.enabled) {
         if (state.config.enabled) return;
@@ -362,7 +397,7 @@ export class DailyProduction {
     const runDay = !previewOnly && saved.config.executionMode === 'once' ? saved.config.executionDate : day;
     const due = Date.parse(dayStartISO(runDay, saved.config.startTime));
     const completed = !previewOnly && saved.config.enabled && completedOnce(saved);
-    if (!previewOnly && !completed && (!saved.config.enabled || day < saved.config.firstDay || this.now() < due || saved.runs.some(r => !r.previewOnly && r.day === runDay))) return;
+    if (!previewOnly && !completed && (!saved.config.enabled || day < saved.config.firstDay || this.now() < due || dayRuns(saved, runDay).length)) return;
     this.busy = true;
     let release, target;
     try {
@@ -374,7 +409,8 @@ export class DailyProduction {
       release = await this.automation.lease();
       await this.store.update(state => {
         if (state.runs.some(r => active.includes(r.status) || r.status === 'uncertain')) throw fail('有运行中或结果待核实的任务，已停止。');
-        if (!previewOnly && (!state.config.enabled || day < state.config.firstDay || this.now() < Date.parse(dayStartISO(runDay, state.config.startTime)) || state.config.authorizedAt !== saved.config.authorizedAt || state.runs.some(r => !r.previewOnly && r.day === runDay))) return;
+        if (!previewOnly) requireRetrySource(state);
+        if (!previewOnly && (!state.config.enabled || day < state.config.firstDay || this.now() < Date.parse(dayStartISO(runDay, state.config.startTime)) || state.config.authorizedAt !== saved.config.authorizedAt || dayRuns(state, runDay).length)) return;
         target = { id: randomUUID(), day: runDay, previewOnly, trigger, sourceMode: state.config.sourceMode, status: 'selecting', startedAt: timestamp(), message: '正在准备当天的内容来源。', binding: structuredClone(state.config) };
         state.runs.push(target); target = structuredClone(target);
       });
@@ -387,8 +423,9 @@ export class DailyProduction {
       if (!previewOnly && (day !== runDay || this.now() - due > 6 * 3600000)) { await update({ status: 'skipped', message: saved.config.executionMode === 'once' ? '单次执行时段已过，计划已暂停，不顺延或补发。' : '超过计划开工时间 6 小时，今天不补发。', finishedAt: timestamp() }); return; }
       const guard = async () => {
         const state = (await this.store.read()).value;
+        if (!previewOnly) requireRetrySource(state);
         if (['sourceMode', 'newsFeedUrl', 'newsKeywords', 'sourceFolder'].some(key => state.config[key] !== target.binding[key])) throw fail('内容来源已变化，停止本次任务。');
-        if (this.stopping || (!previewOnly && (!state.config.enabled || ['authorizedAt', 'startTime', 'executionMode', 'executionDate'].some(key => state.config[key] !== target.binding[key])))) throw fail('每日生产已暂停或配置发生变化。');
+        if (this.stopping || (!previewOnly && (!state.config.enabled || ['authorizedAt', 'startTime', 'executionMode', 'executionDate', 'retryOfRunId'].some(key => state.config[key] !== target.binding[key])))) throw fail('每日生产已暂停或配置发生变化。');
         if (!previewOnly && shanghaiDay(this.now()) !== day) throw fail('已跨日，停止本次发布。');
         if (!previewOnly) {
           const queue = (await this.automation.store.read()).value;

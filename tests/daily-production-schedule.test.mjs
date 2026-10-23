@@ -68,7 +68,9 @@ async function fixture(t) {
   automation.publisher = { publish: async (item, hooks) => {
     calls.push('publish');
     assert.equal(item.approval.accountId, 'TEST-ACCOUNT');
-    await hooks.guard(); await hooks.beforeSubmit();
+    await hooks.guard();
+    if (failure === 'before-submit') throw new Error('测试：浏览器会话在提交前失败');
+    await hooks.beforeSubmit();
     if (failure === 'submit') throw new Error('测试：点击后结果未知');
     return { message: 'SIMULATED submission; no platform contacted', evidence: { simulation: true } };
   } };
@@ -79,7 +81,15 @@ async function fixture(t) {
     const scheduledAt = `${today}T07:45:30.000Z`;
     state.items.push({ id: randomUUID(), sourcePath: join(directory, 'prior.mp4'), fileName: 'prior.mp4', sourceSize: 1, sourceMtime: 1, title: '此前提交', caption: '', status: 'submitted', scheduledAt, startedAt: scheduledAt, submitStartedAt: scheduledAt, ...patch, approval: { asset: join(directory, 'prior.mp4'), sha256: 'a'.repeat(64), accountId: 'TEST-ACCOUNT', browserId: 'TEST-BROWSER', title: '此前提交', caption: '', scheduledAt } });
   });
-  return { directory, daily, automation, workspace, calls, read, schedule, toggle, seedSubmission, advance: value => { now = time(value); }, empty: () => { empty = true; }, failAt: value => { failure = value; } };
+  const seedFailed = async (patch = {}) => {
+    let seeded;
+    await daily.store.update(state => {
+      seeded = { id: randomUUID(), day: today, previewOnly: false, trigger: 'scheduler', sourceMode: state.config.sourceMode, status: 'failed', startedAt: `${today}T06:00:00+08:00`, finishedAt: `${today}T06:00:03+08:00`, message: '测试：浏览器会话在提交前失败', binding: { ...structuredClone(state.config), enabled: true, executionMode: 'once', executionDate: today, authorizedAt: 'prior-test-authorization', firstDay: today }, ...patch };
+      state.runs.push(seeded);
+    });
+    return structuredClone(seeded);
+  };
+  return { directory, daily, automation, workspace, calls, read, schedule, toggle, seedSubmission, seedFailed, advance: value => { now = time(value); }, empty: () => { empty = true; }, failAt: value => { failure = value; } };
 }
 
 test('旧生产配置保持每日模式，保存执行方式、日期或时间会撤销原授权', async t => {
@@ -145,6 +155,182 @@ test('尚未到期的慢轮询不会占 busy 或阻止保存计划，返回旧�
   assert.equal(f.daily.busy, false);
   assert.equal((await f.read()).runs.length, 0);
   assert.deepEqual(f.calls, []);
+});
+
+test('今日失败后新启用明日单次计划显示等待，保留旧记录且不会提前运行', async t => {
+  const f = await fixture(t);
+  const failed = { id: randomUUID(), day: today, previewOnly: false, trigger: 'scheduler', status: 'failed', startedAt: `${today}T06:00:00+08:00`, finishedAt: `${today}T06:00:03+08:00`, message: '测试：浏览器会话建立失败' };
+  await f.daily.store.update(state => { state.runs.push(failed); });
+  await f.daily.start();
+  await f.schedule({ executionDate: today, startTime: '18:00' });
+  await assert.rejects(f.toggle(), /已有生产或发布记录/);
+  await f.schedule(); await f.toggle();
+  await delay(150);
+  const snapshot = await f.daily.snapshot();
+  assert.equal(snapshot.scheduleState, 'waiting');
+  assert.equal(snapshot.nextRunAt, `${tomorrow}T06:00:00+08:00`);
+  assert.equal(snapshot.config.firstDay, tomorrow);
+  assert.equal(snapshot.config.enabled, true);
+  assert.ok(snapshot.config.authorizedAt);
+  assert.deepEqual(snapshot.todayRun, failed);
+  assert.deepEqual(snapshot.runs, [failed]);
+  assert.deepEqual(f.calls, []);
+});
+
+test('明确授权同日提交前失败的重排后，短 timer 完成一次新生产且保留原失败回执', async t => {
+  const f = await fixture(t);
+  const failed = await f.seedFailed();
+  const retry = { executionDate: today, startTime: '18:00', retryOfRunId: failed.id, authorizedRetry: true };
+  await f.daily.start();
+  await f.schedule(retry);
+  assert.equal((await f.read()).config.retryOfRunId, failed.id);
+  await assert.rejects(f.toggle(false), /请确认/);
+  await f.toggle();
+  const authorized = structuredClone((await f.read()).config);
+  await f.schedule(retry);
+  assert.deepEqual((await f.read()).config, authorized, '相同重排设置再次保存不会撤销现有授权');
+  f.daily.stop(); await f.daily.start(); await delay(120);
+  const waiting = await f.daily.snapshot();
+  assert.equal(waiting.config.enabled, true);
+  assert.equal(waiting.scheduleState, 'waiting');
+  assert.equal(waiting.nextRunAt, `${today}T18:00:00+08:00`);
+  assert.deepEqual(waiting.runs, [failed]);
+  assert.deepEqual(f.calls, []);
+  f.advance(`${today}T18:00:00`);
+  await until(async () => (await f.read()).runs.some(run => run.status === 'submitted'));
+  const saved = await f.read();
+  assert.deepEqual(f.calls, ['collect', 'render', 'publish']);
+  assert.equal(saved.runs.length, 2);
+  assert.deepEqual(saved.runs[0], failed);
+  assert.equal(saved.runs[1].trigger, 'scheduler');
+  assert.equal(saved.runs[1].previewOnly, false);
+  assert.equal(saved.runs[1].binding.retryOfRunId, failed.id);
+  assert.ok(saved.runs[1].submitStartedAt);
+  assert.equal(saved.config.enabled, false);
+  await delay(150);
+  assert.equal((await f.read()).runs.length, 2);
+  f.daily.stop(); await f.daily.start();
+  f.advance(`${tomorrow}T18:00:00`); await delay(150);
+  assert.equal((await f.read()).runs.length, 2);
+  assert.equal(f.calls.filter(call => call === 'publish').length, 1);
+});
+
+test('重排后的新任务再次失败会停用；引用旧失败或新失败都不能继续豁免同日记录', async t => {
+  const f = await fixture(t);
+  const failed = await f.seedFailed();
+  f.failAt('before-submit');
+  await f.daily.start();
+  await f.schedule({ executionDate: today, startTime: '18:00', retryOfRunId: failed.id, authorizedRetry: true });
+  await f.toggle();
+  f.advance(`${today}T18:00:00`);
+  await until(async () => (await f.read()).runs.length === 2 && (await f.read()).runs[1].status === 'failed');
+  await until(() => !f.daily.busy);
+  const saved = await f.read();
+  assert.equal(saved.config.enabled, false);
+  assert.deepEqual(saved.runs[0], failed);
+  assert.equal(saved.runs[1].submitStartedAt, undefined);
+  for (const retryOfRunId of [failed.id, saved.runs[1].id]) {
+    await assert.rejects(async () => {
+      await f.schedule({ executionDate: today, startTime: '19:00', retryOfRunId, authorizedRetry: true });
+      await f.toggle();
+    });
+    assert.equal((await f.read()).config.enabled, false);
+  }
+  f.advance(`${today}T19:00:00`); await delay(150);
+  assert.deepEqual((await f.read()).runs, saved.runs);
+  assert.equal(f.calls.filter(call => call === 'publish').length, 1);
+});
+
+test('只有同日同账号且完全无发布信号的完整失败回执可以申请显式重排', async t => {
+  const cases = [
+    ['submitted', { status: 'submitted' }],
+    ['uncertain', { status: 'uncertain' }],
+    ['submitStartedAt', { submitStartedAt: `${today}T06:00:02+08:00` }],
+    ['evidence', { evidence: { message: '提交结果待核实' } }],
+    ['empty evidence', { evidence: {} }],
+    ['publishedUrl', { publishedUrl: 'https://example.com/video/123' }],
+    ['boundWorkId', { boundWorkId: '123' }],
+    ['reconciledResult', { reconciledResult: 'not_published' }],
+    ['different day', { day: '2026-10-21' }],
+    ['different account', { binding: { accountId: 'ANOTHER-ACCOUNT' } }],
+    ['missing account binding', { binding: {} }],
+    ['unfinished', { finishedAt: '' }],
+    ['preview', { previewOnly: true }],
+  ];
+  for (const [label, patch] of cases) {
+    await t.test(label, async sub => {
+      const f = await fixture(sub);
+      const original = await f.seedFailed(patch);
+      await f.daily.start();
+      const before = await f.read();
+      await assert.rejects(f.schedule({ executionDate: today, startTime: '18:00', retryOfRunId: original.id, authorizedRetry: true }));
+      assert.deepEqual((await f.read()).runs, before.runs);
+      assert.equal((await f.read()).config.enabled, false);
+      assert.deepEqual(f.calls, []);
+    });
+  }
+});
+
+test('重排必须单次且明确授权；普通保存清除重排标记并恢复同日防重', async t => {
+  const f = await fixture(t);
+  const failed = await f.seedFailed();
+  const retry = { executionDate: today, startTime: '18:00', retryOfRunId: failed.id };
+  await f.daily.start();
+  await assert.rejects(f.schedule(retry));
+  await assert.rejects(f.schedule({ ...retry, authorizedRetry: false }));
+  await assert.rejects(f.schedule({ ...retry, executionMode: 'daily', authorizedRetry: true }));
+  await assert.rejects(f.schedule({ ...retry, retryOfRunId: 'missing-run', authorizedRetry: true }));
+  await f.schedule({ ...retry, authorizedRetry: true }); await f.toggle();
+  await f.schedule({ executionDate: today, startTime: '18:00' });
+  const saved = await f.read();
+  assert.equal(saved.config.retryOfRunId, '');
+  assert.equal(saved.config.enabled, false);
+  assert.equal(saved.config.authorizedAt, '');
+  await assert.rejects(f.toggle(), /已有生产或发布记录/);
+  assert.deepEqual((await f.read()).runs, [failed]);
+  assert.deepEqual(f.calls, []);
+});
+
+test('重排计划启动恢复遇到新的已落盘任务仍消费授权，不会再次采集或提交', async t => {
+  for (const [status, submitted, expected] of [['submitted', true, 'submitted'], ['rendering', false, 'failed'], ['publishing', true, 'uncertain']]) {
+    await t.test(status, async sub => {
+      const f = await fixture(sub);
+      const failed = await f.seedFailed();
+      await f.schedule({ executionDate: today, startTime: '18:00', retryOfRunId: failed.id, authorizedRetry: true });
+      await f.daily.store.update(state => {
+        Object.assign(state.config, { enabled: true, authorizedAt: 'test-retry-authorization', firstDay: today });
+        state.runs.push({ id: randomUUID(), day: today, previewOnly: false, trigger: 'scheduler', status, ...(submitted ? { submitStartedAt: `${today}T18:00:00+08:00` } : {}), binding: structuredClone(state.config) });
+      });
+      f.advance(`${today}T18:00:01`); await f.daily.start(); await delay(150);
+      const saved = await f.read();
+      assert.equal(saved.config.enabled, false);
+      assert.equal(saved.runs.length, 2);
+      assert.deepEqual(saved.runs[0], failed);
+      assert.equal(saved.runs[1].status, expected);
+      assert.deepEqual(f.calls, []);
+    });
+  }
+});
+
+test('另一个进程不能消费正在执行的重排任务；发布租约仍阻止第二次执行', async t => {
+  const f = await fixture(t);
+  const failed = await f.seedFailed();
+  await f.schedule({ executionDate: today, startTime: '18:00', retryOfRunId: failed.id, authorizedRetry: true });
+  await f.daily.store.update(state => {
+    Object.assign(state.config, { enabled: true, authorizedAt: 'test-retry-authorization', firstDay: today });
+    state.runs.push({ id: randomUUID(), day: today, previewOnly: false, trigger: 'scheduler', status: 'rendering', binding: structuredClone(state.config) });
+  });
+  const release = await f.automation.lease();
+  try {
+    await assert.rejects(f.daily.start(), /另一个发布进程/);
+    f.advance(`${today}T18:00:00`); await f.daily.run(false, 'scheduler');
+    const saved = await f.read();
+    assert.equal(saved.config.enabled, true);
+    assert.equal(saved.runs.length, 2);
+    assert.deepEqual(saved.runs[0], failed);
+    assert.equal(saved.runs[1].status, 'rendering');
+    assert.deepEqual(f.calls, []);
+  } finally { await release(); }
 });
 
 test('真实短 timer 到点触发采集、制作、单次提交；预览不消费授权，回执与停用同时持久化', async t => {

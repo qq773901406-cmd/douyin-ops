@@ -301,6 +301,24 @@ bsk doctor
 
 浏览器扩展连接后，本地工作台的“应用接入”页面可启动会话、打开抖音、观察页面和结束会话。“每日自动发布”会通过 `bsk` 为已批准任务创建独立会话，并绑定所选浏览器与抖音号。浏览器显示登录按钮时，需要用户本人扫码或登录；验证码和账号凭据不进入本项目。其他网页任务可由 WorkBuddy 中的 `browser-skill` 执行。
 
+### Windows 后台持续运行
+
+需要无人值守时，可由当前用户的 Windows 计划任务托管工作台和 BrowserSkill。先在本机 `runtime/background-services/config.json` 配置 `root`、`dataDir`、`port`、`nodeBinary`、`bskBinary`，路径均用绝对路径；可选 `bskHome` 必须沿用当前 BrowserSkill 数据目录，省略时使用当前用户默认目录。本机配置、任务登记、状态和诊断日志只保存在 runtime。
+
+在 PowerShell 7 中执行：
+
+```powershell
+./scripts/register-background-services.ps1 -Config (Resolve-Path ./runtime/background-services/config.json).Path
+```
+
+该命令用本机 .NET Framework 编译无控制台的 WinExe 宿主，安装当前用户登录时启动的隐藏任务并立即启动，不保存密码、不要求以最高权限运行。任务每分钟也会触发一次存活兜底；`IgnoreNew` 保证健康任务保持运行，没有默认的 72 小时执行上限。WinExe 在自有 JobObject 中启动 supervisor，宿主意外退出时由 Windows 回收这次启动的进程树，再由下一次触发恢复；外部已运行且被复用的服务不在这个 JobObject 中。supervisor 每 30 秒检查服务，确认服务已退出后退避恢复；权限错误、超时和其他项目占用端口会保留诊断，不会强杀未知进程。BrowserSkill 使用 foreground 模式，空闲期限为 60 分钟；服务恢复不会重启已消费的单次发布，也不会更改发布授权或回执。
+
+重复注册会校验任务的当前用户、权限、项目路径和精确启动参数，幂等复用符合配置的任务；原 PowerShell 宿主只有完全匹配本项目旧配置时才迁移。需要迁移或重新编译且任务仍运行时，命令会报错并保持原任务运行，应先确认没有进行中的发布再明确停止自己的任务。编译产物和构建校验保存在 `runtime/background-services`，不写入通用源码。
+
+需要真正暂停后台宿主时，先核对 `runtime/background-services/task-registration.json` 中登记的任务确属当前项目，再对该精确任务名先执行 `Disable-ScheduledTask`，然后执行 `Stop-ScheduledTask`。只停止而不禁用会被每分钟触发重新拉起；不要按名称批量停止其他任务或进程。暂停后台宿主也会停止它拥有的工作台和 BrowserSkill，操作前应确认没有进行中的发布。
+
+`runtime/background-services/state.json` 记录当前 PID、健康状态、退出原因和恢复次数；`events.jsonl` 保留有容量上限的事件日志；`host-events.jsonl` 仅记录宿主时间、PID 和启动退出状态，不保留被丢弃的子进程输出；`task-registration.json` 记录本机任务名。注册完成后还需要在独立终端检查工作台接口、BrowserSkill 扩展连接和真实只读会话，并观察完整回采周期。后台任务仍要求用户保持 Windows 登录、电脑唤醒、浏览器已登录；它不能代替登录或验证码。
+
 ## MCP 本地验证
 
 MCP Server 默认与本项目共用 `D:\ai\runtime`。本地 HTTP 服务和 MCP 都支持通过 `DOUFENG_DATA_DIR` 指定数据目录；相对路径以进程工作目录为基准，建议两边配置同一个绝对路径。Connector 安装到其他位置且找不到项目 runtime 时，默认使用用户目录下 `.doufeng-workbuddy`。

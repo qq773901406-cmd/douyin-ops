@@ -69,7 +69,18 @@
     "outputFile": "D:\\ai\\runtime\\video-quality-implementation\\cat-duet-extended\\assembly-cat-duet-20s.mp4",
     "verification": "D:\\ai\\runtime\\video-quality-implementation\\cat-duet-extended\\assembly-verification.json"
   },
-  "publishingAuthorized": false,
+  "publishingAuthorized": true,
+  "publication": {
+    "authorizationScope": "用户明确要求将本条20秒双猫成片发布到项目现有抖音账号；不授权其他视频或其他账号。",
+    "platform": "douyin",
+    "accountId": "138528608",
+    "accountName": "Omni Orange",
+    "title": "两只小猫的20秒下班舞",
+    "status": "published",
+    "publishedAt": "2026-10-22T09:29:00.000Z",
+    "url": "https://www.douyin.com/video/7699421872563178762",
+    "receipt": "D:/ai/runtime/video-quality-implementation/cat-duet-extended/publish-douyin/receipt.json"
+  },
   "latestUserConstraint": "使用免费替代方案，不开通订阅或付费试用",
   "nextRequiredInput": null,
   "freeSample": {

@@ -40,7 +40,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
     return data;
   }
   function acceptSnapshot(value) {
-    if (snapshot && ['accountId', 'browserId', 'startTime', 'executionMode', 'executionDate', 'enabled', 'sourceFolder', 'sourceMode', 'newsFeedUrl', 'newsKeywords'].some(key => snapshot.config[key] !== value.config[key])) authorized = false;
+    if (snapshot && ['accountId', 'browserId', 'startTime', 'executionMode', 'executionDate', 'retryOfRunId', 'enabled', 'sourceFolder', 'sourceMode', 'newsFeedUrl', 'newsKeywords'].some(key => snapshot.config[key] !== value.config[key])) authorized = false;
     snapshot = value;
   }
   function warningMarkup(warnings, title = '处理提示', key = 'sync-warnings') {
@@ -108,6 +108,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
     const once = settings.executionMode === 'once';
     return `<section class="card daily-section"><div class="card-title"><h3>${esc(scheduleText())} · 免费本地合成 · 抖音 1 条</h3><span class="pill">${snapshot.config.enabled ? '已开启' : '已暂停'}</span></div>
       <p>${isNews() ? '自动采集公开资讯 → 选择近 48 小时的最新内容 → 制作原创静音图卡字幕视频 → 制作完成后公开发布。' : '从商品库选择尚未发布的商品 → 商品图片配字幕 → 生成竖屏视频 → 制作完成后公开发布。'}</p>
+      ${snapshot.config.retryOfRunId ? '<p class="form-hint"><b>本次是针对提交前失败记录重新授权的一次尝试。</b>原失败记录保留；本次结束即暂停，不自动重试。</p>' : ''}
       <p class="form-hint">${isNews() ? '免费生成资讯速览，成片保留原文出处。' : '普通商品介绍，不挂商品链接。'}同一账号每天最多 1 条。单次计划完成、跳过或失败后暂停，过期不顺延；每日计划若已过开工时间或今天已有执行记录，从明天开始。</p>
       <div class="daily-schedule"><div class="field"><label for="daily-execution-mode">执行方式</label><select id="daily-execution-mode" ${isBusy() ? 'disabled' : ''}><option value="once" ${once ? 'selected' : ''}>只执行一次，随后暂停</option><option value="daily" ${!once ? 'selected' : ''}>每天执行，直到手动暂停</option></select></div>${once ? `<div class="field"><label for="daily-execution-date">单次日期（北京时间）</label><input id="daily-execution-date" type="date" required value="${esc(settings.executionDate)}" ${isBusy() ? 'disabled' : ''}></div>` : ''}<div class="field"><label for="daily-start-time">开始时间（北京时间）</label><input id="daily-start-time" type="time" required step="60" value="${esc(settings.startTime)}" ${isBusy() ? 'disabled' : ''}></div><button class="button button-light" data-daily="schedule" ${isBusy() || scheduleDraft === null ? 'disabled' : ''}>保存执行计划</button></div>
       <p class="form-hint">更改执行方式、日期或时间后计划暂停，核对后重新开启。允许在计划时间后 6 小时内开工；单次计划不会改到其他日期。${hasUnsavedSettings() ? '<b>有尚未保存的设置，请先保存后再检查或启动。</b>' : ''}</p>
@@ -122,7 +123,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
     const platformLink = workLink(run.platformUrl);
     const link = platformLink || (run.status === 'published' ? workLink(run.publishedUrl) : '');
     return `<article class="automation-item"><span class="pill">${esc(runLabel(run))}</span><h3>${esc(runTitle(run))}</h3>
-      <small>${when(run.startedAt)}${run.previewOnly ? ' · 仅预览' : run.trigger === 'scheduler' ? ' · 定时触发' : ''}${run.binding?.executionMode === 'once' && !run.previewOnly ? ' · 单次计划' : ''}${run.seconds ? ` · ${esc(run.seconds)} 秒` : ''}</small><p>${reviewState ? '提交时回执：' : ''}${esc(run.message || '')}</p>
+      <small>${when(run.startedAt)}${run.previewOnly ? ' · 仅预览' : run.trigger === 'scheduler' ? ' · 定时触发' : ''}${run.binding?.executionMode === 'once' && !run.previewOnly ? ' · 单次计划' : ''}${run.binding?.retryOfRunId && !run.previewOnly ? ' · 重新授权的一次尝试' : ''}${run.seconds ? ` · ${esc(run.seconds)} 秒` : ''}</small><p>${reviewState ? '提交时回执：' : ''}${esc(run.message || '')}</p>
       ${reviewState ? `<p><b>平台审核：${platformLabels[reviewState]}</b></p><p class="form-hint">最近回采：${when(run.platformObservedAt || run.platformReview.observedAt)}。提交记录保留，用于防止重复发布。</p>` : ''}
       ${warningMarkup(run.warnings, '处理提示', `run-${run.id}`)}
       ${run.sourceMode === 'news' || run.sourceArticles?.length ? `<details class="daily-warnings" data-daily-detail="articles-${esc(run.id)}"><summary>资讯出处${run.sourceArticles?.length ? `（${run.sourceArticles.length}）` : ''}</summary>${run.sourceArticles?.length ? `<ul class="daily-news-articles">${run.sourceArticles.map(articleMarkup).join('')}</ul>` : '<p class="form-hint">此记录未保存原文链接。</p>'}</details>` : ''}

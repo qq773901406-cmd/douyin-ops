@@ -132,10 +132,80 @@
       "format": "AI萌宠竖屏视频 · 20秒",
       "asset": "D:/ai/runtime/video-quality-implementation/cat-duet-extended/assembly-cat-duet-20s.mp4",
       "cover": "",
-      "caption": "一个负责领舞，一个负责可爱，最后一起坐下收工。本视频画面由AI生成，配乐为原创合成。 #AI萌宠 #猫咪跳舞 #萌宠日常",
-      "hashtags": "#AI萌宠 #猫咪跳舞 #萌宠日常",
+      "caption": "一个负责领舞，一个负责可爱，最后一起坐下收工。本视频画面由AI生成，配乐为原创合成。",
+      "hashtags": "",
       "scheduledAt": "",
-      "status": "待发布（本次用户已授权）"
+      "status": "已发布",
+      "accountId": "138528608",
+      "accountName": "Omni Orange",
+      "aiGenerated": true,
+      "publicationReceipt": "D:\\ai\\runtime\\video-quality-implementation\\cat-duet-extended\\publish-douyin\\receipt.json",
+      "submittedAt": "2026-10-22T09:28:30.864Z",
+      "publishedUrl": "https://www.douyin.com/video/7699421872563178762",
+      "platformReview": {
+        "accountId": "138528608",
+        "workId": "7699421872563178762",
+        "url": "https://www.douyin.com/video/7699421872563178762",
+        "reviewState": "published",
+        "observedAt": "2026-10-22T09:30:11.163Z",
+        "evidence": {
+          "url": "https://www.douyin.com/video/7699421872563178762",
+          "text": "{\"accountId\":\"138528608\",\"cardTitle\":\"两只小猫的20秒下班舞 一个负责领舞，一个负责可爱，最后一起坐下收工。本视频画面由AI生成，配乐为原创合成。\",\"cardTime\":\"2026年10月22日 17:29\",\"cardStatus\":\"已发布\",\"previewTitle\":\"两只小猫的20秒下班舞 一个负责领舞，一个负责可爱，最后一起坐下收工。本视频画面由AI生成，配乐为原创合成。\",\"previewUrl\":\"https://www.douyin.com/video/7699421872563178762\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699421872563178762\",\"stableSamples\":3,\"rawMetrics\":{\"2秒跳出率\":\"0%\",\"分享\":\"0\",\"吸粉量\":\"0\",\"完播率\":\"0%\",\"播放\":\"0\",\"收藏\":\"0\",\"点赞\":\"0\",\"评论\":\"0\"},\"bindingProof\":{\"kind\":\"douyin-rendered-dom-v1\",\"targetRef\":\"mvjbdnfk4v6224\",\"browserId\":\"b31fc78b\",\"assetSha256\":\"e6d46b5c152e16671ff29a43ff396976cebe9f4dd3701d58b943f5d68cab0235\",\"submittedAt\":\"2026-10-22T09:28:30.864Z\",\"accountId\":\"138528608\",\"workId\":\"7699421872563178762\",\"cardTitle\":\"两只小猫的20秒下班舞 一个负责领舞，一个负责可爱，最后一起坐下收工。本视频画面由AI生成，配乐为原创合成。\",\"cardTime\":\"2026-10-22T09:29:00.000Z\",\"previewTitle\":\"两只小猫的20秒下班舞 一个负责领舞，一个负责可爱，最后一起坐下收工。本视频画面由AI生成，配乐为原创合成。\",\"previewUrl\":\"https://www.douyin.com/video/7699421872563178762\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699421872563178762\",\"cardMatches\":1,\"profileMatches\":1,\"stableSamples\":3}}"
+        },
+        "metrics": {
+          "plays": 0,
+          "likes": 0,
+          "mComments": 0,
+          "shares": 0,
+          "saves": 0,
+          "followers": 0,
+          "completion": 0
+        },
+        "publishedAt": "2026-10-22T09:29:00.000Z"
+      }
+    },
+    {
+      "id": "7f51f33c-fc69-40fd-90e8-5662f6f15323",
+      "title": "10月23日资讯速览",
+      "pubTitle": "10月23日资讯速览",
+      "caption": "10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 西部数据 2027 财年第一财季归母净利润 17.79 亿美元,同比增长 54% 来源：IT之家 https://www.ithome.com/1/016/759.htm 2. 今日霜降:恍然暮秋至,静候冬日来 来源：IT之家 https://www.ithome.com/1/016/756.htm 3. 方舟引擎新突破:华为详解 HarmonyOS 7 超空间存储 + 超空间内存技术 来源：IT之家 https://www.ithome.com/1/016/755.htm",
+      "asset": "D:\\ai\\runtime\\daily-production\\videos\\2bbbfdf2-c16c-4f63-971d-759fd7572b45\\video.mp4",
+      "platform": "douyin",
+      "format": "视频",
+      "status": "待检查",
+      "sourceVideoId": "43130230-e0cb-4b87-8636-7a0daf4f45fc",
+      "sourceProductionId": "43603b9e-8a5e-444a-9cde-cfda5da98b26",
+      "sourceMode": "news",
+      "sourceArticles": [
+        {
+          "id": "2c9231de44f0dd76aae393ff64be751539d459063891cc390838d2d84e25fa43",
+          "title": "西部数据 2027 财年第一财季归母净利润 17.79 亿美元,同比增长 54%",
+          "url": "https://www.ithome.com/1/016/759.htm",
+          "publishedAt": "2026-10-22T20:19:37.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        },
+        {
+          "id": "11162a782086974f812cf841ff438ac3786245fc2adb1bdd5f87c3c473921988",
+          "title": "今日霜降:恍然暮秋至,静候冬日来",
+          "url": "https://www.ithome.com/1/016/756.htm",
+          "publishedAt": "2026-10-22T16:00:09.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        },
+        {
+          "id": "d8b051ba7e1f0c7cccc3814d9655ccf33b0bbffbae32cd8f3002be71f4b05b18",
+          "title": "方舟引擎新突破:华为详解 HarmonyOS 7 超空间存储 + 超空间内存技术",
+          "url": "https://www.ithome.com/1/016/755.htm",
+          "publishedAt": "2026-10-22T15:59:04.000Z",
+          "sourceName": "IT之家",
+          "sourceUrl": "https://www.ithome.com/rss/"
+        }
+      ],
+      "createdAt": "2026-10-22T22:00:28.533Z",
+      "updatedAt": "2026-10-22T22:00:28.636Z",
+      "productionStatus": "failed",
+      "productionMessage": "浏览器步骤 session 未完成。请检查扩展、登录状态和页面；系统不会盲目重试。"
     }
   ],
   "metrics": [
@@ -151,26 +221,60 @@
       "mTitle": "10月20日资讯速览",
       "date": "2026-10-22",
       "createdAt": "2026-10-22T07:49:05.271Z",
-      "plays": 12,
+      "plays": 34,
       "likes": 0,
       "mComments": 0,
       "shares": 0,
       "saves": 0,
       "followers": 0,
-      "completion": 0,
-      "collectedAt": "2026-10-22T09:21:59.544Z",
+      "completion": 3.23,
+      "collectedAt": "2026-10-22T13:37:09.075Z",
       "metricObservedAt": {
-        "plays": "2026-10-22T09:21:59.544Z",
-        "likes": "2026-10-22T09:21:59.544Z",
-        "mComments": "2026-10-22T09:21:59.544Z",
-        "shares": "2026-10-22T09:21:59.544Z",
-        "saves": "2026-10-22T09:21:59.544Z",
-        "followers": "2026-10-22T09:21:59.544Z",
-        "completion": "2026-10-22T09:21:59.544Z"
+        "plays": "2026-10-22T13:37:09.075Z",
+        "likes": "2026-10-22T13:37:09.075Z",
+        "mComments": "2026-10-22T13:37:09.075Z",
+        "shares": "2026-10-22T13:37:09.075Z",
+        "saves": "2026-10-22T13:37:09.075Z",
+        "followers": "2026-10-22T13:37:09.075Z",
+        "completion": "2026-10-22T13:37:09.075Z"
       },
       "evidence": {
         "url": "https://www.douyin.com/video/7699395315459198223",
-        "text": "{\"accountId\":\"138528608\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026年10月22日 15:46\",\"cardStatus\":\"已发布\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"stableSamples\":3,\"rawMetrics\":{\"2秒跳出率\":\"53.85%\",\"分享\":\"0\",\"吸粉量\":\"0\",\"完播率\":\"0%\",\"播放\":\"12\",\"收藏\":\"0\",\"点赞\":\"0\",\"评论\":\"0\"},\"bindingProof\":{\"kind\":\"douyin-rendered-dom-v1\",\"targetRef\":\"queue:16fe01a5-7131-492a-af6f-e77f1dc86632\",\"browserId\":\"b31fc78b\",\"assetSha256\":\"ed9ab0a356f2845143cdd29238d95237b84f18a04a6c4de19f00e3482948fee5\",\"submittedAt\":\"2026-10-22T07:45:29.605Z\",\"accountId\":\"138528608\",\"workId\":\"7699395315459198223\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026-10-22T07:46:00.000Z\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"cardMatches\":1,\"profileMatches\":1,\"stableSamples\":3}}"
+        "text": "{\"accountId\":\"138528608\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026年10月22日 15:46\",\"cardStatus\":\"已发布\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"stableSamples\":3,\"rawMetrics\":{\"2秒跳出率\":\"52.63%\",\"分享\":\"0\",\"吸粉量\":\"0\",\"完播率\":\"3.23%\",\"播放\":\"34\",\"收藏\":\"0\",\"点赞\":\"0\",\"评论\":\"0\"},\"bindingProof\":{\"kind\":\"douyin-rendered-dom-v1\",\"targetRef\":\"queue:16fe01a5-7131-492a-af6f-e77f1dc86632\",\"browserId\":\"b31fc78b\",\"assetSha256\":\"ed9ab0a356f2845143cdd29238d95237b84f18a04a6c4de19f00e3482948fee5\",\"submittedAt\":\"2026-10-22T07:45:29.605Z\",\"accountId\":\"138528608\",\"workId\":\"7699395315459198223\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026-10-22T07:46:00.000Z\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"cardMatches\":1,\"profileMatches\":1,\"stableSamples\":3}}"
+      }
+    },
+    {
+      "id": "douyin-fe2833bb79c1a443bc0712621e081785",
+      "source": "douyin-tracking",
+      "sourceTarget": "queue:16fe01a5-7131-492a-af6f-e77f1dc86632",
+      "accountId": "138528608",
+      "platform": "douyin",
+      "platformWorkId": "7699395315459198223",
+      "publishedUrl": "https://www.douyin.com/video/7699395315459198223",
+      "draftId": "",
+      "mTitle": "10月20日资讯速览",
+      "date": "2026-10-23",
+      "createdAt": "2026-10-23T01:42:15.889Z",
+      "plays": 49,
+      "likes": 0,
+      "mComments": 0,
+      "shares": 0,
+      "saves": 0,
+      "followers": 0,
+      "completion": 2,
+      "collectedAt": "2026-10-23T06:49:09.867Z",
+      "metricObservedAt": {
+        "plays": "2026-10-23T06:49:09.867Z",
+        "likes": "2026-10-23T06:49:09.867Z",
+        "mComments": "2026-10-23T06:49:09.867Z",
+        "shares": "2026-10-23T06:49:09.867Z",
+        "saves": "2026-10-23T06:49:09.867Z",
+        "followers": "2026-10-23T06:49:09.867Z",
+        "completion": "2026-10-23T06:49:09.867Z"
+      },
+      "evidence": {
+        "url": "https://www.douyin.com/video/7699395315459198223",
+        "text": "{\"accountId\":\"138528608\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026年10月22日 15:46\",\"cardStatus\":\"已发布\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"stableSamples\":3,\"rawMetrics\":{\"2秒跳出率\":\"55%\",\"分享\":\"0\",\"吸粉量\":\"0\",\"完播率\":\"2%\",\"播放\":\"49\",\"收藏\":\"0\",\"点赞\":\"0\",\"评论\":\"0\"},\"bindingProof\":{\"kind\":\"douyin-rendered-dom-v1\",\"targetRef\":\"queue:16fe01a5-7131-492a-af6f-e77f1dc86632\",\"browserId\":\"b31fc78b\",\"assetSha256\":\"ed9ab0a356f2845143cdd29238d95237b84f18a04a6c4de19f00e3482948fee5\",\"submittedAt\":\"2026-10-22T07:45:29.605Z\",\"accountId\":\"138528608\",\"workId\":\"7699395315459198223\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026-10-22T07:46:00.000Z\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"cardMatches\":1,\"profileMatches\":1,\"stableSamples\":3}}"
       }
     }
   ],
@@ -290,6 +394,40 @@
       "id": "b113af04-1342-49c7-b9ae-d34c5e65e8da",
       "createdAt": "2026-10-22T08:17:33.014Z",
       "updatedAt": "2026-10-22T08:17:33.014Z"
+    },
+    {
+      "title": "10月23日资讯速览",
+      "subject": "每日资讯标题速览",
+      "setting": "",
+      "style": "",
+      "referenceVideo": "",
+      "characterReference": "",
+      "visualIdentity": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "本地资讯图卡字幕合成",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\daily-production\\videos\\2bbbfdf2-c16c-4f63-971d-759fd7572b45\\video.mp4",
+      "blocker": "",
+      "notes": "公开资讯标题编排为原创信息卡画面，非现场画面，不含热度排名。\nIT之家：西部数据 2027 财年第一财季归母净利润 17.79 亿美元,同比增长 54%\nhttps://www.ithome.com/1/016/759.htm\nIT之家：今日霜降:恍然暮秋至,静候冬日来\nhttps://www.ithome.com/1/016/756.htm\nIT之家：方舟引擎新突破:华为详解 HarmonyOS 7 超空间存储 + 超空间内存技术\nhttps://www.ithome.com/1/016/755.htm",
+      "shots": [
+        {
+          "id": "legacy-shot-1",
+          "seconds": 36,
+          "action": "按资讯逐条展示信息卡、标题、发布日期和来源，附字幕说明。",
+          "camera": "竖屏资讯图卡",
+          "referenceImage": "",
+          "startState": "",
+          "endState": "",
+          "asset": "",
+          "reviewStatus": "pending",
+          "reviewNotes": ""
+        }
+      ],
+      "id": "43130230-e0cb-4b87-8636-7a0daf4f45fc",
+      "createdAt": "2026-10-22T22:00:28.533Z",
+      "updatedAt": "2026-10-22T22:00:28.533Z"
     }
   ],
   "schemaVersion": 5,

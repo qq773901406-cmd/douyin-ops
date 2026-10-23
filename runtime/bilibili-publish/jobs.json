@@ -36,6 +36,81 @@
         "note": "B站稿件管理显示：全部稿件 1，进行中 0，已发布 1；标题匹配，上传及转码已完成。",
         "imported": true
       }
+    },
+    {
+      "id": "8a6a723c-0e8e-4008-9fc2-5ac7205d1226",
+      "platform": "bilibili",
+      "account": {
+        "name": "Omni_Orange",
+        "uid": "631870098"
+      },
+      "browserId": "b31fc78b",
+      "title": "AI生成｜双猫一起抬爪摇摆",
+      "video": {
+        "path": "D:\\ai\\runtime\\bilibili-publish\\assets\\8a6a723c-0e8e-4008-9fc2-5ac7205d1226\\video.mp4",
+        "sha256": "9ff054fbf9a9f7aef2403155ce5cd816639406da6fa17a6890a4f4a812370e66",
+        "size": 6939718,
+        "sourcePath": "D:\\ai\\runtime\\ai_gen\\videos\\two-cats-dance-jimeng-20261022-720p.mp4"
+      },
+      "plan": {
+        "title": "AI生成｜双猫一起抬爪摇摆",
+        "description": "黑白小猫和橘猫在客厅里轻轻摇摆，一起抬起小爪子。\n全片画面由 AI 生成，时长 10 秒，本版无配乐。",
+        "tags": [
+          "AI生成",
+          "AI视频",
+          "猫咪",
+          "萌宠",
+          "双猫跳舞"
+        ],
+        "aiGenerated": true,
+        "category": "人工智能",
+        "coverFrameSeconds": 1,
+        "covers": {}
+      },
+      "status": "submitted",
+      "createdAt": "2026-10-22T10:13:31.677Z",
+      "updatedAt": "2026-10-23T06:35:35.772Z",
+      "history": [
+        {
+          "at": "2026-10-22T10:13:31.690Z",
+          "action": "prepare",
+          "detail": "保存视频副本和清单，尚未取得提交许可。"
+        },
+        {
+          "at": "2026-10-23T06:34:24.829Z",
+          "action": "begin-submit",
+          "detail": "已记录单次提交意图。接下来最多点击一次立即投稿；重启后不自动重试。"
+        },
+        {
+          "at": "2026-10-23T06:35:35.772Z",
+          "action": "submitted",
+          "detail": "2026-10-23 单次点击立即投稿后显示稿件投递成功。当前账号 Omni_Orange（631870098）；稿件管理中本条标题 AI生成｜双猫一起抬爪摇摆 与链接 BV1vynb6tENh 匹配，转码完成、审核中。进度页确认 360P/480P/720P 转码均完成，尚未确认公开发布。"
+        }
+      ],
+      "planHash": "854d138e50b625ab93c7265a155900c416515a1337cc051f483cbc39a1e43917",
+      "attempt": {
+        "id": "3002ff92-ccd4-4c5c-b811-dca5e91d4b0d",
+        "startedAt": "2026-10-23T06:34:24.829Z",
+        "authorization": "用户针对本条即梦双猫视频明确要求发布，并确认“已登录 Omni_Orange，继续发布”；2026-10-23 再次要求“重新 现在发布”。本次延续同一视频、同一账号、立即投稿授权。",
+        "accountObserved": {
+          "name": "Omni_Orange",
+          "uid": "631870098"
+        },
+        "evidence": {
+          "path": "D:\\ai\\runtime\\bilibili-publish\\evidence\\c60fd974-36f0-4874-96f9-5f8b68d8255d.png",
+          "sha256": "65952b793c5697098befa218012645be01d4b607edc051db70958d6ccd37243c"
+        }
+      },
+      "receipt": {
+        "bvid": "BV1vynb6tENh",
+        "url": "https://www.bilibili.com/video/BV1vynb6tENh/",
+        "observedAt": "2026-10-23T06:35:35.772Z",
+        "evidence": {
+          "path": "D:\\ai\\runtime\\bilibili-publish\\evidence\\9d526e41-dbcc-4394-80e9-6540207f63aa.png",
+          "sha256": "f8853210230f279d52d1d9dc9bbdebb08bf8c19bcac856274edda3f5026cef9b"
+        },
+        "note": "2026-10-23 单次点击立即投稿后显示稿件投递成功。当前账号 Omni_Orange（631870098）；稿件管理中本条标题 AI生成｜双猫一起抬爪摇摆 与链接 BV1vynb6tENh 匹配，转码完成、审核中。进度页确认 360P/480P/720P 转码均完成，尚未确认公开发布。"
+      }
     }
   ]
 }
