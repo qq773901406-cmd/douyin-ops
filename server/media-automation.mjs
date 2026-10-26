@@ -32,7 +32,7 @@ export function createWanDownloadFetch({ Agent = HttpsAgent, request = httpsRequ
   return async (address, { signal, method = 'GET' } = {}) => {
     let url; try { url = new URL(address); } catch { throw fail('Wan 下载地址无效。'); }
     if (method !== 'GET' || url.origin !== WAN_ORIGIN || url.username || url.password || url.search || url.hash || url.href !== address
-      || !/^\/gradio_api\/file=\/tmp\/gradio\/[a-f0-9]{64}\/[a-zA-Z0-9_.-]+\.mp4$/.test(url.pathname) || url.pathname.includes('..')) throw fail('专用下载客户端仅允许固定 Wan 返回文件的 GET 请求。');
+      || !/^(?:\/--replicas\/[A-Za-z0-9][A-Za-z0-9-]{0,127})?\/gradio_api\/file=\/tmp\/gradio\/[a-f0-9]{64}\/[a-zA-Z0-9_.-]+\.mp4$/.test(url.pathname) || url.pathname.includes('..')) throw fail('专用下载客户端仅允许固定 Wan 返回文件的 GET 请求。');
     cancelled(signal);
     const env = Object.fromEntries(['HTTP_PROXY', 'http_proxy', 'HTTPS_PROXY', 'https_proxy', 'NO_PROXY', 'no_proxy'].filter(key => typeof proxyEnv[key] === 'string').map(key => [key, proxyEnv[key]]));
     const agent = new Agent({ proxyEnv: env, keepAlive: false, rejectUnauthorized: true });
@@ -66,9 +66,16 @@ export function returnedWanFile(receipt) {
   if (!receipt || receipt.space !== WAN_SPACE || receipt.anonymous !== true || receipt.paid_subscription_or_trial !== false || !Array.isArray(receipt.result)) throw fail('原回执没有已返回的匿名免费 Wan 文件，不能恢复下载或重新生成。');
   const file = receipt.result[0];
   if (!file || typeof file.path !== 'string' || !/^\/tmp\/gradio\/[a-f0-9]{64}\/[a-zA-Z0-9_.-]+\.mp4$/.test(file.path) || file.path.includes('..') || file.meta?._type !== 'gradio.FileData') throw fail('原回执的返回文件路径无效，未下载。');
-  const expected = `${WAN_ORIGIN}/gradio_api/file=${file.path}`;
+  let appUrl = WAN_ORIGIN;
+  if (receipt.app_url != null || receipt.observed_replica != null) {
+    if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,127}$/.test(receipt.observed_replica || '')
+      || receipt.app_url !== `${WAN_ORIGIN}/--replicas/${receipt.observed_replica}`
+      || !Number.isFinite(Date.parse(receipt.route_verified_at || ''))) throw fail('原回执缺少已核实的固定 Wan 副本路由。');
+    appUrl = receipt.app_url;
+  }
+  const canonical = `${WAN_ORIGIN}/gradio_api/file=${file.path}`, expected = `${appUrl}/gradio_api/file=${file.path}`;
   let url; try { url = new URL(file.url); } catch { throw fail('原回执没有有效文件 URL。'); }
-  if (url.href !== expected || url.username || url.password || url.search || url.hash || receipt.download_url && receipt.download_url !== expected) throw fail('恢复只允许固定 Wan Space 的原始返回文件，拒绝其他来源、凭据或重定向。');
+  if (![canonical, expected].includes(url.href) || url.username || url.password || url.search || url.hash || receipt.download_url && receipt.download_url !== expected) throw fail('恢复只允许固定 Wan Space 的原始返回文件，拒绝其他来源、凭据或重定向。');
   const duration = receipt.parameters?.duration_seconds;
   if (!Number.isFinite(duration) || duration < 0.5 || duration > 5) throw fail('原回执没有有效的请求时长，不能核验恢复视频。');
   return { url: expected, path: file.path, duration };

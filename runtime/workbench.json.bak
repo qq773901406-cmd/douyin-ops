@@ -293,13 +293,13 @@
       "platformUrl": "https://www.douyin.com/video/7699755152432975158",
       "platformReview": {
         "state": "published",
-        "observedAt": "2026-10-26T01:57:44.221Z",
+        "observedAt": "2026-10-26T02:12:40.567Z",
         "evidence": {
           "url": "https://www.douyin.com/video/7699755152432975158",
           "text": "{\"accountId\":\"138528608\",\"cardTitle\":\"10月23日资讯速览 10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm\",\"cardTime\":\"2026年10月23日 15:02\",\"cardStatus\":\"已发布\",\"previewTitle\":\"10月23日资讯速览 10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699755152432975158\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699755152432975158\",\"stableSamples\":3,\"rawMetrics\":{\"2秒跳出率\":\"65.52%\",\"分享\":\"0\",\"吸粉量\":\"0\",\"完播率\":\"0%\",\"播放\":\"45\",\"收藏\":\"0\",\"点赞\":\"0\",\"评论\":\"0\"},\"bindingProof\":{\"kind\":\"douyin-rendered-dom-v1\",\"targetRef\":\"daily:0bb12014-39d6-4437-8715-410b30b8234a\",\"browserId\":\"b31fc78b\",\"assetSha256\":\"7cd9e1f4d3785f348f04cb2e05663d05b7190b9d581349966630732b0ca18174\",\"submittedAt\":\"2026-10-23T07:01:45.162Z\",\"accountId\":\"138528608\",\"workId\":\"7699755152432975158\",\"cardTitle\":\"10月23日资讯速览 10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm\",\"cardTime\":\"2026-10-23T07:02:00.000Z\",\"previewTitle\":\"10月23日资讯速览 10月23日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 红果短剧上线防沉迷提醒视频,正逐步覆盖更多用户 来源：IT之家 https://www.ithome.com/1/017/031.htm 2. 明年开年生效,希腊通过 15 岁以下用户社交媒体禁令 来源：IT之家 https://www.ithome.com/1/017/026.htm 3. 芬兰森林惨遭“剃光头”:谷歌为建 AI 数据中心非法清场 25 万棵树 来源：IT之家 https://www.ithome.com/1/017/025.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699755152432975158\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699755152432975158\",\"cardMatches\":1,\"profileMatches\":1,\"stableSamples\":3}}"
         }
       },
-      "platformObservedAt": "2026-10-26T01:57:44.221Z",
+      "platformObservedAt": "2026-10-26T02:12:40.567Z",
       "platformTrackingRef": "daily:0bb12014-39d6-4437-8715-410b30b8234a",
       "platformPublishedAt": "2026-10-23T07:02:00.000Z"
     },
@@ -378,6 +378,21 @@
       "updatedAt": "2026-10-23T22:11:10.122Z",
       "productionStatus": "failed",
       "productionMessage": "浏览器步骤 evaluate 未完成。请检查扩展、登录状态和页面；系统不会盲目重试。"
+    },
+    {
+      "id": "media-draft-01c32a3c9bdd4d294c0788926b73bff0",
+      "sourceVideoId": "media-01c32a3c9bdd4d294c0788926b73bff0",
+      "sourceMediaTaskId": "pet-fe35a0f3-413f-4d2a-9dbb-2b460bb8ae3f-shot-1",
+      "platform": "douyin",
+      "pubTitle": "黑白与橘色的小猫·镜头1",
+      "title": "黑白与橘色的小猫·镜头1",
+      "caption": "A black-and-white kitten tilts its head slightly while the orange tabby watches from behind, both maintaining their natural body posture.",
+      "asset": "D:\\ai\\runtime\\media-automation\\jobs\\01c32a3c9bdd4d294c0788926b73bff0\\wan\\video.mp4",
+      "format": "视频",
+      "status": "待检查",
+      "aiGenerated": true,
+      "createdAt": "2026-10-26T09:15:48.627Z",
+      "updatedAt": "2026-10-26T09:15:48.627Z"
     }
   ],
   "metrics": [
@@ -502,15 +517,15 @@
       "saves": 0,
       "followers": 0,
       "completion": 0,
-      "collectedAt": "2026-10-26T01:57:44.221Z",
+      "collectedAt": "2026-10-26T02:12:40.567Z",
       "metricObservedAt": {
-        "plays": "2026-10-26T01:57:44.221Z",
-        "likes": "2026-10-26T01:57:44.221Z",
-        "mComments": "2026-10-26T01:57:44.221Z",
-        "shares": "2026-10-26T01:57:44.221Z",
-        "saves": "2026-10-26T01:57:44.221Z",
-        "followers": "2026-10-26T01:57:44.221Z",
-        "completion": "2026-10-26T01:57:44.221Z"
+        "plays": "2026-10-26T02:12:40.567Z",
+        "likes": "2026-10-26T02:12:40.567Z",
+        "mComments": "2026-10-26T02:12:40.567Z",
+        "shares": "2026-10-26T02:12:40.567Z",
+        "saves": "2026-10-26T02:12:40.567Z",
+        "followers": "2026-10-26T02:12:40.567Z",
+        "completion": "2026-10-26T02:12:40.567Z"
       },
       "evidence": {
         "url": "https://www.douyin.com/video/7699755152432975158",
@@ -973,6 +988,40 @@
       "id": "a7f8dfa9-a3a7-4fb3-8f01-250e9054efeb",
       "createdAt": "2026-10-23T22:04:20.799Z",
       "updatedAt": "2026-10-23T22:04:20.799Z"
+    },
+    {
+      "title": "黑白与橘色的小猫·镜头1",
+      "subject": "黑白与橘色的小猫·镜头1",
+      "setting": "",
+      "style": "",
+      "referenceVideo": "",
+      "characterReference": "",
+      "visualIdentity": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "免费 Wan2.2 公共 Space",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\media-automation\\jobs\\01c32a3c9bdd4d294c0788926b73bff0\\wan\\video.mp4",
+      "blocker": "",
+      "notes": "已通过媒体轨道与完整解码检查；画面质量、版权和发布内容仍待检查。",
+      "shots": [
+        {
+          "id": "shot-3fed46a8-f9ea-4673-a482-baa81b985947",
+          "seconds": 5,
+          "action": "A black-and-white kitten tilts its head slightly while the orange tabby watches from behind, both maintaining their natural body posture.",
+          "camera": "中景，固定机位。",
+          "referenceImage": "",
+          "startState": "",
+          "endState": "",
+          "asset": "D:\\ai\\runtime\\media-automation\\jobs\\01c32a3c9bdd4d294c0788926b73bff0\\wan\\video.mp4",
+          "reviewStatus": "pending",
+          "reviewNotes": ""
+        }
+      ],
+      "id": "media-01c32a3c9bdd4d294c0788926b73bff0",
+      "createdAt": "2026-10-26T09:15:48.627Z",
+      "updatedAt": "2026-10-26T09:15:48.627Z"
     }
   ],
   "schemaVersion": 5,

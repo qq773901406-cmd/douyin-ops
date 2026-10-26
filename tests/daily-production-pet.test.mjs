@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { DailyProduction } from '../server/daily-production.mjs';
@@ -77,6 +77,18 @@ test('萌宠设置变化撤销授权，旧图卡回执保持原样且版本保�
   const state = await f.state(); assert.equal(state.config.enabled, false); assert.equal(state.config.authorizedAt, '');
   assert.equal(state.config.firstDay, ''); assert.deepEqual(state.runs[0], old);
   await assert.rejects(f.daily.productionSettings({ productionMode: 'cards' }, stale), /更新/);
+});
+
+test('旧配置默认首帧说明为空，保存说明保留其他设置并撤销授权且不改历史回执', async t => {
+  const f = await fixture(t); assert.equal((await f.state()).config.petSettings.visualBrief, '');
+  const old = { id: randomUUID(), day: '2026-10-23', previewOnly: false, status: 'failed', productionMode: 'ai-pet', binding: { petSettings: structuredClone(f.settings) } };
+  await f.daily.store.update(state => state.runs.push(old)); await f.enable();
+  await f.configure({ visualBrief: '' }); assert.equal((await f.state()).config.enabled, true);
+  await f.configure({ visualBrief: '  两只小猫位于同一房间的地面。  ' });
+  const state = await f.state(); assert.equal(state.config.enabled, false); assert.equal(state.config.authorizedAt, '');
+  assert.equal(state.config.petSettings.visualBrief, '两只小猫位于同一房间的地面。');
+  assert.equal(state.config.petSettings.model, f.settings.model); assert.deepEqual(state.config.petSettings.firstFrames, f.settings.firstFrames);
+  assert.deepEqual(state.runs[0], old);
 });
 
 test('萌宠定时链路采集转化后一次发布且保留生成、声音、动作与来源凭据', async t => {
@@ -166,4 +178,93 @@ test('中断的萌宠生成在启动时暂停并保留生成结果待核实标�
   await f.daily.start(); const state = await f.state();
   assert.equal(state.config.enabled, false); assert.equal(state.runs[0].generationState, 'uncertain'); assert.equal(state.runs[0].status, 'failed');
   assert.deepEqual(f.calls, []);
+});
+
+async function uncertainPreview(f) {
+  f.failRender(Object.assign(new Error('SIMULATED result stream lost'), { code: 'uncertain' }));
+  await f.daily.run(true, 'preview');
+  return structuredClone((await f.state()).runs.at(-1));
+}
+const abandonment = (run, extra = {}) => ({ id: run.id, action: 'abandon-preview', confirmed: true,
+  note: '已核实原生成结果无法取回，明确放弃本次预览，保留未知回执。', ...extra });
+const resolvePreview = async (f, run, extra = {}) => f.daily.resolveGeneration(abandonment(run, extra), (await f.daily.store.read()).revision);
+
+test('人工处置未知预览只追加审计，原回执不改且不自动重生成或启用', async t => {
+  const f = await fixture(t), original = await uncertainPreview(f), beforeCalls = [...f.calls];
+  const evidencePath = join(f.daily.runtimeDir, 'original-event-read.json'), bytes = '{"session_not_found":true,"generationResubmitted":false}';
+  await writeFile(evidencePath, bytes);
+  const before = await f.daily.snapshot();
+  assert.deepEqual(before.generationResolutionStatus, [{ runId: original.id, abandoned: false, canAbandon: true }]);
+  await resolvePreview(f, original, { evidencePath });
+  const state = await f.state(), resolution = state.generationResolutions[0];
+  assert.deepEqual(state.runs[0], original); assert.deepEqual(f.calls, beforeCalls); assert.equal(state.config.enabled, false);
+  assert.equal(resolution.originalRunSha256, hash(JSON.stringify(original))); assert.equal(resolution.originalRevision, before.revision);
+  assert.equal(resolution.originalGenerationState, 'uncertain'); assert.equal(resolution.originalReceiptPreserved, true);
+  assert.equal(resolution.publicationSubmitted, false); assert.equal(resolution.evidence.sha256, hash(bytes)); assert.equal(await readFile(evidencePath, 'utf8'), bytes);
+  const after = await f.daily.snapshot();
+  assert.deepEqual(after.generationResolutionStatus, [{ runId: original.id, abandoned: true, canAbandon: false }]);
+  assert.equal(after.readiness.checks.find(check => check.id === 'receipts').state, 'ok');
+  await assert.rejects(resolvePreview(f, original), /仅可处置/);
+  f.daily.stop(); await f.daily.start(); f.failRender(undefined); await f.daily.run(true, 'preview');
+  const next = await f.state(); assert.equal(next.runs.length, 2); assert.notEqual(next.runs[1].id, original.id);
+  assert.equal(next.runs[1].status, 'preview'); assert.deepEqual(next.runs[0], original); assert.ok(!f.calls.includes('publish'));
+});
+
+test('未知预览处置需要明确确认、说明与最新版本，暂停且空闲才接受', async t => {
+  const f = await fixture(t), run = await uncertainPreview(f), originalRevision = (await f.daily.store.read()).revision;
+  for (const patch of [{ confirmed: false }, { action: 'retry' }, { note: '未确认' }, { unknown: true }]) await assert.rejects(resolvePreview(f, run, patch), /明确确认/);
+  await f.daily.store.update(state => { state.config.newsKeywords = 'changed'; });
+  await assert.rejects(f.daily.resolveGeneration(abandonment(run), originalRevision), /已有更新/);
+  f.daily.busy = true; await assert.rejects(resolvePreview(f, run), /任务正在处理/); f.daily.busy = false;
+  await f.daily.store.update(state => Object.assign(state.config, { enabled: true, authorizedAt: new Date().toISOString(), firstDay: '2026-10-27' }));
+  await assert.rejects(resolvePreview(f, run), /先暂停/);
+  await f.daily.store.update(state => { state.config.enabled = false; state.runs.push({ id: randomUUID(), status: 'rendering' }); });
+  await assert.rejects(resolvePreview(f, run), /所有任务结束/);
+  assert.equal((await f.state()).generationResolutions.length, 0);
+});
+
+test('处置不接受定时生成、发布状态或任何发布与成片痕迹', async t => {
+  for (const patch of [
+    { previewOnly: false, trigger: 'scheduler' }, { trigger: 'scheduler' }, { status: 'uncertain' }, { status: 'submitted' },
+    { productionMode: 'cards' }, { generationState: 'completed' }, { finishedAt: '' },
+    { submitStartedAt: '2026-10-26T02:00:00Z' }, { evidence: {} }, { publishedUrl: 'https://www.douyin.com/video/123' },
+    { boundWorkId: '123' }, { platformWorkId: '123' }, { reconciledResult: 'not-published' },
+    { asset: 'returned.mp4' }, { draftId: randomUUID() }, { videoId: randomUUID() }
+  ]) await t.test(JSON.stringify(patch), async t => {
+    const f = await fixture(t), run = await uncertainPreview(f);
+    await f.daily.store.update(state => Object.assign(state.runs[0], patch));
+    await assert.rejects(resolvePreview(f, run), /仅可处置/);
+    assert.equal((await f.state()).generationResolutions.length, 0);
+  });
+});
+
+test('关联草稿或活跃发布队列阻止处置未知预览', async t => {
+  const f = await fixture(t), run = await uncertainPreview(f);
+  await f.workspace.update(state => state.drafts.push({ id: randomUUID(), sourceProductionId: run.id, title: 'SIMULATED prior draft', platform: 'douyin', status: '待检查' }));
+  await assert.rejects(resolvePreview(f, run), /关联草稿/);
+  await f.workspace.update(state => { state.drafts = []; });
+  await f.automation.store.update(state => { state.config.enabled = true; });
+  await assert.rejects(resolvePreview(f, run), /发布队列/);
+  assert.equal((await f.state()).generationResolutions.length, 0);
+});
+
+test('核实证据必须在当前runtime内，保存内容摘要且不读取外部文件', async t => {
+  const f = await fixture(t), run = await uncertainPreview(f);
+  await assert.rejects(resolvePreview(f, run, { evidencePath: 'relative.json' }), /绝对文件/);
+  await assert.rejects(resolvePreview(f, run, { evidencePath: resolve('package.json') }), /runtime/);
+  const empty = join(f.daily.runtimeDir, 'empty.json'); await writeFile(empty, '');
+  await assert.rejects(resolvePreview(f, run, { evidencePath: empty }), /非空文件/);
+  assert.equal((await f.state()).generationResolutions.length, 0);
+});
+
+test('已处置预览快照后续变化会重新阻塞，不允许重写处置或放行其他未知发布', async t => {
+  const f = await fixture(t), run = await uncertainPreview(f); await resolvePreview(f, run);
+  await f.daily.store.update(state => { state.runs[0].message += ' changed'; });
+  let view = await f.daily.snapshot();
+  assert.deepEqual(view.generationResolutionStatus, [{ runId: run.id, abandoned: false, canAbandon: false }]);
+  await assert.rejects(f.enable(), /生成结果不明/);
+  await assert.rejects(resolvePreview(f, run), /仅可处置/);
+  await f.daily.store.update(state => { state.runs[0] = run; state.runs.push({ id: randomUUID(), status: 'uncertain', submitStartedAt: '2026-10-26T02:00:00Z' }); });
+  view = await f.daily.snapshot(); assert.equal(view.readiness.checks.find(check => check.id === 'receipts').state, 'blocked');
+  await assert.rejects(f.enable(), /提交结果待核实/); assert.equal((await f.state()).config.enabled, false);
 });

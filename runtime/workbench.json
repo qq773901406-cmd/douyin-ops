@@ -378,6 +378,36 @@
       "updatedAt": "2026-10-23T22:11:10.122Z",
       "productionStatus": "failed",
       "productionMessage": "浏览器步骤 evaluate 未完成。请检查扩展、登录状态和页面；系统不会盲目重试。"
+    },
+    {
+      "id": "media-draft-01c32a3c9bdd4d294c0788926b73bff0",
+      "sourceVideoId": "media-01c32a3c9bdd4d294c0788926b73bff0",
+      "sourceMediaTaskId": "pet-fe35a0f3-413f-4d2a-9dbb-2b460bb8ae3f-shot-1",
+      "platform": "douyin",
+      "pubTitle": "黑白与橘色的小猫·镜头1",
+      "title": "黑白与橘色的小猫·镜头1",
+      "caption": "A black-and-white kitten tilts its head slightly while the orange tabby watches from behind, both maintaining their natural body posture.",
+      "asset": "D:\\ai\\runtime\\media-automation\\jobs\\01c32a3c9bdd4d294c0788926b73bff0\\wan\\video.mp4",
+      "format": "视频",
+      "status": "待检查",
+      "aiGenerated": true,
+      "createdAt": "2026-10-26T09:15:48.627Z",
+      "updatedAt": "2026-10-26T09:15:48.627Z"
+    },
+    {
+      "id": "media-draft-4b0ae8e1e638a372a9868edebd9f9e40",
+      "sourceVideoId": "media-4b0ae8e1e638a372a9868edebd9f9e40",
+      "sourceMediaTaskId": "pet-fe35a0f3-413f-4d2a-9dbb-2b460bb8ae3f-shot-2",
+      "platform": "douyin",
+      "pubTitle": "黑白与橘色的小猫·镜头2",
+      "title": "黑白与橘色的小猫·镜头2",
+      "caption": "The orange tabby moves slightly to the left, the black-and-white kitten follows with a small tail flick, both remaining in their original positions.",
+      "asset": "D:\\ai\\runtime\\media-automation\\jobs\\4b0ae8e1e638a372a9868edebd9f9e40\\wan\\video.mp4",
+      "format": "视频",
+      "status": "待检查",
+      "aiGenerated": true,
+      "createdAt": "2026-10-26T09:18:08.674Z",
+      "updatedAt": "2026-10-26T09:18:08.674Z"
     }
   ],
   "metrics": [
@@ -973,6 +1003,74 @@
       "id": "a7f8dfa9-a3a7-4fb3-8f01-250e9054efeb",
       "createdAt": "2026-10-23T22:04:20.799Z",
       "updatedAt": "2026-10-23T22:04:20.799Z"
+    },
+    {
+      "title": "黑白与橘色的小猫·镜头1",
+      "subject": "黑白与橘色的小猫·镜头1",
+      "setting": "",
+      "style": "",
+      "referenceVideo": "",
+      "characterReference": "",
+      "visualIdentity": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "免费 Wan2.2 公共 Space",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\media-automation\\jobs\\01c32a3c9bdd4d294c0788926b73bff0\\wan\\video.mp4",
+      "blocker": "",
+      "notes": "已通过媒体轨道与完整解码检查；画面质量、版权和发布内容仍待检查。",
+      "shots": [
+        {
+          "id": "shot-3fed46a8-f9ea-4673-a482-baa81b985947",
+          "seconds": 5,
+          "action": "A black-and-white kitten tilts its head slightly while the orange tabby watches from behind, both maintaining their natural body posture.",
+          "camera": "中景，固定机位。",
+          "referenceImage": "",
+          "startState": "",
+          "endState": "",
+          "asset": "D:\\ai\\runtime\\media-automation\\jobs\\01c32a3c9bdd4d294c0788926b73bff0\\wan\\video.mp4",
+          "reviewStatus": "pending",
+          "reviewNotes": ""
+        }
+      ],
+      "id": "media-01c32a3c9bdd4d294c0788926b73bff0",
+      "createdAt": "2026-10-26T09:15:48.627Z",
+      "updatedAt": "2026-10-26T09:15:48.627Z"
+    },
+    {
+      "title": "黑白与橘色的小猫·镜头2",
+      "subject": "黑白与橘色的小猫·镜头2",
+      "setting": "",
+      "style": "",
+      "referenceVideo": "",
+      "characterReference": "",
+      "visualIdentity": "",
+      "ratio": "9:16",
+      "budget": "free",
+      "provider": "免费 Wan2.2 公共 Space",
+      "cost": "0",
+      "status": "completed",
+      "asset": "D:\\ai\\runtime\\media-automation\\jobs\\4b0ae8e1e638a372a9868edebd9f9e40\\wan\\video.mp4",
+      "blocker": "",
+      "notes": "已通过媒体轨道与完整解码检查；画面质量、版权和发布内容仍待检查。",
+      "shots": [
+        {
+          "id": "shot-f745a18e-037f-4632-afe6-c5abc80273fa",
+          "seconds": 5,
+          "action": "The orange tabby moves slightly to the left, the black-and-white kitten follows with a small tail flick, both remaining in their original positions.",
+          "camera": "中景，固定机位。",
+          "referenceImage": "",
+          "startState": "",
+          "endState": "",
+          "asset": "D:\\ai\\runtime\\media-automation\\jobs\\4b0ae8e1e638a372a9868edebd9f9e40\\wan\\video.mp4",
+          "reviewStatus": "pending",
+          "reviewNotes": ""
+        }
+      ],
+      "id": "media-4b0ae8e1e638a372a9868edebd9f9e40",
+      "createdAt": "2026-10-26T09:18:08.674Z",
+      "updatedAt": "2026-10-26T09:18:08.674Z"
     }
   ],
   "schemaVersion": 5,

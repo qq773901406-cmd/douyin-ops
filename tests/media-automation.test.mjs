@@ -170,6 +170,18 @@ test('Wan恢复拒绝任意URL、路径穿越、编码路径、账号凭据及�
   for (const extra of altered) assert.throws(() => returnedWanFile(downloadableReceipt(extra)));
 });
 
+test('Wan已观察副本的返回文件沿原副本下载，保留原FileData且拒绝路由失配', () => {
+  const replica = 'observed-replica', app = `${wanOrigin}/--replicas/${replica}`, pinned = `${app}/gradio_api/file=${returnedPath}`;
+  const receipt = downloadableReceipt({ observed_replica: replica, app_url: app, route_verified_at: '2026-10-26T00:00:00Z', download_url: pinned });
+  const original = JSON.stringify(receipt);
+  assert.equal(returnedWanFile(receipt).url, pinned);
+  assert.equal(JSON.stringify(receipt), original);
+  assert.equal(returnedWanFile({ ...receipt, result: [{ ...receipt.result[0], url: pinned }] }).url, pinned);
+  for (const extra of [{ observed_replica: '../other' }, { observed_replica: 'other' }, { app_url: wanOrigin }, { app_url: 'https://other.hf.space/--replicas/observed-replica' },
+    { route_verified_at: '' }, { download_url: returnedUrl }, { result: [{ ...receipt.result[0], url: pinned.replace(replica, 'other-replica') }] }])
+    assert.throws(() => returnedWanFile({ ...receipt, ...extra }));
+});
+
 test('Wan恢复网络GET最多2次，成功不重新submit；重定向/登录响应直接停止', async () => {
   let gets = 0;
   const f = await recoveryFixture({ services: { downloadFetch: async () => { gets++; if (gets === 1) throw new Error('connection reset'); return new Response(mp4Bytes()); } } });

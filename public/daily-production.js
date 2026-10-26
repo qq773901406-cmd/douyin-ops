@@ -22,7 +22,8 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
   const isBusy = () => busy || snapshot?.busy;
   const isNews = () => snapshot?.config.sourceMode === 'news';
   const isPet = () => snapshot?.config.productionMode === 'ai-pet';
-  const productionConfig = () => ({ productionMode: snapshot.config.productionMode || 'cards', petSettings: { model: '', referenceUrls: [], firstFrames: [], duration: 20, audioMode: 'original-music', ...snapshot.config.petSettings } });
+  const generationResolution = run => snapshot?.generationResolutionStatus?.find(item => item.runId === run?.id);
+  const productionConfig = () => ({ productionMode: snapshot.config.productionMode || 'cards', petSettings: { model: '', referenceUrls: [], firstFrames: [], visualBrief: '', duration: 20, audioMode: 'original-music', ...snapshot.config.petSettings } });
   const sourceConfig = () => ({ mode: snapshot.config.sourceMode || 'products', feedUrl: snapshot.config.newsFeedUrl || defaultNewsFeed, keywords: snapshot.config.newsKeywords || '' });
   const scheduleConfig = () => ({ startTime: snapshot.config.startTime, executionMode: snapshot.config.executionMode || 'daily', executionDate: snapshot.config.executionDate || '' });
   const isOnce = () => snapshot?.config.executionMode === 'once';
@@ -51,10 +52,10 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
   }
   function summaryMarkup() {
     const today = snapshot.todayRun;
-    const unresolved = snapshot.runs.filter(needsReconcile).length;
+    const unresolved = snapshot.runs.filter(run => needsReconcile(run) || run.generationState === 'uncertain' && !generationResolution(run)?.abandoned).length;
     return `<section class="daily-summary" aria-label="每日生产概况">
       <div class="card"><span class="daily-summary-label">今日状态</span><strong>${esc(scheduleLabels[snapshot.scheduleState] || (snapshot.config.enabled ? '等待开始' : '计划已暂停'))}</strong><small>${today ? `${esc(runLabel(today))}${platformState(today) ? ` · 平台${platformLabels[platformState(today)]}` : ''} · ${esc(runTitle(today))}` : '今天还没有正式执行记录'}</small></div>
-      <div class="card"><span class="daily-summary-label">待核实 / 待审核</span><strong>${unresolved} 条</strong><small>${unresolved ? '在下方记录中核对作品实际状态' : '暂无需要核实的发布记录'}</small></div>
+      <div class="card"><span class="daily-summary-label">待核实 / 待审核</span><strong>${unresolved} 条</strong><small>${unresolved ? '在下方记录中核对生成或作品实际状态' : '暂无需要核实的生成或发布记录'}</small></div>
       <div class="card"><span class="daily-summary-label">下次执行 · 北京时间</span><strong class="daily-next-run">${when(snapshot.nextRunAt)}</strong><small>${esc(scheduleText())} · 电脑和本地服务需持续运行</small></div>
     </section>`;
   }
@@ -66,7 +67,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
     const config = productionDraft || productionConfig(), pet = config.petSettings;
     return `<section class="card daily-section"><div class="card-title"><h3>成片方式</h3><span class="pill">已保存：${isPet() ? 'AI 萌宠有声视频' : '静音图卡字幕'}</span></div>
       <div class="field"><label for="daily-production-mode">每日制作流程</label><select id="daily-production-mode" ${isBusy() ? 'disabled' : ''}><option value="ai-pet" ${config.productionMode === 'ai-pet' ? 'selected' : ''}>萌宠参考 → AI 原创剧情 → AI 动态视频＋配乐</option><option value="cards" ${config.productionMode === 'cards' ? 'selected' : ''}>资讯／商品静音图卡</option></select></div>
-      ${config.productionMode === 'ai-pet' ? `<p>读取萌宠选题与参考内容，由本地模型生成原创故事和四个镜头，再生成约 20 秒萌宠动态视频并加入原创配乐。现有角色首帧用于保持角色一致；每次重新生成动作，不复用旧成片。</p><div class="field"><label for="daily-pet-urls">萌宠参考内容链接（每行一个，最多 3 个）</label><textarea id="daily-pet-urls" rows="3" ${isBusy() ? 'disabled' : ''}>${esc(pet.referenceUrls.join('\n'))}</textarea><small>只取可核对的主题和文字，不搬运参考视频。需要登录或验证时保留失败原因。</small></div><div class="field"><label for="daily-pet-model">本地剧情模型</label><input id="daily-pet-model" value="${esc(pet.model)}" placeholder="已安装的本地模型名称" ${isBusy() ? 'disabled' : ''}></div><div class="field"><label for="daily-pet-frames">AI 萌宠角色首帧（本机图片路径，每行一个）</label><textarea id="daily-pet-frames" rows="3" ${isBusy() ? 'disabled' : ''}>${esc(pet.firstFrames.join('\n'))}</textarea></div><p class="form-hint">声音：原创配乐；当前没有启用中文旁白。缺少真实生成结果、动态画面或非静音音轨时停止，不降级为图卡。公共免费生成额度与排队时间以服务实际结果为准。</p>` : '<p class="form-hint">此模式制作静音图卡。历史图卡记录保留原来的制作方式。</p>'}
+      ${config.productionMode === 'ai-pet' ? `<p>读取萌宠选题与参考内容，由本地模型生成原创故事和四个镜头，再生成约 20 秒萌宠动态视频并加入原创配乐。现有角色首帧用于保持角色一致；每次重新生成动作，不复用旧成片。</p><div class="field"><label for="daily-pet-urls">萌宠参考内容链接（每行一个，最多 3 个）</label><textarea id="daily-pet-urls" rows="3" ${isBusy() ? 'disabled' : ''}>${esc(pet.referenceUrls.join('\n'))}</textarea><small>只取可核对的主题和文字，不搬运参考视频。需要登录或验证时保留失败原因。</small></div><div class="field"><label for="daily-pet-model">本地剧情模型</label><input id="daily-pet-model" value="${esc(pet.model)}" placeholder="已安装的本地模型名称" ${isBusy() ? 'disabled' : ''}></div><div class="field"><label for="daily-pet-frames">AI 萌宠角色首帧（本机图片路径，每行一个）</label><textarea id="daily-pet-frames" rows="3" ${isBusy() ? 'disabled' : ''}>${esc(pet.firstFrames.join('\n'))}</textarea></div><div class="field"><label for="daily-pet-visual-brief">首帧画面说明（选填，最多 1500 字）</label><input id="daily-pet-visual-brief" type="text" maxlength="1500" value="${esc(pet.visualBrief)}" ${isBusy() ? 'disabled' : ''}><small>用单段文字按实际首帧描述已有小猫的外观和场景，帮助剧情保持一致，避免新增画面中不存在的人物、动物或道具。</small></div><p class="form-hint">声音：原创配乐；当前没有启用中文旁白。缺少真实生成结果、动态画面或非静音音轨时停止，不降级为图卡。公共免费生成额度与排队时间以服务实际结果为准。</p>` : '<p class="form-hint">此模式制作静音图卡。历史图卡记录保留原来的制作方式。</p>'}
       <button class="button button-green" data-daily="production-settings" ${isBusy() || productionDraft === null ? 'disabled' : ''}>保存成片方式</button><p class="form-hint">修改成片方式或模型、素材后暂停计划，重新检查运行条件后开启。</p></section>`;
   }
   function contentSourceMarkup() {
@@ -131,6 +132,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
   }
   function runMarkup(run) {
     const reviewState = platformState(run);
+    const resolution = generationResolution(run);
     const platformLink = workLink(run.platformUrl);
     const link = platformLink || (run.status === 'published' ? workLink(run.publishedUrl) : '');
     return `<article class="automation-item"><span class="pill">${esc(runLabel(run))}</span><h3>${esc(runTitle(run))}</h3>
@@ -140,6 +142,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
       ${run.productionMode === 'ai-pet' ? `<details class="daily-warnings" data-daily-detail="pet-sources-${esc(run.id)}"><summary>萌宠参考与生成检查</summary><ul class="daily-news-articles">${(run.sourceReferences || []).map(articleMarkup).join('')}</ul><p class="form-hint">声音：${run.audioVerification?.nonSilent ? '已验证非静音音轨' : '尚未完成'}；动态镜头：${run.motionVerification?.passed ? '已通过技术检查' : '尚未完成'}。技术检查不能替代画面与听感审看。</p></details>` : run.sourceMode === 'news' || run.sourceArticles?.length ? `<details class="daily-warnings" data-daily-detail="articles-${esc(run.id)}"><summary>资讯出处${run.sourceArticles?.length ? `（${run.sourceArticles.length}）` : ''}</summary>${run.sourceArticles?.length ? `<ul class="daily-news-articles">${run.sourceArticles.map(articleMarkup).join('')}</ul>` : '<p class="form-hint">此记录未保存原文链接。</p>'}</details>` : ''}
       ${run.asset ? `<video class="automation-review-video" controls preload="none" src="/api/daily-production/media?id=${encodeURIComponent(run.id)}"></video>` : ''}
       ${needsReconcile(run) ? `<button class="button button-light" data-daily="reconcile" data-id="${esc(run.id)}" ${busy ? 'disabled' : ''}>核实发布结果</button>` : ''}
+      ${resolution?.abandoned ? '<p class="form-hint"><b>已放弃取回此预览。</b>原生成结果仍不确定，原回执保留；这不是成功成片或发布记录。需要继续制作时，请另建一条预览。</p>' : run.generationState === 'uncertain' ? `<p class="form-hint">生成结果仍不确定，请先检查原任务回执。${resolution?.canAbandon ? '确认不再取回此预览后，可保留原回执并另建预览。' : '此记录尚不能放弃取回。'}</p>${resolution?.canAbandon ? `<button class="button button-light" data-daily="resolve-generation" data-id="${esc(run.id)}" ${isBusy() ? 'disabled' : ''}>处理未取回的预览</button>` : ''}` : ''}
       ${link ? `<a class="button button-light" href="${esc(link)}" target="_blank" rel="noopener noreferrer">${platformLink ? '查看已绑定作品' : '查看作品'}</a>` : ''}
       ${run.status === 'uncertain' ? '<p class="form-hint">请先到抖音核实这次提交。此任务不会自动重发。</p>' : ''}
     </article>`;
@@ -249,6 +252,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
     if (event.target.id === 'daily-pet-model') editProduction('model', event.target.value);
     else if (event.target.id === 'daily-pet-urls') editProduction('referenceUrls', event.target.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean));
     else if (event.target.id === 'daily-pet-frames') editProduction('firstFrames', event.target.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean));
+    else if (event.target.id === 'daily-pet-visual-brief') editProduction('visualBrief', event.target.value);
     else if (event.target.id === 'daily-source-folder') sourceDraft = event.target.value === snapshot.config.sourceFolder ? null : event.target.value;
     else if (event.target.id === 'daily-start-time') editSchedule('startTime', event.target.value);
     else if (event.target.id === 'daily-execution-date') editSchedule('executionDate', event.target.value);
@@ -264,6 +268,36 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
     if (event.target.id === 'daily-execution-mode') { editSchedule('executionMode', event.target.value); update(); }
     if (event.target.name === 'daily-source-mode') { editContent('mode', event.target.value); update(); }
   });
+  function resolveGeneration(run) {
+    if (!run || !generationResolution(run)?.canAbandon || isBusy() || snapshot.config.enabled) { notify('当前记录不能处置，请暂停计划并刷新后核实。'); return; }
+    const el = dialog('放弃取回本次预览', `<p>${esc(runTitle(run))}。原生成结果仍不确定。确认后保留原任务和回执，并记录你已放弃取回这条预览；不会把它标记为生成成功。</p><p>此操作不会立即生成、启用计划或发布。继续制作时，需要另建一条预览。</p><form><div class="field"><label for="daily-generation-note">核实说明</label><textarea id="daily-generation-note" name="note" required minlength="10" maxlength="1500" rows="3" placeholder="说明已检查的原任务结果及放弃取回原因"></textarea></div><label class="check-row"><input name="confirmed" type="checkbox" required>我已核实原任务，并决定放弃取回此预览，保留未知结果与原回执</label><p class="form-error" role="alert"></p><button class="button button-green">确认放弃取回</button></form>`);
+    let pending = false;
+    const form = el.querySelector('form');
+    el.querySelector('[data-dialog-close]').onclick = () => { if (!pending) el.close(); };
+    el.addEventListener('cancel', event => { if (pending) event.preventDefault(); });
+    form.onsubmit = async event => {
+      event.preventDefault(); event.stopPropagation();
+      if (pending || isBusy()) return;
+      const note = form.elements.note.value.trim();
+      if (!form.elements.confirmed.checked || note.length < 10 || note.length > 1500) { el.querySelector('.form-error').textContent = '请填写 10 至 1500 字的核实说明，并勾选确认。'; return; }
+      const body = { id: run.id, action: 'abandon-preview', confirmed: true, note };
+      const controls = [...el.querySelectorAll('button,input,textarea')].map(input => [input, input.disabled]);
+      pending = true; beginMutation();
+      controls.forEach(([input]) => { input.disabled = true; });
+      el.querySelector('.form-error').textContent = '';
+      try {
+        acceptSnapshot(await request('/resolve-generation', body)); problem = '';
+        el.close(); notify('已记录放弃取回，原未知回执保留；可另建预览。');
+      } catch (error) {
+        await recoverSnapshot(error);
+        el.querySelector('.form-error').textContent = problem;
+      } finally {
+        pending = busy = false;
+        controls.forEach(([input, disabled]) => { input.disabled = disabled; });
+        update();
+      }
+    };
+  }
   function reconcile(run) {
     if (!run) { notify('暂无待核实记录，请刷新后查看最新状态。'); return; }
     const el = dialog('核实发布结果', `<p>${esc(runTitle(run))}。请到抖音确认后选择实际结果。</p><form><div class="field"><label for="daily-result">结果</label><select id="daily-result" name="result"><option value="published">作品已经发布</option><option value="not-published">确认完全未发布</option></select></div><div class="field"><label for="daily-url">已发布作品链接</label><input id="daily-url" type="url" name="url" required></div><label class="check-row"><input name="confirmed" type="checkbox" required>我已在抖音核实此条视频</label><p class="form-error" role="alert"></p><button class="button button-green">保存核实结果</button></form>`);
@@ -305,7 +339,13 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
     const action = button.dataset.daily;
     if (action === 'refresh') { await load(); return; }
     if (!snapshot) return;
-    if (action === 'reconcile') { reconcile(button.dataset.id ? snapshot.runs.find(r => r.id === button.dataset.id) : snapshot.runs.find(r => r.status === 'uncertain') || snapshot.runs.find(needsReconcile)); return; }
+    if (action === 'resolve-generation') { resolveGeneration(snapshot.runs.find(r => r.id === button.dataset.id)); return; }
+    if (action === 'reconcile') {
+      const run = button.dataset.id ? snapshot.runs.find(r => r.id === button.dataset.id) : snapshot.runs.find(r => r.status === 'uncertain') || snapshot.runs.find(needsReconcile);
+      if (!run) resolveGeneration(snapshot.runs.find(r => generationResolution(r)?.canAbandon));
+      else reconcile(run);
+      return;
+    }
     if (action === 'export') { download({ exportedAt: new Date().toISOString(), ...snapshot }, 'doufeng-daily-production.json'); return; }
     if (!['production-settings', 'browsers', 'toggle', 'source', 'content-source', 'default-news', 'schedule', 'sync', 'connect', 'preview', 'check'].includes(action)) return;
     if (action === 'schedule' && (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(scheduleDraft?.startTime || '') || scheduleDraft.executionMode === 'once' && !/^\d{4}-\d{2}-\d{2}$/.test(scheduleDraft.executionDate))) { notify('请选择有效的开始时间和单次日期。'); return; }

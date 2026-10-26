@@ -58,7 +58,15 @@ export class LocalTextGeneration {
     try { response = await this.fetch(url, { method: body ? 'POST' : 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.any(signals), redirect: 'error', credentials: 'omit' }); }
     catch (error) { if (signal?.aborted) throw Object.assign(new Error('AI 写作已取消。'), { code: 'cancelled' }); throw issue(`无法连接本机 Ollama，或请求已超时：${String(error.message || error).slice(0, 240)}`); }
     if (response.redirected || response.url && response.url !== url) throw issue('本地模型发生重定向，已拒绝读取。');
-    if (!response.ok) throw issue(`本机 Ollama 返回 HTTP ${response.status}，未生成成功记录。`);
+    if (!response.ok) {
+      let detail = '';
+      try {
+        const failure = await responseJson(response, 16 * 1024);
+        if (typeof failure?.error === 'string') detail = clean(failure.error, 500).replace(/[\u0001-\u001f\u007f]/g, ' ');
+      } catch {}
+      if (signal?.aborted) throw Object.assign(new Error('AI 写作已取消。'), { code: 'cancelled' });
+      throw Object.assign(issue(`本机 Ollama 返回 HTTP ${response.status}${detail ? `：${detail}` : '，未生成成功记录。'}`), { httpStatus: response.status });
+    }
     const result = await responseJson(response);
     if (result.error) throw issue(`本机 Ollama 未完成：${clean(result.error, 300)}`);
     return result;

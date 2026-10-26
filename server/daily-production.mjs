@@ -16,10 +16,10 @@ const timestamp = () => new Date().toISOString();
 const fail = message => Object.assign(new Error(message), { status: 409 });
 const active = ['selecting', 'rendering', 'publishing'];
 const DAILY_TICK_INTERVAL_MS = 30000;
-const defaultPetSettings = () => ({ model: '', referenceUrls: [], firstFrames: [], duration: 20, audioMode: 'original-music' });
+const defaultPetSettings = () => ({ model: '', referenceUrls: [], firstFrames: [], visualBrief: '', duration: 20, audioMode: 'original-music' });
 const productionMode = config => config.productionMode || 'cards';
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const petSettingsDigest = config => digest(config.petSettings || defaultPetSettings());
+const petSettingsDigest = config => digest(validatePetSettings(config.petSettings || defaultPetSettings()));
 const productionChanged = (a, b) => productionMode(a) !== productionMode(b) || petSettingsDigest(a) !== petSettingsDigest(b);
 const generationUncertain = run => run.generationState === 'uncertain';
 const petSourceIdentity = source => {
@@ -35,9 +35,19 @@ const petSourceIdentity = source => {
 };
 // Persist and calculate daily boundaries in Shanghai time.
 const dayStartISO = (day, startTime = '06:00') => `${day}T${startTime}:00+08:00`;
-const defaults = () => ({ version: 1, config: { enabled: false, startTime: '06:00', executionMode: 'daily', executionDate: '', accountId: '', browserId: '', authorizedAt: '', firstDay: '', sourceFolder: '', sourceMode: 'news', newsFeedUrl: defaultNewsFeed, newsKeywords: '', productionMode: 'cards', petSettings: defaultPetSettings() }, runs: [], lastSync: null, newsLastSync: null, newsItems: [], petSources: [], petLastSync: null });
+const defaults = () => ({ version: 1, config: { enabled: false, startTime: '06:00', executionMode: 'daily', executionDate: '', accountId: '', browserId: '', authorizedAt: '', firstDay: '', sourceFolder: '', sourceMode: 'news', newsFeedUrl: defaultNewsFeed, newsKeywords: '', productionMode: 'cards', petSettings: defaultPetSettings() }, runs: [], generationResolutions: [], lastSync: null, newsLastSync: null, newsItems: [], petSources: [], petLastSync: null });
 const validDay = day => typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isFinite(Date.parse(`${day}T00:00:00Z`)) && new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) === day;
 const submissionFields = ['submitStartedAt', 'evidence', 'publishedUrl', 'publishedAt', 'boundWorkId', 'boundUrl', 'platformWorkId', 'platformUrl', 'platformReview', 'platformObservedAt', 'platformPublishedAt', 'platformTrackingRef', 'reconciledAt', 'reconciledResult'];
+const hasSubmissionEvidence = run => submissionFields.some(key => run[key] != null && run[key] !== '');
+// Abandonment applies only to a finished, unpublished preview. Its unknown
+// generation outcome and all original receipts remain unchanged.
+const abandonableGeneration = run => run?.previewOnly === true && run.trigger === 'preview'
+  && run.status === 'failed' && run.productionMode === 'ai-pet' && generationUncertain(run)
+  && Number.isFinite(Date.parse(run.finishedAt)) && !hasSubmissionEvidence(run)
+  && !run.asset && !run.draftId && !run.videoId;
+const generationAbandoned = (state, run) => abandonableGeneration(run)
+  && (state.generationResolutions || []).some(item => item.runId === run.id && item.action === 'abandon-preview' && item.originalRunSha256 === digest(run));
+const generationBlocked = (state, run) => generationUncertain(run) && !generationAbandoned(state, run);
 // An explicitly reauthorized one-time slot may exclude exactly one proven
 // pre-submit failure. The old receipt stays immutable; every new run still
 // consumes the day, including another failure, skip or uncertain submission.
@@ -70,6 +80,19 @@ function validate(state) {
   if (!['cards', 'ai-pet'].includes(state.config.productionMode)) throw new Error('成片方式无效。');
   state.config.petSettings = validatePetSettings(state.config.petSettings);
   state.petSources ??= [];
+  state.generationResolutions ??= [];
+  if (!Array.isArray(state.generationResolutions)) throw new Error('生成处置审计格式无效，请保留原文件。');
+  const resolutionIds = new Set(), resolvedRuns = new Set();
+  for (const item of state.generationResolutions) {
+    if (!item || typeof item.id !== 'string' || !item.id || resolutionIds.has(item.id)
+      || typeof item.runId !== 'string' || !item.runId || resolvedRuns.has(item.runId)
+      || item.action !== 'abandon-preview' || item.confirmed !== true || !Number.isFinite(Date.parse(item.at))
+      || typeof item.note !== 'string' || item.note.trim().length < 10 || item.note.length > 1500
+      || !/^[a-f0-9]{64}$/.test(item.originalRunSha256 || '') || !/^[a-f0-9]{64}$/.test(item.originalRevision || '')
+      || item.originalGenerationState !== 'uncertain' || item.originalReceiptPreserved !== true || item.publicationSubmitted !== false
+      || item.evidence && (typeof item.evidence.path !== 'string' || !/^[a-f0-9]{64}$/.test(item.evidence.sha256 || '') || !Number.isSafeInteger(item.evidence.bytes) || item.evidence.bytes < 1)) throw new Error('生成处置审计不完整，请保留原文件。');
+    resolutionIds.add(item.id); resolvedRuns.add(item.runId);
+  }
   if (!Array.isArray(state.petSources) || state.petSources.length > 100) throw new Error('萌宠来源记录无效。');
   for (const source of state.petSources) petSourceIdentity(source);
   if (typeof state.config.retryOfRunId !== 'string' || state.config.retryOfRunId.length > 100) throw new Error('重新排期的原执行记录标识无效。');
@@ -103,6 +126,7 @@ export class DailyProduction {
   constructor(runtimeDir, workspace, automation, { now = () => Date.now(), intervalMs = DAILY_TICK_INTERVAL_MS, renderNews = renderNewsVideo, petPipeline } = {}) {
     if (typeof now !== 'function' || !Number.isSafeInteger(intervalMs) || intervalMs < 1 || typeof renderNews !== 'function') throw new Error('生产调度器配置无效。');
     this.directory = join(runtimeDir, 'daily-production');
+    this.runtimeDir = resolve(runtimeDir);
     this.store = new JsonStore(join(this.directory, 'state.json'), defaults(), validate);
     this.workspace = workspace; this.automation = automation;
     this.inbox = join(runtimeDir, 'product-inbox'); this.uploads = join(runtimeDir, 'uploads');
@@ -149,6 +173,8 @@ export class DailyProduction {
       : config.firstDay > today || now < due ? 'waiting' : scheduledRun ? 'done' : windowOpen ? 'due' : 'missed';
     const petMode = productionMode(config) === 'ai-pet', newsMode = config.sourceMode === 'news';
     return { ...value, config, revision, eligible, todayRun, scheduleState, busy: this.busy || running, error: this.error, environment: this.environment,
+      generationResolutionStatus: value.runs.filter(generationUncertain).map(run => ({ runId: run.id, abandoned: generationAbandoned(value, run),
+        canAbandon: !config.enabled && !this.busy && !running && abandonableGeneration(run) && !value.generationResolutions.some(item => item.runId === run.id) })),
       productionMode: productionMode(config), petReadiness: petMode ? this.environment : null,
       lastSync: petMode ? value.petLastSync : newsMode ? value.newsLastSync : value.lastSync,
       readiness: await this.readiness(value, eligible), nextRunAt: config.enabled && (!once || !consumedOnce(value) && windowOpen) ? dayStartISO(nextDay, config.startTime) : '',
@@ -184,8 +210,9 @@ export class DailyProduction {
     } catch {
       add('queue', '发布队列', 'blocked', '无法读取发布账号或队列记录，请检查每日自动发布页面。', 'automation');
     }
-    const uncertain = state.runs.some(run => run.status === 'uncertain' || generationUncertain(run));
-    add('receipts', '生成与发布结果', uncertain ? 'blocked' : 'ok', uncertain ? '有生成或提交结果不明的任务，请先核实原回执，系统不会自动重试。' : '没有结果不明的生成或提交。', 'reconcile');
+    const uncertain = state.runs.some(run => run.status === 'uncertain' || generationBlocked(state, run));
+    const abandoned = state.runs.filter(run => generationAbandoned(state, run)).length;
+    add('receipts', '生成与发布结果', uncertain ? 'blocked' : 'ok', uncertain ? '有生成或提交结果不明的任务，请先核实原回执，系统不会自动重试。' : abandoned ? `已保留 ${abandoned} 条放弃取回的预览生成回执；原结果仍不明，仅解除新任务阻塞。` : '没有结果不明的生成或提交。', 'reconcile');
     add('scheduler', '本地调度', this.timer && !this.stopping ? 'ok' : 'blocked', this.timer && !this.stopping ? '调度已启动；电脑与本地服务需要保持运行。' : '调度尚未启动，请查看服务日志并重启服务。');
     return { checkedAt: timestamp(), canEnable: !this.busy && !state.runs.some(run => active.includes(run.status)) && !checks.some(check => check.state === 'blocked'), checks };
   }
@@ -351,6 +378,47 @@ export class DailyProduction {
       }, revision);
     } finally { try { if (release) await release(); } finally { this.busy = false; } }
   }
+  async resolveGeneration(input, revision) {
+    if (!revision || !input || typeof input !== 'object' || Array.isArray(input)
+      || Object.keys(input).some(key => !['id', 'action', 'confirmed', 'note', 'evidencePath'].includes(key))
+      || input.action !== 'abandon-preview' || input.confirmed !== true || typeof input.id !== 'string'
+      || typeof input.note !== 'string' || input.note.trim().length < 10 || input.note.length > 1500
+      || input.evidencePath != null && (typeof input.evidencePath !== 'string' || input.evidencePath.length > 4096)) throw fail('请明确确认放弃取回这次未发布的预览，并填写至少 10 字的核实说明。');
+    if (this.busy || this.stopping) throw fail('任务正在处理或服务停止中，不能处置生成记录。');
+    this.busy = true;
+    let release;
+    try {
+      release = await this.automation.lease();
+      const current = await this.store.read();
+      if (revision !== current.revision) throw fail('记录已有更新，请刷新后核实。');
+      const original = current.value.runs.find(run => run.id === input.id);
+      if (current.value.config.enabled || current.value.runs.some(run => active.includes(run.status))) throw fail('请先暂停计划并等待所有任务结束。');
+      if (!abandonableGeneration(original) || current.value.generationResolutions.some(item => item.runId === input.id)) throw fail('仅可处置尚未发布、没有成片或草稿且已结束的未知预览；原任务不会重跑。');
+      const [queue, workspace] = await Promise.all([this.automation.store.read(), this.workspace.read()]);
+      const drafts = workspace.value.drafts.filter(draft => draft.sourceProductionId === original.id || original.draftId && draft.id === original.draftId);
+      if (queue.value.config.enabled || queue.value.items.some(item => ['approved', 'running', 'uncertain'].includes(item.status))
+        || drafts.length || queue.value.items.some(item => item.sourceProductionId === original.id || original.draftId && item.sourceDraftId === original.draftId)) throw fail('发布队列或关联草稿存在记录，请先人工核实，不能按未发布预览处置。');
+      let evidence;
+      if (input.evidencePath) {
+        if (!isAbsolute(input.evidencePath)) throw fail('核实证据必须是本项目 runtime 内的绝对文件路径。');
+        const root = await realpath(this.runtimeDir), path = await realpath(input.evidencePath), rel = relative(root, path);
+        if (!rel || rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel)) throw fail('核实证据必须位于本项目 runtime 内。');
+        const info = await stat(path);
+        if (!info.isFile() || info.size < 1 || info.size > 1024 * 1024) throw fail('核实证据必须是 1 MiB 以内的非空文件。');
+        const raw = await readFile(path);
+        if (!raw.length || raw.length > 1024 * 1024) throw fail('核实证据文件在读取期间发生变化。');
+        evidence = { path, bytes: raw.length, sha256: createHash('sha256').update(raw).digest('hex') };
+      }
+      await this.store.update(state => {
+        const run = state.runs.find(item => item.id === input.id);
+        if (state.config.enabled || state.runs.some(item => active.includes(item.status)) || !abandonableGeneration(run)
+          || state.generationResolutions.some(item => item.runId === input.id)) throw fail('生成记录或计划状态已经变化，请重新核实。');
+        state.generationResolutions.push({ id: randomUUID(), runId: run.id, action: 'abandon-preview', confirmed: true,
+          at: timestamp(), note: input.note.trim(), originalRevision: revision, originalRunSha256: digest(run),
+          originalGenerationState: run.generationState, originalReceiptPreserved: true, publicationSubmitted: false, ...(evidence ? { evidence } : {}) });
+      }, revision);
+    } finally { try { if (release) await release(); } finally { this.busy = false; } }
+  }
   async reconcile(input, revision) {
     if (!revision || input.confirmed !== true || !['published', 'not-published'].includes(input.result)) throw fail('请确认已在抖音核实实际结果。');
     let url;
@@ -401,7 +469,7 @@ export class DailyProduction {
         if (Date.parse(dayStartISO(current.config.executionDate, current.config.startTime)) <= this.now()) throw fail('单次执行时间已过，请重新保存一个未来时间；不会自动顺延或补发。');
         if (consumedOnce(current) || queueSubmittedOn(queue, binding.accountId, current.config.executionDate)) throw fail('该日期已有生产或发布记录，请另选日期；不会重复执行。');
       }
-      if (current.runs.some(generationUncertain)) throw fail('有 AI 生成结果不明的任务，请先核实原回执；不会新建生成重试。');
+      if (current.runs.some(run => generationBlocked(current, run))) throw fail('有 AI 生成结果不明的任务，请先核实原回执；不会新建生成重试。');
       if (productionMode(current.config) === 'ai-pet') {
         if (typeof this.petPipeline?.render !== 'function' || typeof this.petPipeline?.collect !== 'function') throw fail('AI 萌宠有声生产链未完整接入。');
       } else if (current.config.sourceMode === 'news') {
@@ -412,7 +480,7 @@ export class DailyProduction {
     }
     await this.store.update(state => {
       if (input.enabled) requireRetrySource(state);
-      if (input.enabled && state.runs.some(r => active.includes(r.status) || r.status === 'uncertain' || generationUncertain(r))) throw fail('请先处理正在运行或生成、提交结果待核实的任务。');
+      if (input.enabled && state.runs.some(r => active.includes(r.status) || r.status === 'uncertain' || generationBlocked(state, r))) throw fail('请先处理正在运行或生成、提交结果待核实的任务。');
       if (input.enabled) {
         if (state.config.enabled) return;
         const now = this.now(), day = shanghaiDay(now);
@@ -516,7 +584,7 @@ export class DailyProduction {
       // Share the publisher lease with the manually approved queue across processes.
       release = await this.automation.lease();
       await this.store.update(state => {
-        if (state.runs.some(r => active.includes(r.status) || r.status === 'uncertain' || generationUncertain(r))) throw fail('有运行中或生成、提交结果待核实的任务，已停止。');
+        if (state.runs.some(r => active.includes(r.status) || r.status === 'uncertain' || generationBlocked(state, r))) throw fail('有运行中或生成、提交结果待核实的任务，已停止。');
         if (!previewOnly) requireRetrySource(state);
         if (!previewOnly && (!state.config.enabled || day < state.config.firstDay || this.now() < Date.parse(dayStartISO(runDay, state.config.startTime)) || state.config.authorizedAt !== saved.config.authorizedAt || dayRuns(state, runDay).length)) return;
         target = { id: randomUUID(), day: runDay, previewOnly, trigger, sourceMode: state.config.sourceMode, productionMode: productionMode(state.config), status: 'selecting', startedAt: timestamp(), message: '正在准备当天的内容来源。', binding: structuredClone(state.config) };

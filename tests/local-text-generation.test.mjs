@@ -54,6 +54,29 @@ test('服务不可用或没有模型时 requires_action，不下载模型且不�
   const ready = await service.readiness(); assert.equal(ready.available, false); assert.deepEqual(ready.models, []); assert.equal((await workspace.read()).value.ideas.length, 0);
 });
 
+test('Ollama非成功响应保留HTTP状态及有界JSON错误详情，不自动重试', async t => {
+  const { service } = await fixture(t); let requests = 0;
+  service.fetch = async () => { requests++; return new Response(JSON.stringify({ error: 'invalid grammar\nrunner stopped', ignored: 'unrelated response value' }), { status: 500 }); };
+  await assert.rejects(service.request('/api/chat', { body: { model: 'qwen3:8b' } }), error => {
+    assert.equal(error.httpStatus, 500); assert.equal(error.code, 'requires_action');
+    assert.match(error.message, /HTTP 500：invalid grammar runner stopped/); assert.ok(!error.message.includes('unrelated')); return true;
+  });
+  assert.equal(requests, 1);
+  service.fetch = async () => new Response(JSON.stringify({ error: 'x'.repeat(1000) }), { status: 503 });
+  await assert.rejects(service.request('/api/chat'), error => error.httpStatus === 503 && error.message.endsWith('x'.repeat(500)) && !error.message.includes('x'.repeat(501)));
+});
+
+test('非JSON、超长或被重定向的失败body不暴露且不掩盖原HTTP状态', async t => {
+  const { service } = await fixture(t);
+  for (const body of ['<html>private diagnostic page</html>', JSON.stringify({ error: 'y'.repeat(20000) })]) {
+    service.fetch = async () => new Response(body, { status: 500 });
+    await assert.rejects(service.request('/api/chat'), error => error.httpStatus === 500 && error.message === '本机 Ollama 返回 HTTP 500，未生成成功记录。');
+  }
+  let read = false;
+  service.fetch = async () => ({ ok: false, status: 500, redirected: true, url: 'https://remote.example/api/chat', text: async () => { read = true; return '{"error":"remote"}'; } });
+  await assert.rejects(service.request('/api/chat'), /重定向/); assert.equal(read, false);
+});
+
 test('返回 tool_calls、未完成、无效 JSON、身份不符均拒绝且不保存', async t => {
   const { service, workspace } = await fixture(t);
   const bad = [
