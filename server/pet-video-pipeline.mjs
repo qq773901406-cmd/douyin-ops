@@ -106,6 +106,35 @@ export class PetVideoPipeline {
     const sources = evidenceFrom(collected);
     return { at: this.clock(), sources, warnings: collected.warnings || [], sourceHash: petSourceHash(sources) };
   }
+  async unsubmittedShotEvidence(record) {
+    // Error text is not submission evidence. Require the matching durable media
+    // job and Python receipt, including the actual frozen input, to agree.
+    try {
+      const index = record.activeShot - 1, intent = record.shotIntent;
+      if (!Number.isInteger(index) || index < 0 || index > 3 || intent?.taskId !== `pet-${record.runId}-shot-${index + 1}`) return null;
+      const id = digest(['wan', intent.taskId]).slice(0, 32), mediaRoot = join(this.runtimeDir, 'media-automation');
+      if (resolve(this.media.directory || '') !== mediaRoot) return null;
+      const job = (await this.media.store.read()).value.jobs.find(item => item.id === id);
+      const directory = join(mediaRoot, 'jobs', id, 'wan'), frame = record.firstFrames[index % record.firstFrames.length];
+      const imagePath = join(record.directory, `first-frame-${index + 1}${extname(frame.path).toLowerCase()}`);
+      const seed = Number.parseInt(digest([record.runId, index]).slice(0, 7), 16), prompt = record.plan.shots[index].prompt;
+      const inputHash = digest({ imagePath, prompt, title: `${record.plan.title}·镜头${index + 1}`, duration: 5, seed, platform: 'douyin' });
+      if (job?.kind !== 'wan' || job.taskId !== intent.taskId || job.runId !== record.runId || job.inputHash !== inputHash
+        || !['requires_action', 'cancelled'].includes(job.status) || job.remoteStatus !== 'failed_before_submit' || resolve(job.directory || '') !== directory) return null;
+      if (await realpath(directory) !== join(await realpath(mediaRoot), 'jobs', id, 'wan')) return null;
+      const path = join(directory, 'request.json'), raw = await readFile(path, 'utf8'), receipt = JSON.parse(raw);
+      if (receipt.status !== 'failed_before_submit' || receipt.video_produced !== false || receipt.space !== 'zerogpu-aoti/wan2-2-fp8da-aoti-faster'
+        || receipt.anonymous !== true || receipt.paid_subscription_or_trial !== false
+        || ['event_id', 'result', 'download_url', 'output_file'].some(key => receipt[key] != null)
+        || resolve(receipt.out_dir || '') !== directory || resolve(receipt.input_image || '') !== imagePath
+        || receipt.parameters?.prompt !== prompt || receipt.parameters?.duration_seconds !== 5 || receipt.parameters?.seed !== seed
+        || receipt.input_sha256 !== intent.frameSha256 || frame.sha256 !== intent.frameSha256) return null;
+      const snapshot = join(directory, 'input' + extname(imagePath).toLowerCase());
+      if (resolve(receipt.input_snapshot || '') !== snapshot || await realpath(snapshot) !== join(await realpath(directory), 'input' + extname(imagePath).toLowerCase())
+        || await hashFile(snapshot) !== intent.frameSha256) return null;
+      return { taskId: intent.taskId, status: 'failed_before_submit', receipt: path, receiptSha256: createHash('sha256').update(raw).digest('hex') };
+    } catch { return null; }
+  }
   async render(rawSources, outputRoot, { runId, settings: rawSettings, guard = async () => {}, onProgress, previousStoryHashes = [] } = {}) {
     if (typeof runId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/.test(runId)) throw fail('萌宠生产需要明确的运行编号。');
     const settings = validatePetSettings(rawSettings), sources = evidenceFrom(rawSources), sourceHash = petSourceHash(sources);
@@ -114,7 +143,7 @@ export class PetVideoPipeline {
     const inputHash = digest({ settings, sourceHash }), existing = (await this.store.read()).value.jobs.find(job => job.runId === runId);
     if (existing) {
       if (existing.inputHash !== inputHash) throw fail('原萌宠运行输入已变化，保留原回执。');
-      if (existing.status !== 'completed') throw fail('此萌宠运行已经保存执行意图或结果待核实，不会重新生成。', existing.generationStarted ? 'uncertain' : 'requires_action');
+      if (existing.status !== 'completed') throw fail('此萌宠运行已经保存执行意图或结果待核实，不会重新生成。', existing.status === 'uncertain' || existing.generationStarted && !(existing.status === 'failed' && existing.activeShot == null) ? 'uncertain' : 'requires_action');
       if (await hashFile(existing.result.asset) !== existing.assetSha256) throw fail('已完成萌宠成片的哈希发生变化。');
       return structuredClone(existing.result);
     }
@@ -196,9 +225,11 @@ export class PetVideoPipeline {
       return result;
     } catch (error) {
       const current = (await this.store.read()).value.jobs.find(job => job.runId === runId);
-      const uncertain = error.code === 'uncertain' || current?.generationStarted && current?.activeShot != null;
+      const unsubmitted = error.code !== 'uncertain' && current?.activeShot != null ? await this.unsubmittedShotEvidence(current) : null;
+      const uncertain = error.code === 'uncertain' || current?.generationStarted && current?.activeShot != null && !unsubmitted;
       // Keep all original generator receipts; this pipeline never edits or retries them.
-      try { await update({ status: uncertain ? 'uncertain' : 'failed', error: String(error.message).slice(0, 1500), finishedAt: this.clock() }); } catch {}
+      try { await update({ status: uncertain ? 'uncertain' : 'failed', error: String(error.message).slice(0, 1500), finishedAt: this.clock(),
+        ...(unsubmitted ? { activeShot: null, lastShotFailure: unsubmitted } : {}) }); } catch {}
       throw fail(error.message, uncertain ? 'uncertain' : error.code || 'requires_action');
     }
   }

@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
-import { join, resolve, sep } from 'node:path';
+import { mkdtemp, mkdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises';
+import { join, resolve, sep, extname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { PetVideoPipeline, validatePetSettings, validatePetPlan, petSourceHash } from '../server/pet-video-pipeline.mjs';
+import { JsonStore } from '../workbuddy/connector/lib/json-store.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const source = { title: '小猫的日常', url: 'https://www.douyin.com/video/12345678', observedAt: '2026-10-26T01:00:00Z', paragraphs: ['两只小猫在家中互动，这是只读采集到的参考文字。'] };
@@ -42,6 +43,27 @@ async function fixture(t, overrides = {}) {
   const pipeline = new PetVideoPipeline(root, { content, text, media });
   return { root, frame, settings, pipeline, content, media, text, calls, textCalls, contentCalls,
     render: (options = {}) => pipeline.render([source], join(root, 'outputs'), { runId: 'day-1', settings, ...options }) };
+}
+
+async function installUnsubmittedFixture(f, { failAt = 1, jobPatch = {}, receiptPatch = {}, missingReceipt = false, corruptSnapshot = false, errorCode = 'requires_action' } = {}) {
+  f.media.directory = join(f.root, 'media-automation');
+  f.media.store = new JsonStore(join(f.media.directory, 'state.json'), { jobs: [] });
+  const execute = f.media.execute;
+  f.media.execute = async (kind, input, context) => {
+    if (f.calls.filter(call => call.kind === 'wan').length + 1 !== failAt) return execute(kind, input, context);
+    f.calls.push({ kind, input, context });
+    const id = hash(JSON.stringify(['wan', context.task.id])), directory = join(f.media.directory, 'jobs', id.slice(0, 32), 'wan');
+    await mkdir(directory, { recursive: true });
+    const snapshot = join(directory, 'input' + extname(input.imagePath).toLowerCase()); await copyFile(input.imagePath, snapshot);
+    const receipt = { status: 'failed_before_submit', video_produced: false, space: 'zerogpu-aoti/wan2-2-fp8da-aoti-faster', anonymous: true, paid_subscription_or_trial: false,
+      out_dir: directory, input_image: input.imagePath, input_snapshot: snapshot, input_sha256: hash(await readFile(snapshot)),
+      parameters: { prompt: input.prompt, duration_seconds: input.duration, seed: input.seed }, ...receiptPatch };
+    if (corruptSnapshot) await writeFile(snapshot, 'changed input');
+    if (!missingReceipt) await writeFile(join(directory, 'request.json'), JSON.stringify(receipt));
+    await f.media.store.update(state => state.jobs.push({ id: id.slice(0, 32), kind, taskId: context.task.id, runId: context.runId, directory,
+      inputHash: hash(JSON.stringify(input)), status: 'requires_action', remoteStatus: 'failed_before_submit', submitIntentAt: '2026-10-26T01:00:00Z', ...jobPatch }));
+    throw Object.assign(new Error('Space connection failed before submission'), { code: errorCode });
+  };
 }
 
 test('萌宠设置可保存未配置状态，严格限定免费本机模型、参考和有声规格', () => {
@@ -105,6 +127,35 @@ test('生成未知保存原意图并终止后续镜头，同一运行和新实�
   const restarted = new PetVideoPipeline(f.root, { content: f.content, text: f.text, media: f.media });
   await assert.rejects(restarted.render([source], join(f.root, 'outputs'), { runId: 'day-1', settings: f.settings }), error => error.code === 'uncertain');
   assert.equal(f.calls.filter(call => call.kind === 'wan').length, 2);
+});
+
+test('匹配持久回执确证未提交时保存普通失败，保留已完成镜头且同一运行仍禁止重提', async t => {
+  const f = await fixture(t); await installUnsubmittedFixture(f, { failAt: 2 });
+  await assert.rejects(f.render(), error => error.code === 'requires_action');
+  const record = (await f.pipeline.store.read()).value.jobs[0], mediaBefore = (await f.media.store.read()).raw;
+  assert.equal(record.status, 'failed'); assert.equal(record.shots.length, 1); assert.equal(record.activeShot, null);
+  assert.equal(record.lastShotFailure.status, 'failed_before_submit');
+  assert.equal(record.lastShotFailure.taskId, 'pet-day-1-shot-2');
+  assert.equal(record.lastShotFailure.receiptSha256, hash(await readFile(record.lastShotFailure.receipt)));
+  const restarted = new PetVideoPipeline(f.root, { content: f.content, text: f.text, media: f.media });
+  await assert.rejects(restarted.render([source], join(f.root, 'outputs'), { runId: 'day-1', settings: f.settings }), error => error.code === 'requires_action');
+  assert.equal(f.calls.filter(call => call.kind === 'wan').length, 2); assert.equal((await f.media.store.read()).raw, mediaBefore);
+});
+
+test('缺失、矛盾或非当前输入的未提交凭据仍按结果不明保留，不能凭错误文字解锁', async t => {
+  for (const [name, overrides] of Object.entries({
+    missing: { missingReceipt: true }, unknown: { receiptPatch: { status: 'unknown' } }, submitted: { receiptPatch: { status: 'submitted' } },
+    event: { receiptPatch: { event_id: 'remote-event' } }, result: { receiptPatch: { result: [] } }, produced: { receiptPatch: { video_produced: true } },
+    differentRun: { jobPatch: { runId: 'other-run' } }, differentInput: { jobPatch: { inputHash: '0'.repeat(64) } },
+    changedSnapshot: { corruptSnapshot: true }, uncertainError: { errorCode: 'uncertain' },
+  })) await t.test(name, async t => {
+    const f = await fixture(t); await installUnsubmittedFixture(f, overrides);
+    await assert.rejects(f.render(), error => error.code === 'uncertain');
+    const record = (await f.pipeline.store.read()).value.jobs[0];
+    assert.equal(record.status, 'uncertain'); assert.equal(record.activeShot, 1); assert.equal(record.lastShotFailure, undefined);
+    await assert.rejects(f.render(), error => error.code === 'uncertain');
+    assert.equal(f.calls.filter(call => call.kind === 'wan').length, 1);
+  });
 });
 
 test('重复剧情在调用Wan之前拒绝，相同来源仍可生成不同的新剧情', async t => {
