@@ -5,11 +5,15 @@ import { createServer } from 'node:net';
 import { createHash, randomUUID } from 'node:crypto';
 import { promisify } from 'node:util';
 import { readFile, mkdir, writeFile, rename, unlink, appendFile, stat, access } from 'node:fs/promises';
-import { resolve, join, isAbsolute } from 'node:path';
+import { resolve, join, isAbsolute, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { parseBskJson } from '../lib/bsk-client.mjs';
-import { workbenchHealth, workbenchFailure, browserHealth, browserFailure, shortDiagnostic, restartDelayMs, mayStart, mayStopOwnedChild } from '../lib/background-service-policy.mjs';
+import { workbenchHealth, workbenchFailure, browserHealth, browserFailure, shortDiagnostic, restartDelayMs, mayStart, mayStopOwnedChild, stalledRecoveryDecision } from '../lib/background-service-policy.mjs';
+import { acquireBrowserMaintenance, clearExitedBrowserMaintenance } from '../lib/browser-activity.mjs';
+import { acquireRecoveryGuard } from '../lib/background-recovery-guard.mjs';
+import { createBrowserConnectionRecovery } from '../lib/browser-connection-recovery.mjs';
+import { recoverOwnedBrowser } from '../lib/recover-owned-browser.mjs';
 
 const execute = promisify(execFile);
 const scriptRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -23,6 +27,15 @@ for (const field of ['root', 'dataDir', 'bskBinary', 'nodeBinary']) {
 }
 if (config.bskHome !== undefined && (typeof config.bskHome !== 'string' || !isAbsolute(config.bskHome))) throw new Error('bskHome 必须为绝对路径。');
 if (!Number.isInteger(config.port) || config.port < 1 || config.port > 65535) throw new Error('后台配置 port 无效。');
+if (config.browserLaunch) {
+  const launch = config.browserLaunch;
+  if (typeof launch.executable !== 'string' || !isAbsolute(launch.executable)
+    || !['msedge.exe', 'chrome.exe'].includes(basename(launch.executable).toLowerCase())
+    || typeof launch.profileDirectory !== 'string' || !/^(Default|Profile \d+)$/.test(launch.profileDirectory)) {
+    throw new Error('browserLaunch 必须使用已验证的 Edge/Chrome 可执行文件和现有配置目录名。');
+  }
+  await access(launch.executable);
+}
 if (process.platform !== 'win32') throw new Error('此后台宿主使用 Windows 命名管道独占锁。');
 await Promise.all([config.bskBinary, config.nodeBinary, join(config.root, 'server.mjs')].map(path => access(path)));
 
@@ -51,9 +64,16 @@ else delete env.BSK_HOME;
 const startedAt = new Date().toISOString();
 let stopping = false;
 let logging = Promise.resolve();
+let latestBrowserStatus = null;
+let connection = null;
+const priorState = await readFile(statePath, 'utf8').then(JSON.parse).catch(() => null);
 const services = Object.fromEntries(['browser', 'workbench'].map(name => [name, {
   name, process: null, owned: false, starts: 0, restarts: 0, failureCount: 0,
   nextStartAt: 0, healthySince: null, lastExit: null, health: { state: 'unchecked' },
+  stallCount: 0, stalledSince: null, lastHealthyPid: null, lastSessionCount: null,
+  lastRecoveryAt: Number(priorState?.services?.[name]?.lastRecoveryAt) || 0,
+  recoveryAttempts: Number(priorState?.services?.[name]?.recoveryAttempts) || 0,
+  recovery: { action: 'none' },
 }]));
 
 function log(event) {
@@ -75,6 +95,8 @@ function publicState(service) {
     starts: service.starts, restarts: service.restarts, lastExit: service.lastExit,
     nextStartAt: service.nextStartAt ? new Date(service.nextStartAt).toISOString() : null,
     healthySince: service.healthySince ? new Date(service.healthySince).toISOString() : null,
+    stallCount: service.stallCount, recovery: service.recovery,
+    recoveryAttempts: service.recoveryAttempts, lastRecoveryAt: service.lastRecoveryAt,
   };
 }
 
@@ -85,6 +107,7 @@ async function saveState() {
       at: new Date().toISOString(), startedAt, pid: process.pid, stopping,
       configPath, root: config.root, dataDir: config.dataDir, port: config.port,
       intervalMs: 30_000,
+      connection,
       services: Object.fromEntries(Object.entries(services).map(([name, service]) => [name, publicState(service)])),
     }, null, 2) + '\n');
     for (let attempt = 0; ; attempt++) {
@@ -98,9 +121,11 @@ async function saveState() {
 }
 
 async function probeBrowser() {
+  latestBrowserStatus = null;
   try {
     const result = await execute(config.bskBinary, ['status', '--json'], { env, windowsHide: true, timeout: 8_000, maxBuffer: 1024 * 1024 });
-    return browserHealth(parseBskJson(result.stdout));
+    latestBrowserStatus = parseBskJson(result.stdout);
+    return browserHealth(latestBrowserStatus);
   } catch (error) {
     const reply = parseBskJson(String(error.stdout || '')) || parseBskJson(String(error.stderr || ''));
     return browserFailure({ code: error.code, killed: error.killed, signal: error.signal, message: reply?.message || String(error.stderr || error.message || '') });
@@ -124,6 +149,8 @@ function start(service) {
     env: browser ? env : { ...env, PORT: String(config.port), HOST: '127.0.0.1', DOUFENG_DATA_DIR: config.dataDir },
   });
   service.process = child; service.owned = true;
+  service.stallCount = 0; service.stalledSince = null;
+  service.lastHealthyPid = null; service.lastSessionCount = null;
   service.restarts = service.starts; service.starts += 1;
   service.health = { state: 'starting', pid: child.pid ?? null };
   // Keep only a bounded, redacted startup/error excerpt. Never collect stdout,
@@ -146,6 +173,62 @@ function start(service) {
   void log({ event: 'child-start', service: service.name, pid: child.pid ?? null, starts: service.starts }).catch(() => {});
 }
 
+const connectionStatePath = join(outputDir, 'browser-connection.json');
+const connectionRecovery = createBrowserConnectionRecovery({
+  loadState: async () => {
+    try { return JSON.parse(await readFile(connectionStatePath, 'utf8')); }
+    catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  },
+  saveState: async state => {
+    const temporary = `${connectionStatePath}.${randomUUID()}.tmp`;
+    try { await writeFile(temporary, JSON.stringify(state, null, 2) + '\n'); await rename(temporary, connectionStatePath); }
+    finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
+  },
+  launchBrowser: async () => {
+    const guard = await acquireRecoveryGuard({ dataDir: config.dataDir, service: 'browser' });
+    if (!guard.ok) return { deferred: true, reason: guard.reason };
+    let maintenance;
+    try {
+      maintenance = await acquireBrowserMaintenance(config.dataDir);
+      if (!maintenance.ok) return { deferred: true, reason: maintenance.reason };
+      const health = await probeBrowser();
+      if (health.state !== 'healthy' || health.browserCount !== 0 || health.sessionCount !== 0) return { deferred: true, reason: '连接状态已变化，下一轮重新核实。' };
+      // No temporary profile, URL or page action: use the explicitly configured
+      // existing browser profile. Never terminate the user's browser process.
+      // The WinExe launcher explicitly breaks away from the service JobObject;
+      // restarting this supervisor must never close the user's Chrome/Edge.
+      await execute(join(outputDir, 'DoufengBackgroundHost.exe'), ['--launch-browser', configPath], {
+        windowsHide: true, timeout: 10_000, cwd: config.root,
+      });
+      await log({ event: 'browser-launch-attempt', profile: config.browserLaunch.profileDirectory });
+    } finally { try { if (maintenance?.ok) await maintenance.release(); } finally { await guard.release(); } }
+  },
+});
+
+async function recoverStalled(service) {
+  const decision = stalledRecoveryDecision(service, Date.now());
+  const previous = service.recovery;
+  service.recovery = decision;
+  if (decision.action === 'recover') {
+    service.recovery = await recoverOwnedBrowser({ service,
+      acquireGuard: () => acquireRecoveryGuard({ dataDir: config.dataDir, service: service.name }),
+      acquireMaintenance: () => acquireBrowserMaintenance(config.dataDir),
+      probe: () => service.name === 'browser' ? probeBrowser() : probeWorkbench(),
+      stopChild: async child => {
+        service.recoveryAttempts++;
+        await saveState();
+        const closed = new Promise(accept => child.once('close', () => accept(true)));
+        child.kill();
+        return Promise.race([closed, delay(5_000).then(() => false)]);
+      },
+      startChild: start, log,
+    });
+  }
+  if (JSON.stringify(service.recovery) !== JSON.stringify(previous) && service.recovery.action !== 'none') {
+    await log({ event: 'recovery', service: service.name, ...service.recovery });
+  }
+}
+
 async function tick() {
   const results = await Promise.all([probeBrowser(), probeWorkbench()]);
   if (stopping) return;
@@ -153,16 +236,31 @@ async function tick() {
     const health = results[index];
     const previous = service.health;
     service.health = health;
+    if (health.daemonResponsive) { service.lastHealthyPid = health.pid; service.lastSessionCount = health.sessionCount; }
     if (health.state === 'healthy') {
+      service.stallCount = 0; service.stalledSince = null;
+      service.lastHealthyPid = health.pid;
+      if (service.name === 'browser') service.lastSessionCount = health.sessionCount;
       if (previous.pid !== health.pid) service.healthySince = null;
       service.healthySince ??= Date.now();
       service.nextStartAt = 0;
-      if (Date.now() - service.healthySince >= 10 * 60_000) service.failureCount = 0;
-    } else service.healthySince = null;
+      if (Date.now() - service.healthySince >= 10 * 60_000) { service.failureCount = 0; service.recoveryAttempts = 0; }
+    } else {
+      service.healthySince = null;
+      if (health.state === 'unknown' && health.recoverable) { service.stallCount++; service.stalledSince ??= Date.now(); }
+      else { service.stallCount = 0; service.stalledSince = null; }
+    }
     if (previous.state !== health.state || previous.pid !== health.pid || previous.error !== health.error) {
       await log({ event: 'health', service: service.name, ...health });
     }
     if (mayStart({ health, ownedChildRunning: mayStopOwnedChild(service), nextStartAt: service.nextStartAt, now: Date.now(), stopping })) start(service);
+    await recoverStalled(service);
+  }
+  const previousConnection = connection;
+  connection = await connectionRecovery.check({ health: services.browser.health, status: latestBrowserStatus,
+    launchConfigured: Boolean(config.browserLaunch), allowLaunch: !stopping });
+  if (connection.status !== previousConnection?.status || connection.message !== previousConnection?.message) {
+    await log({ event: 'browser-connection', status: connection.status, needsUserAction: connection.needsUserAction, message: connection.message });
   }
   await saveState();
 }
@@ -187,6 +285,7 @@ process.once('SIGTERM', () => { void stop('SIGTERM'); });
 process.once('uncaughtException', error => { console.error(shortDiagnostic(error.message)); void stop('uncaughtException', 1); });
 process.once('unhandledRejection', error => { console.error(shortDiagnostic(error?.message || error)); void stop('unhandledRejection', 1); });
 await log({ event: 'supervisor-start', pid: process.pid });
+await clearExitedBrowserMaintenance(config.dataDir).catch(error => log({ event: 'recovery-lock-error', error: shortDiagnostic(error.message) }));
 while (!stopping) {
   try { await tick(); }
   catch (error) { await log({ event: 'supervisor-error', error: shortDiagnostic(error.message) }).catch(() => {}); }

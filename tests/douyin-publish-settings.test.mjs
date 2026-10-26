@@ -94,6 +94,41 @@ test('封面弹窗只返回可用按钮并区分顶部步骤和横封面引导',
   assert.equal(inspect([editor]).coverDialog.frameReady, false);
 });
 
+test('AI声明只认明确选项，重复或隐藏控件不构成可提交凭据', () => {
+  const selected = inspect([radio('内容由AI生成', true), element('button', { text: '确定' })]);
+  assert.equal(selected.declaration.ai.checked, true);
+  assert.equal(selected.declaration.ai.label, '内容由AI生成');
+  assert.equal(selected.declaration.open, true);
+  assert.equal(inspect([radio('内容由AI生成', true), radio('内容由AI生成', true)]).declaration.ai, null);
+  assert.equal(inspect([radio('内容由AI生成', true, true)]).declaration.ai, null);
+});
+
+test('AI萌宠在提交前选择并重新核对AI声明，无法识别时停止', async () => {
+  const make = available => {
+    const settings = { covers: { vertical: { saved: true }, horizontal: { saved: true } }, noCrosspost: true,
+      declaration: { entry: '#declaration', open: false, value: '请选择自主声明' } };
+    const page = { url: 'https://creator.douyin.com/creator-micro/content/post/video', settings }, calls = [];
+    return { page, calls, publisher: { page: async () => structuredClone(page),
+      waitPage: async (_session, condition, guard) => { await guard(); assert.ok(condition(page)); return structuredClone(page); },
+      command: async args => {
+        const target = args[args.indexOf('--selector') + 1]; calls.push(target);
+        if (target === '#declaration') Object.assign(settings.declaration, { open: true, confirm: '#confirm', ...(available ? { ai: { selector: '#ai', checked: false, label: '内容由AI生成' } } : {}) });
+        else if (target === '#ai') settings.declaration.ai.checked = true;
+        else if (target === '#confirm') { assert.equal(settings.declaration.ai.checked, true); settings.declaration.open = false; settings.declaration.value = settings.declaration.ai.label; }
+        else assert.fail('unexpected click');
+      } } };
+  };
+  const ready = make(true);
+  const prepared = await preparePublicationSettings(ready.publisher, 'owned', { contentDeclaration: 'ai-generated' });
+  assert.equal(prepared.contentDeclaration, 'ai-generated');
+  assert.deepEqual(ready.calls, ['#declaration', '#ai', '#confirm']);
+  ready.page.settings.declaration.value = '内容为转载信息';
+  assert.throws(() => validatePublicationSettings(ready.page, { contentDeclaration: 'ai-generated' }, prepared), /AI 生成声明/);
+  const missing = make(false);
+  await assert.rejects(preparePublicationSettings(missing.publisher, 'owned', { contentDeclaration: 'ai-generated' }), /未唯一显示/);
+  assert.deepEqual(missing.calls, ['#declaration']);
+});
+
 function fixture({ prompt = false, alreadySaved = false, existingDeclaration = false } = {}) {
   const calls = [];
   const page = {

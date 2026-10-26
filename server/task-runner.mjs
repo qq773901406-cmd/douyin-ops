@@ -232,18 +232,20 @@ export class TaskRunner {
         if (trigger === 'scheduler' && (!task.enabled || !task.nextRunAt || Date.parse(task.nextRunAt) > Date.parse(this.now()))) throw fault('任务尚未到期或已暂停。', 409);
         if (['running', 'unknown', 'interrupted', 'cancelled'].includes(task.status)) throw fault('当前任务状态禁止再次执行。', 409);
         if (task.schedule.type === 'once' && state.runs.some(run => run.taskId === id)) throw fault('单次任务已执行过，禁止重复提交。', 409);
-        const handler = this.handler(task.kind);
+        const handler = this.handlers.get(task.kind);
         // Durable intent precedes execute. A crash after this point is never
         // interpreted as success and never causes an automatic repeat.
-        receipt = { id: runId, taskId: id, kind: task.kind, trigger, readOnly: handler.readOnly === true, status: 'running', intentAt: this.now(), startedAt: this.now(), scheduledFor: task.nextRunAt || '', input: clone(task.input), output: null, error: '', progress: null };
+        receipt = { id: runId, taskId: id, kind: task.kind, trigger, readOnly: handler?.readOnly === true, status: 'running', intentAt: this.now(), startedAt: this.now(), scheduledFor: task.nextRunAt || '', input: clone(task.input), output: null, error: '', progress: null };
         state.runs.push(receipt); task.status = 'running'; task.lastRunId = runId; task.updatedAt = this.now(); state.updatedAt = this.now(); task = clone(task);
       }, revision);
       claimSucceeded(clone(receipt));
-      let result, status, problem = '';
+      let result, status, problem = '', beganExecution = false;
       try {
         const handler = this.handler(task.kind);
         if (this.stopping || controller.signal.aborted) throw Object.assign(new Error('任务已取消或执行器正在停止。'), { code: 'cancelled' });
+        if ((handler.readOnly === true) !== task.readOnly || task.schedule.type !== 'once' && handler.readOnly !== true) throw Object.assign(new Error('任务处理器的执行权限已变化，请重新检查并新建任务。'), { code: 'requires_action' });
         if (await handler.validate(clone(task.input)) === false) throw new Error('任务参数未通过校验。');
+        beganExecution = true;
         result = await handler.execute(clone(task.input), { task, runId, signal: controller.signal, reportProgress: async progress => {
           await this.store.update(state => { const run = state.runs.find(item => item.id === runId); if (run?.status === 'running') { run.progress = clone(progress); state.updatedAt = this.now(); } });
         } });
@@ -253,6 +255,7 @@ export class TaskRunner {
       } catch (error) {
         if (error?.code === 'requires_action' || error?.actionable === true) status = 'requires_action';
         else if (['uncertain', 'unknown'].includes(error?.code)) status = 'unknown';
+        else if (!beganExecution) status = controller.signal.aborted || error?.code === 'cancelled' ? 'cancelled' : 'requires_action';
         else if (error?.code === 'cancelled') status = receipt.readOnly ? 'cancelled' : 'unknown';
         else status = receipt.readOnly ? (controller.signal.aborted ? 'interrupted' : 'failed') : 'unknown';
         problem = String(error?.message || error);

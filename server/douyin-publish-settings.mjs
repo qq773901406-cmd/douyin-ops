@@ -43,7 +43,8 @@ export function inspectPublishSettingsDOM() {
   const declarationEntry = one(nodes(document, 'div[class*="selectText-"]'));
   const repost = one(nodes(document, 'label').filter(el => text(el) === '内容为转载信息'));
   const external = one(nodes(document, 'label').filter(el => text(el) === '取材站外'));
-  const declarationOpen = !!repost;
+  const ai = one(nodes(document, 'label').filter(el => ['内容由AI生成', '内容由 AI 生成', '包含AI生成内容', '包含 AI 生成内容'].includes(text(el))));
+  const declarationOpen = !!repost || !!ai;
   const choiceLabels = nodes(document, 'label').filter(el => el.querySelector('input:checked') || checked(el)).map(text);
   return {
     covers, coverDialog, coverPrompt: prompt ? { horizontal: selector(button(prompt, '设置横封面')) } : null,
@@ -53,6 +54,7 @@ export function inspectPublishSettingsDOM() {
       entry: selector(declarationEntry), value: text(declarationEntry), open: declarationOpen,
       repost: repost ? { selector: selector(repost), checked: checked(repost) } : null,
       external: external ? { selector: selector(external), checked: checked(external) } : null,
+      ai: ai ? { selector: selector(ai), checked: checked(ai), label: text(ai) } : null,
       confirm: declarationOpen ? selector(button(document, '确定')) : null
     },
     noCrosspost: choiceLabels.some(value => value === '不同时发布') && !choiceLabels.some(value => value === '同时发布到')
@@ -65,10 +67,11 @@ export function validatePublicationSettings(page, approval, prepared) {
   if (!settings.covers?.vertical?.saved || !settings.covers?.horizontal?.saved) throw new Error('无法确认横、竖封面均已保存，已停止。');
   if (!settings.noCrosspost) throw new Error('无法确认页面已选择不同时发布，已停止。');
   if (approval.contentDeclaration === 'external-source' && (prepared?.contentDeclaration !== 'external-source' || settings.declaration?.value !== '内容为转载信息')) throw new Error('站外来源声明未完成，已停止。');
+  if (approval.contentDeclaration === 'ai-generated' && (prepared?.contentDeclaration !== 'ai-generated' || !['内容由AI生成', '内容由 AI 生成', '包含AI生成内容', '包含 AI 生成内容'].includes(settings.declaration?.value))) throw new Error('AI 生成声明未完成，已停止。');
 }
 
 export async function preparePublicationSettings(publisher, session, approval, guard = async () => {}) {
-  if (approval.contentDeclaration && approval.contentDeclaration !== 'external-source') throw new Error('尚不支持此自主声明策略，已停止。');
+  if (approval.contentDeclaration && !['external-source', 'ai-generated'].includes(approval.contentDeclaration)) throw new Error('尚不支持此自主声明策略，已停止。');
   const safe = page => {
     if (!/\/creator-micro\/content\/(?:post\/video|publish)(?:[/?#]|$)/.test(page.url) || !page.settings || page.settings.ambiguous || page.settings.unexpectedDialogs) throw new Error('无法唯一识别当前发布设置，已停止。');
     return page;
@@ -125,6 +128,23 @@ export async function preparePublicationSettings(publisher, session, approval, g
     await click(page.settings.declaration.confirm);
     page = await wait(settings => !settings.declaration.open && settings.declaration.value === '内容为转载信息');
     prepared.contentDeclaration = 'external-source';
+  }
+  if (approval.contentDeclaration === 'ai-generated') {
+    if (!page.settings.declaration.open) {
+      await click(page.settings.declaration.entry);
+      page = await wait(settings => settings.declaration.open);
+    }
+    if (!page.settings.declaration.ai?.selector) throw new Error('页面未唯一显示 AI 生成声明选项，已停止，不能用转载声明代替。');
+    if (!page.settings.declaration.ai.checked) {
+      await click(page.settings.declaration.ai.selector);
+      page = await wait(settings => settings.declaration.ai?.checked);
+    }
+    if (!page.settings.declaration.ai.checked || page.settings.declaration.repost?.checked) throw new Error('无法确认仅选中了 AI 生成声明，已停止。');
+    const expected = page.settings.declaration.ai.label;
+    if (!['内容由AI生成', '内容由 AI 生成', '包含AI生成内容', '包含 AI 生成内容'].includes(expected)) throw new Error('AI 声明文字未识别，已停止。');
+    await click(page.settings.declaration.confirm);
+    page = await wait(settings => !settings.declaration.open && settings.declaration.value === expected);
+    prepared.contentDeclaration = 'ai-generated';
   }
   validatePublicationSettings(page, approval, prepared);
   return { ...prepared, verticalCoverSaved: true, horizontalCoverSaved: true, noCrosspost: true, checkedAt: new Date().toISOString() };

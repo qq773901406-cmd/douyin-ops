@@ -6,7 +6,7 @@ import { parseBskJson, resolveBskBinary, BSK_TIMEOUTS } from '../lib/bsk-client.
 import { runMediaProcess } from './media-automation.mjs';
 
 const now = () => new Date().toISOString();
-const failure = message => Object.assign(new Error(message), { code: 'requires_action' });
+const failure = message => Object.assign(new Error(message), { code: 'requires_action', status: 400 });
 const compact = value => String(value || '').replace(/\s+/gu, '');
 const hash = value => createHash('sha256').update(value).digest('hex').slice(0, 32);
 export function bilibiliWorkURL(value) {
@@ -96,7 +96,10 @@ export class BilibiliTracking {
   }
   async snapshot() { return { ...(await this.store.read()).value, targets: await this.targets() }; }
   async command(args, { signal, timeout = 30000 } = {}) {
-    const result = await this.run(args, { signal, timeout }), parsed = parseBskJson(result.stdout);
+    let result;
+    try { result = await this.run(args, { signal, timeout }); }
+    catch (error) { if (error.code === 'cancelled') throw error; throw failure(`BrowserSkill ${args[0]} 无法执行，请检查客户端安装、现有守护进程和浏览器连接。`); }
+    const parsed = parseBskJson(result.stdout);
     if (!result.ok || !parsed || parsed.ok === false || parsed.error || parsed.success === false) throw failure(`BrowserSkill ${args[0]} 未完成，请检查浏览器连接和站点权限。`);
     return parsed;
   }

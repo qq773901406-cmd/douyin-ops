@@ -1,5 +1,8 @@
 import { spawn } from 'node:child_process';
-import { mkdir, readFile, writeFile, stat, realpath, copyFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { Agent as HttpsAgent, request as httpsRequest } from 'node:https';
+import { Readable } from 'node:stream';
+import { mkdir, readFile, writeFile, stat, realpath, copyFile, open } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { join, resolve, extname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,17 +11,68 @@ import { newVideo, newShot } from '../workbuddy/connector/lib/video-projects.mjs
 import { buildNewsVideoMetadata, selectNewsForVideo } from './news-video.mjs';
 import { collectNews, validateNewsSettings } from './news-source.mjs';
 import { productVideoPython } from './product-video.mjs';
-import { hashFile } from '../lib/fs-utils.mjs';
+import { hashFile, isInside } from '../lib/fs-utils.mjs';
 
 const timestamp = () => new Date().toISOString();
-const fail = (message, code = 'requires_action') => Object.assign(new Error(message), { code });
+const fail = (message, code = 'requires_action') => Object.assign(new Error(message), { code, status: code === 'requires_action' ? 400 : 409 });
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const root = resolve(fileURLToPath(new URL('../', import.meta.url)));
+const WAN_SPACE = 'zerogpu-aoti/wan2-2-fp8da-aoti-faster';
+const WAN_ORIGIN = 'https://zerogpu-aoti-wan2-2-fp8da-aoti-faster.hf.space';
+const RECOVERY_MAX_BYTES = 128 * 1024 ** 2;
 const text = (value, max, label) => {
   if (typeof value !== 'string' || !value.trim() || value.length > max || value.includes('\0')) throw fail(`${label}为空或格式无效。`);
   return value.trim();
 };
 function cancelled(signal) { if (signal?.aborted) throw fail('制作已取消。', 'cancelled'); }
+
+// Dedicated to returned Wan files: honoring the configured HTTPS proxy here
+// must not change the DNS/proxy behavior of RSS, browser, or local API clients.
+export function createWanDownloadFetch({ Agent = HttpsAgent, request = httpsRequest, proxyEnv = process.env } = {}) {
+  return async (address, { signal, method = 'GET' } = {}) => {
+    let url; try { url = new URL(address); } catch { throw fail('Wan 下载地址无效。'); }
+    if (method !== 'GET' || url.origin !== WAN_ORIGIN || url.username || url.password || url.search || url.hash || url.href !== address
+      || !/^\/gradio_api\/file=\/tmp\/gradio\/[a-f0-9]{64}\/[a-zA-Z0-9_.-]+\.mp4$/.test(url.pathname) || url.pathname.includes('..')) throw fail('专用下载客户端仅允许固定 Wan 返回文件的 GET 请求。');
+    cancelled(signal);
+    const env = Object.fromEntries(['HTTP_PROXY', 'http_proxy', 'HTTPS_PROXY', 'https_proxy', 'NO_PROXY', 'no_proxy'].filter(key => typeof proxyEnv[key] === 'string').map(key => [key, proxyEnv[key]]));
+    const agent = new Agent({ proxyEnv: env, keepAlive: false, rejectUnauthorized: true });
+    return new Promise((resolveRequest, reject) => {
+      let req;
+      const failRequest = error => { agent.destroy(); reject(error); };
+      try {
+        req = request(url, { method: 'GET', agent, signal, rejectUnauthorized: true, headers: { Accept: 'video/mp4, application/octet-stream;q=0.9' } }, response => {
+          const status = response.statusCode || 0;
+          const headers = new Headers();
+          for (const [key, value] of Object.entries(response.headers || {})) if (value !== undefined) headers.set(key, Array.isArray(value) ? value.join(', ') : String(value));
+          const destroyAgent = () => agent.destroy();
+          response.once('end', destroyAgent); response.once('close', destroyAgent);
+          if (status < 200 || status >= 300) {
+            // Do not read an authentication/error page or follow Location.
+            response.destroy(); agent.destroy();
+            resolveRequest({ ok: false, status, headers, url: url.href, redirected: false, body: null });
+            return;
+          }
+          resolveRequest({ ok: true, status, headers, url: url.href, redirected: false, body: Readable.toWeb(response) });
+        });
+        req.once('error', failRequest); req.end();
+      } catch (error) { req?.destroy(); failRequest(error); }
+    });
+  };
+}
+
+const wanDownloadFetch = createWanDownloadFetch();
+
+export function returnedWanFile(receipt) {
+  if (!receipt || receipt.space !== WAN_SPACE || receipt.anonymous !== true || receipt.paid_subscription_or_trial !== false || !Array.isArray(receipt.result)) throw fail('原回执没有已返回的匿名免费 Wan 文件，不能恢复下载或重新生成。');
+  const file = receipt.result[0];
+  if (!file || typeof file.path !== 'string' || !/^\/tmp\/gradio\/[a-f0-9]{64}\/[a-zA-Z0-9_.-]+\.mp4$/.test(file.path) || file.path.includes('..') || file.meta?._type !== 'gradio.FileData') throw fail('原回执的返回文件路径无效，未下载。');
+  const expected = `${WAN_ORIGIN}/gradio_api/file=${file.path}`;
+  let url; try { url = new URL(file.url); } catch { throw fail('原回执没有有效文件 URL。'); }
+  if (url.href !== expected || url.username || url.password || url.search || url.hash || receipt.download_url && receipt.download_url !== expected) throw fail('恢复只允许固定 Wan Space 的原始返回文件，拒绝其他来源、凭据或重定向。');
+  const duration = receipt.parameters?.duration_seconds;
+  if (!Number.isFinite(duration) || duration < 0.5 || duration > 5) throw fail('原回执没有有效的请求时长，不能核验恢复视频。');
+  return { url: expected, path: file.path, duration };
+}
 
 /** Spawn only the requested executable. Timeout/cancel terminates this owned process tree. */
 export function runMediaProcess(executable, args, { signal, timeout = 960000, env = process.env, cwd } = {}) {
@@ -50,13 +104,17 @@ export function runMediaProcess(executable, args, { signal, timeout = 960000, en
 }
 
 export class MediaAutomation {
-  constructor(runtimeDir, { workspace, projectRoot = root, python = productVideoPython(), ffprobe = process.env.DOUFENG_FFPROBE || 'ffprobe', ffmpeg = process.env.DOUFENG_FFMPEG || '', depsDir = process.env.DOUFENG_WAN_DEPS || '', processRun = runMediaProcess, newsCollect = collectNews } = {}) {
+  constructor(runtimeDir, { workspace, projectRoot = root, python = productVideoPython(), ffprobe = process.env.DOUFENG_FFPROBE || 'ffprobe', ffmpeg = process.env.DOUFENG_FFMPEG || '', depsDir = process.env.DOUFENG_WAN_DEPS || '', processRun = runMediaProcess, newsCollect = collectNews, downloadFetch = wanDownloadFetch, recoveryTimeoutMs = 60000, recoveryMaxBytes = RECOVERY_MAX_BYTES } = {}) {
     this.directory = join(resolve(runtimeDir), 'media-automation');
     this.store = new JsonStore(join(this.directory, 'state.json'), { version: 1, jobs: [] });
-    Object.assign(this, { workspace, projectRoot, python, ffprobe, ffmpeg, depsDir, processRun, newsCollect });
+    Object.assign(this, { workspace, projectRoot, python, ffprobe, ffmpeg, depsDir, processRun, newsCollect, downloadFetch, recoveryTimeoutMs, recoveryMaxBytes });
   }
   validate(kind, input) {
     if (!input || typeof input !== 'object' || Array.isArray(input)) throw fail('制作输入必须为对象。');
+    if (kind === 'wanRecover') {
+      if (Object.keys(input).some(key => key !== 'taskId')) throw fail('恢复输入仅允许原 Wan 任务编号，不接受下载地址或新生成参数。');
+      return { taskId: text(input.taskId, 200, '原 Wan 任务编号') };
+    }
     const allowed = kind === 'wan' ? ['image', 'imagePath', 'prompt', 'title', 'duration', 'seed', 'platform'] : kind === 'news' ? ['items', 'day', 'platform', 'feedUrl', 'keywords'] : kind === 'edit' ? ['clipPaths', 'title', 'ratio', 'platform'] : ['product', 'productId', 'platform'];
     if (Object.keys(input).some(key => !allowed.includes(key))) throw fail('制作输入包含不支持的字段。');
     if (input.platform && !['douyin', 'bilibili'].includes(input.platform)) throw fail('制作草稿平台必须为 douyin 或 bilibili。');
@@ -73,8 +131,9 @@ export class MediaAutomation {
     if (kind === 'product') {
       if (input.productId) { if (input.product) throw fail('请选择 productId 或 product 对象。'); return { productId: text(input.productId, 100, '商品编号'), platform }; }
       const p = input.product;
-      if (!p || !Array.isArray(p.images) || p.images.length < 1 || p.images.length > 6) throw fail('商品需要 1–6 张本地图片。');
-      return { product: { id: String(p.id || '').slice(0, 100), title: text(p.title, 30, '商品标题'), caption: text(p.captionZh || p.caption || p.hook || `${p.title}。商品图片展示，具体规格请查看商品资料。`, 450, '商品文案'), images: p.images.map(i => ({ path: text(i?.path, 2000, '本地图片路径') })) }, platform };
+      if (!p || !Array.isArray(p.images) || p.images.length < 1 || p.images.length > 20) throw fail('商品需要 1–20 张本地图片，视频使用前 6 张。');
+      const originalTitle = text(p.title, 160, '商品标题');
+      return { product: { id: String(p.id || '').slice(0, 100), originalTitle, title: [...originalTitle].slice(0, 30).join(''), caption: text(p.captionZh || p.caption || p.hook || `${originalTitle}。商品图片展示，具体规格请查看商品资料。`, 450, '商品文案'), images: p.images.slice(0, 6).map(i => ({ path: text(i?.path, 2000, '本地图片路径') })) }, platform };
     }
     const duration = input.duration ?? 3.5, seed = input.seed ?? 42;
     if (!Number.isFinite(duration) || duration < 0.5 || duration > 5 || !Number.isInteger(seed) || seed < 0 || seed > 2147483647) throw fail('免费 Wan 时长须为 0.5–5 秒，seed 须为 0–2147483647 整数。');
@@ -82,9 +141,9 @@ export class MediaAutomation {
     return { image: text(input.imagePath || input.image, 2000, '首帧路径'), prompt: text(input.prompt, 6000, '动作提示词'), title: text(input.title || '免费 Wan 首帧视频', 120, '标题'), duration, seed, platform };
   }
   handlers() {
-    return Object.fromEntries(['wan', 'news', 'product', 'edit'].map(kind => [`media.${kind}`, {
+    return Object.fromEntries(['wan', 'news', 'product', 'edit', 'wanRecover'].map(kind => [`media.${kind}`, {
       readOnly: kind !== 'wan', validate: input => { this.validate(kind, input); return input; },
-      execute: (input, context) => this.execute(kind, input, context),
+      execute: (input, context) => kind === 'wanRecover' ? this.recoverWan(input, context) : this.execute(kind, input, context),
     }]));
   }
   async command(args, context = {}, timeout = 30000, executable = this.python) {
@@ -127,7 +186,12 @@ export class MediaAutomation {
   }
   async readiness(context = {}) {
     const result = { local: false, wan: false, ffprobe: false, checkedAt: timestamp(), errors: [] };
-    try { await this.probeTools(context); result.local = true; result.ffprobe = this.ffprobeAvailable; result.metadataInspector = this.ffprobeAvailable ? 'ffprobe' : 'ffmpeg-stream-report-and-decode'; }
+    try {
+      await this.probeTools(context);
+      const renderer = await this.command([join(this.projectRoot, 'tools/product_video/render.py'), '--check'], context);
+      if (JSON.parse(renderer.stdout).ok !== true) throw fail('图片渲染器没有通过字体、Pillow 和 FFmpeg 检查。');
+      result.local = true; result.ffprobe = this.ffprobeAvailable; result.metadataInspector = this.ffprobeAvailable ? 'ffprobe' : 'ffmpeg-stream-report-and-decode';
+    }
     catch (error) { result.errors.push(`本地媒体环境：${error.message}`); }
     try {
       const deps = this.depsDir ? `;sys.path.append(${JSON.stringify(this.depsDir)})` : '';
@@ -141,12 +205,17 @@ export class MediaAutomation {
   async check(context = {}) { return this.readiness(context); }
   async mediaByPath(input) {
     const requested = typeof input === 'string' ? input : input?.path;
-    if (typeof requested !== 'string' || !isAbsolute(requested)) throw fail('需要已完成成片的完整路径。');
-    const actual = await realpath(requested), records = (await this.store.read()).value.jobs;
+    if (typeof requested !== 'string' || !isAbsolute(requested)) return null;
+    let actual; try { actual = await realpath(requested); } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+    const records = (await this.store.read()).value.jobs;
     for (const record of records.filter(j => j.status === 'completed' && j.asset)) {
-      if (actual === await realpath(record.asset) && await hashFile(actual) === record.media.sha256) return { directory: record.directory, path: actual };
+      let saved; try { saved = await realpath(record.asset); } catch (error) { if (error.code === 'ENOENT') continue; throw error; }
+      if (actual === saved) {
+        if (await hashFile(actual) !== record.media.sha256) throw fail('已归档成片校验不一致，停止预览。');
+        return { directory: await realpath(record.directory), path: actual };
+      }
     }
-    throw fail('仅可预览此制作服务已核验并归档的成片。');
+    return null;
   }
   async verifyMedia(asset, ffmpeg, context) {
     const info = await stat(asset);
@@ -158,12 +227,120 @@ export class MediaAutomation {
   }
   async archive(record) {
     if (!this.workspace) throw fail('工作区存储未连接，成片已保留但尚未归档。');
-    const videoId = `media-${record.id}`, draftId = `media-draft-${record.id}`, at = timestamp();
+    const videoId = `media-${record.id}`, draftId = `media-draft-${record.id}`, at = timestamp(), wan = ['wan', 'wanRecover'].includes(record.kind);
     await this.workspace.update(state => {
-      if (!state.videos.some(v => v.id === videoId)) state.videos.push({ ...newVideo(), id: videoId, title: record.title, subject: record.title, asset: record.asset, status: 'completed', provider: record.kind === 'wan' ? '免费 Wan2.2 公共 Space' : '本地静音图卡字幕', budget: 'free', cost: '0', notes: '已通过媒体轨道与完整解码检查；画面质量、版权和发布内容仍待检查。', createdAt: at, updatedAt: at, shots: [newShot({ seconds: Math.max(1, Math.round(record.media.seconds)), action: record.caption || record.title, asset: record.asset, reviewStatus: 'pending' })] });
-      if (!state.drafts.some(d => d.id === draftId)) state.drafts.push({ id: draftId, sourceVideoId: videoId, sourceMediaTaskId: record.taskId, platform: record.platform, pubTitle: record.title, title: record.title, caption: record.caption, asset: record.asset, format: '视频', status: '待检查', aiGenerated: record.kind === 'wan', createdAt: at, updatedAt: at });
+      if (!state.videos.some(v => v.id === videoId)) state.videos.push({ ...newVideo(), id: videoId, title: record.title, subject: record.title, asset: record.asset, status: 'completed', ratio: record.ratio || '9:16', provider: wan ? '免费 Wan2.2 公共 Space' : record.kind === 'edit' ? '本地镜头拼接与规格统一' : '本地静音图卡字幕', budget: 'free', cost: '0', notes: '已通过媒体轨道与完整解码检查；画面质量、版权和发布内容仍待检查。', ...(record.originalTaskId ? { originalTaskId: record.originalTaskId, originalMediaId: record.originalMediaId, downloadRecovery: true } : {}), createdAt: at, updatedAt: at, shots: [newShot({ seconds: Math.max(1, Math.round(record.media.seconds)), action: record.caption || record.title, asset: record.asset, reviewStatus: 'pending' })] });
+      if (!state.drafts.some(d => d.id === draftId)) state.drafts.push({ id: draftId, sourceVideoId: videoId, sourceMediaTaskId: record.taskId, ...(record.originalTaskId ? { originalWanTaskId: record.originalTaskId, originalMediaId: record.originalMediaId, downloadRecovery: true } : {}), platform: record.platform, pubTitle: record.title, title: record.title, caption: record.caption, asset: record.asset, format: '视频', status: '待检查', aiGenerated: wan, createdAt: at, updatedAt: at });
     });
-    return { summary: '视频制作、实际媒体检查和草稿归档完成；未发布。', videoId, draftId, asset: record.asset, media: record.media, receipt: record.kind === 'wan' ? join(record.directory, 'request.json') : this.store.path, publicationSubmitted: false };
+    return { summary: record.kind === 'wanRecover' ? '已恢复原 Wan 返回文件，完成实际媒体检查和草稿归档；未重新生成或发布。' : '视频制作、实际媒体检查和草稿归档完成；未发布。', videoId, draftId, asset: record.asset, media: record.media, receipt: record.recoveryReceipt || (record.kind === 'wan' ? join(record.directory, 'request.json') : this.store.path), ...(record.originalTaskId ? { originalTaskId: record.originalTaskId, originalMediaId: record.originalMediaId, originalReceipt: record.originalReceipt, downloadRecovery: true, remoteResubmitted: false } : {}), publicationSubmitted: false };
+  }
+  async downloadReturnedWanFile(file, target, context, attempt) {
+    cancelled(context.signal);
+    const timer = AbortSignal.timeout(Math.min(60000, Math.max(1, this.recoveryTimeoutMs)));
+    const signal = context.signal ? AbortSignal.any([timer, context.signal]) : timer;
+    let fileHandle, reader, abortListener;
+    const interrupted = new Promise((_, reject) => {
+      abortListener = () => reject(context.signal?.aborted ? fail('恢复下载已取消。', 'cancelled') : Object.assign(fail('恢复下载超时。'), { downloadRetryable: true }));
+      signal.addEventListener('abort', abortListener, { once: true }); if (signal.aborted) abortListener();
+    });
+    interrupted.catch(() => {});
+    try {
+      let response;
+      try { response = await Promise.race([this.downloadFetch(file.url, { method: 'GET', redirect: 'manual', credentials: 'omit', signal }), interrupted]); }
+      catch (error) { if (context.signal?.aborted) throw fail('恢复下载已取消。', 'cancelled'); throw Object.assign(fail(`恢复下载连接失败：${String(error.message).slice(0, 250)}`), { downloadRetryable: true }); }
+      attempt.httpStatus = response.status;
+      if (response.redirected || response.status >= 300 && response.status < 400 || response.url && response.url !== file.url) throw fail('原文件下载发生重定向，已停止；未访问新地址。');
+      if (!response.ok) throw Object.assign(fail(`原文件下载返回 HTTP ${response.status}，未重新生成。`), { downloadRetryable: response.status >= 500 && response.status < 600 });
+      const maximum = Math.min(RECOVERY_MAX_BYTES, Math.max(32, this.recoveryMaxBytes));
+      const announced = Number(response.headers?.get?.('content-length'));
+      if (Number.isFinite(announced) && announced > maximum) throw fail('返回文件超过恢复下载的体积上限。');
+      const type = String(response.headers?.get?.('content-type') || '');
+      if (/text\/|application\/(?:json|xml)/i.test(type)) throw fail('远端返回文字页面而非视频，可能需要登录或文件已失效。');
+      if (!response.body?.getReader) throw fail('下载响应没有可读取的文件流。');
+      fileHandle = await open(target, 'wx'); reader = response.body.getReader();
+      let bytes = 0, header = Buffer.alloc(0);
+      const sum = createHash('sha256');
+      for (;;) {
+        cancelled(context.signal);
+        let next; try { next = await Promise.race([reader.read(), interrupted]); }
+        catch (error) { if (context.signal?.aborted) throw fail('恢复下载已取消。', 'cancelled'); throw Object.assign(fail(`下载文件流中断：${String(error.message).slice(0, 250)}`), { downloadRetryable: true }); }
+        if (next.done) break;
+        const chunk = Buffer.from(next.value); bytes += chunk.length; attempt.bytes = bytes;
+        if (bytes > maximum) throw fail('返回文件超过恢复下载的体积上限。');
+        if (header.length < 12) header = Buffer.concat([header, chunk.subarray(0, 12 - header.length)]);
+        sum.update(chunk); await fileHandle.write(chunk);
+      }
+      await fileHandle.sync();
+      if (bytes < 32 || header.length < 12 || header.subarray(4, 8).toString() !== 'ftyp') throw fail('返回文件没有有效 MP4 文件头，未归档。');
+      attempt.sha256 = sum.digest('hex'); attempt.bytes = bytes;
+      return { bytes, sha256: attempt.sha256 };
+    } finally {
+      signal.removeEventListener('abort', abortListener);
+      if (reader) { reader.cancel().catch(() => {}); try { reader.releaseLock(); } catch {} }
+      if (fileHandle) await fileHandle.close();
+    }
+  }
+  async recoverWan(raw, context = {}, { automatic = false, ffmpeg: preparedFfmpeg } = {}) {
+    const input = this.validate('wanRecover', raw), taskId = text(context.task?.id, 200, '恢复任务编号'), runId = text(context.runId, 200, '恢复运行编号');
+    cancelled(context.signal);
+    const source = (await this.store.read()).value.jobs.find(job => job.kind === 'wan' && job.taskId === input.taskId);
+    if (!source || !/^[a-f0-9]{32}$/.test(source.id) || !['uncertain', 'requires_action', 'completed'].includes(source.status)) throw fail('未找到已结束且有返回文件的原 Wan 制作记录。');
+    const expectedDirectory = join(this.directory, 'jobs', source.id, 'wan'), canonicalRoot = await realpath(this.directory), canonicalSource = await realpath(source.directory);
+    if (resolve(source.directory) !== expectedDirectory || !isInside(canonicalRoot, canonicalSource) || canonicalSource !== join(canonicalRoot, 'jobs', source.id, 'wan')) throw fail('原 Wan 目录与任务记录不一致。');
+    const originalReceipt = join(source.directory, 'request.json'), receiptInfo = await stat(originalReceipt);
+    if (await realpath(originalReceipt) !== join(canonicalSource, 'request.json')) throw fail('原 Wan 回执路径发生变化。');
+    if (!receiptInfo.isFile() || receiptInfo.size > 1024 * 1024) throw fail('原 Wan 回执无效或过大。');
+    const originalRaw = await readFile(originalReceipt, 'utf8'), originalHash = digest(originalRaw);
+    let returned; try { returned = JSON.parse(originalRaw); } catch { throw fail('原 Wan 回执无法解析，未下载。'); }
+    const file = returnedWanFile(returned), id = digest(['wan-recovery', source.id, taskId]).slice(0, 32);
+    const directory = join(this.directory, 'jobs', id, 'wan-recovery'), recoveryReceipt = join(directory, 'download-recovery.json'), asset = join(directory, 'video.mp4');
+    const existing = (await this.store.read()).value.jobs.find(job => job.id === id);
+    if (existing) {
+      if (existing.status === 'completed' && existing.originalReceiptHash === originalHash && await hashFile(existing.asset) === existing.media.sha256) return { status: 'completed', output: await this.archive(existing) };
+      throw fail('此恢复任务已有未完成或不一致的记录，请检查回执；不会覆盖原素材或自动重放。');
+    }
+    const ffmpeg = preparedFfmpeg || await this.probeTools(context);
+    const record = { id, kind: 'wanRecover', taskId, runId, directory, recoveryReceipt, originalTaskId: source.taskId, originalMediaId: source.id, originalReceipt, originalReceiptHash: originalHash,
+      status: 'recovering', createdAt: timestamp(), platform: source.platform, automatic, remoteResubmitted: false, title: source.title || '免费 Wan 视频（恢复下载）', caption: source.caption || String(returned.parameters?.prompt || '').slice(0, 6000) };
+    await this.store.update(state => { if (state.jobs.some(job => job.id === id)) throw fail('同一恢复任务已被认领。'); state.jobs.push(record); });
+    const update = async fields => { const saved = await this.store.update(state => Object.assign(state.jobs.find(job => job.id === id), fields)); return saved.value.jobs.find(job => job.id === id); };
+    const receipt = { version: 1, recoveryId: id, taskId, runId, originalTaskId: source.taskId, originalMediaId: source.id, originalReceipt, originalReceiptHash: originalHash,
+      url: file.url, returnedPath: file.path, requestedDuration: file.duration, method: 'GET', remoteResubmitted: false, originalReceiptPreserved: true, automatic, startedAt: timestamp(), status: 'recovering', attempts: [], asset };
+    await mkdir(directory, { recursive: true });
+    if (await realpath(directory) !== join(canonicalRoot, 'jobs', id, 'wan-recovery')) throw fail('恢复输出目录发生变化。');
+    const receiptStore = new JsonStore(recoveryReceipt, receipt);
+    await receiptStore.replace(receipt, 'missing');
+    try {
+      let downloaded;
+      for (let index = 1; index <= 2; index++) {
+        cancelled(context.signal);
+        const attempt = { index, startedAt: timestamp(), status: 'downloading', path: join(directory, `attempt-${index}-${randomUUID()}.mp4.part`) };
+        receipt.attempts.push(attempt); await receiptStore.replace(receipt);
+        await context.reportProgress?.({ phase: 'recovering_download', message: `只下载原 Wan 已返回文件，第 ${index}/2 次 GET；不会重新生成。` });
+        try {
+          downloaded = await this.downloadReturnedWanFile(file, attempt.path, context, attempt); attempt.status = 'downloaded'; attempt.finishedAt = timestamp(); await receiptStore.replace(receipt);
+          const media = await this.verifyMedia(attempt.path, ffmpeg, context);
+          if (Math.abs(media.seconds - file.duration) > 0.6) throw fail('恢复文件实际时长与原请求不符，保留副本但不归档。');
+          if (media.sha256 !== downloaded.sha256) throw fail('恢复文件在下载后校验时发生变化。');
+          if (digest(await readFile(originalReceipt, 'utf8')) !== originalHash) throw fail('原生成回执在恢复期间发生变化，未归档。');
+          cancelled(context.signal);
+          await copyFile(attempt.path, asset, constants.COPYFILE_EXCL);
+          if (await hashFile(asset) !== media.sha256) throw fail('归档副本哈希校验失败。');
+          receipt.status = 'completed'; receipt.finishedAt = timestamp(); receipt.media = media; receipt.sourceReceiptUnchanged = true; await receiptStore.replace(receipt);
+          const complete = await update({ status: 'completed', asset, media, ratio: media.width === media.height ? '1:1' : media.width > media.height ? '16:9' : '9:16', finishedAt: timestamp() });
+          return { status: 'completed', output: await this.archive(complete) };
+        } catch (error) {
+          attempt.status = error.code === 'cancelled' ? 'cancelled' : 'failed'; attempt.error = String(error.message).slice(0, 1000); attempt.finishedAt = timestamp(); await receiptStore.replace(receipt);
+          if (!error.downloadRetryable || index === 2 || context.signal?.aborted) throw error;
+        }
+      }
+      throw fail('恢复下载未完成。');
+    } catch (error) {
+      const current = (await this.store.read()).value.jobs.find(job => job.id === id);
+      receipt.status = current.status === 'completed' ? 'completed' : error.code === 'cancelled' ? 'cancelled' : 'requires_action'; receipt.error = String(error.message).slice(0, 1000); receipt.finishedAt = timestamp(); await receiptStore.replace(receipt);
+      if (current.status !== 'completed') await update({ status: receipt.status, error: receipt.error, finishedAt: timestamp() });
+      throw fail(`原生成已保留，下载恢复未完成：${error.message}`, error.code === 'cancelled' ? 'cancelled' : 'requires_action');
+    }
   }
   async execute(kind, raw, context = {}) {
     let input = this.validate(kind, raw);
@@ -201,7 +378,7 @@ export class MediaAutomation {
     const directory = join(this.directory, 'jobs', id), outputDir = kind === 'wan' ? join(directory, 'wan') : directory, asset = join(outputDir, 'video.mp4');
     await this.store.update(state => {
       if (state.jobs.some(j => j.id === id)) throw fail('任务已有制作意图，不能并行提交。', kind === 'wan' ? 'uncertain' : 'requires_action');
-      state.jobs.push({ id, kind, taskId, runId, inputHash, directory: outputDir, status: 'preparing', createdAt: timestamp(), platform: input.platform });
+      state.jobs.push({ id, kind, taskId, runId, inputHash, directory: outputDir, status: 'preparing', createdAt: timestamp(), platform: input.platform, ratio: input.ratio || '9:16', ...(kind === 'wan' ? { title: input.title, caption: input.prompt, requestedDuration: input.duration } : {}) });
     });
     const update = async fields => { const saved = await this.store.update(state => Object.assign(state.jobs.find(j => j.id === id), fields)); return saved.value.jobs.find(j => j.id === id); };
     await mkdir(directory, { recursive: true });
@@ -253,6 +430,7 @@ export class MediaAutomation {
           const images = [];
           for (const [index, item] of input.product.images.entries()) { const source = await this.localImage(item.path), target = join(directory, `image-${index}${extname(source) || '.png'}`); await copyFile(source, target); images.push(target); }
           title = input.product.title; caption = input.product.caption; config = { title, caption, images };
+          await writeFile(join(directory, 'sources.json'), JSON.stringify({ productId: input.product.id, originalTitle: input.product.originalTitle, inputImages: input.product.images }, null, 2), { flag: 'wx' });
         }
         const configFile = join(directory, 'input.json'); await writeFile(configFile, JSON.stringify(config), { flag: 'wx' });
         await update({ status: 'rendering' });
@@ -269,6 +447,19 @@ export class MediaAutomation {
       const remoteUnknown = kind === 'wan' && !!current.submitIntentAt && receipt?.status !== 'failed_before_submit';
       const status = remoteUnknown ? 'uncertain' : error.code === 'cancelled' ? 'cancelled' : 'requires_action';
       await update({ status, error: String(error.message).slice(0, 1000), remoteStatus: receipt?.status || '', finishedAt: timestamp() });
+      // Recovery is GET-only and requires an already-returned FileData. Never
+      // call the generator again, even if recovery fails or the process exits.
+      const downloadFailure = remoteUnknown && !context.signal?.aborted && receipt?.status === 'unknown' && receipt?.video_produced === false
+        && receipt.download_url && ['URLError', 'HTTPError', 'TimeoutError', 'ConnectionResetError', 'ConnectionError', 'SSLError'].includes(receipt.error_type);
+      if (downloadFailure) {
+        try {
+          returnedWanFile(receipt);
+          return await this.recoverWan({ taskId }, context, { automatic: true, ffmpeg });
+        } catch (recoveryError) {
+          if (recoveryError.code === 'cancelled') throw recoveryError;
+          throw fail(`原生成结果已保留，仅下载恢复未完成；未重新提交：${recoveryError.message}`, 'uncertain');
+        }
+      }
       throw fail(remoteUnknown ? `生成结果需核实，未重试：${error.message}` : error.message, status);
     }
   }

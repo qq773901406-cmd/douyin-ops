@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runBsk, parseBskJson, resolveBskBinary, BSK_TIMEOUTS } from '../lib/bsk-client.mjs';
+import { planBrowserConnectionRecovery } from '../lib/browser-connection-recovery.mjs';
+import { shortDiagnostic } from '../lib/background-service-policy.mjs';
 
 let activeSession = process.env.BSK_SESSION_ID || '';
 let startingSession = null;
@@ -27,13 +29,31 @@ async function run(args, timeout = BSK_TIMEOUTS.DEFAULT_MS) {
   return runBsk(args, { timeout });
 }
 
-export async function browserSkillStatus() {
-  const version = await run(['--version'], BSK_TIMEOUTS.STATUS_MS);
+export async function browserSkillStatus(invoke = run) {
+  const version = await invoke(['--version'], BSK_TIMEOUTS.STATUS_MS);
   if (!version.ok) return { installed: false, connected: false, message: version.message, sessionId: activeSession || null };
-  const doctor = await run(['doctor'], BSK_TIMEOUTS.DOCTOR_MS);
-  const output = `${doctor.stdout || ''}\n${doctor.stderr || ''}`.trim();
-  const connected = doctor.ok && !/failed|not connected|disconnected|未连接|失败/i.test(output);
-  return { installed: true, connected, version: version.stdout || '已安装', sessionId: activeSession || null, message: connected ? 'BrowserSkill CLI 与浏览器扩展已连接。' : (output || 'BrowserSkill 已安装，请在浏览器扩展中启用本地连接。') };
+  // `doctor` can sync installed skills and emit update hints. Status requests
+  // must remain read-only and must distinguish a daemon from a live extension.
+  const result = await invoke(['status', '--json'], BSK_TIMEOUTS.STATUS_MS);
+  const payload = parseBskJson(result.stdout);
+  if (!result.ok || !payload || payload.ok === false || payload.error) {
+    return { installed: true, connected: false, version: version.stdout || '已安装',
+      state: 'daemon_unavailable', sessionId: null, browserCount: null,
+      message: shortDiagnostic(result.message || payload?.message || 'BrowserSkill 守护进程未响应，请检查后台连接。') };
+  }
+  const { state } = planBrowserConnectionRecovery({ health: { state: 'healthy' }, status: payload });
+  if (Array.isArray(payload.browsers) && payload.browsers.length === 0 && state.status === 'needs_user_action') {
+    state.status = 'disconnected';
+    state.message = 'BrowserSkill 守护进程已运行，浏览器扩展尚未连接；请查看后台恢复状态或启用扩展本地连接。';
+  }
+  const sessionKnown = Array.isArray(payload.sessions) && payload.sessions.some(session => session.session_id === activeSession);
+  if (Array.isArray(payload.sessions) && !sessionKnown) activeSession = '';
+  return { installed: true, connected: state.status === 'connected', version: version.stdout || '已安装',
+    state: state.status, sessionId: sessionKnown ? activeSession : null,
+    browserCount: Array.isArray(payload.browsers) ? payload.browsers.length : null,
+    responsiveBrowserCount: state.connectedBrowserIds.length,
+    unresponsiveBrowserCount: state.unresponsiveBrowserCount,
+    message: state.message };
 }
 
 function assertDouyinUrl(value) {

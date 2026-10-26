@@ -1,7 +1,7 @@
-import { realpath, mkdir, stat, access } from 'node:fs/promises';
+import { realpath, mkdir, stat, access, readFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, relative, isAbsolute, sep, resolve } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { JsonStore } from '../workbuddy/connector/lib/json-store.mjs';
 import { renderProductVideo, inspectProductVideoEnvironment, usableProductImages } from './product-video.mjs';
 import { shanghaiDay } from '../shared/automation-model.mjs';
@@ -10,14 +10,32 @@ import { newVideo } from '../workbuddy/connector/lib/video-projects.mjs';
 import { hashFile } from '../lib/fs-utils.mjs';
 import { collectNews, defaultNewsFeed, validateNewsSettings } from './news-source.mjs';
 import { renderNewsVideo, selectNewsForVideo } from './news-video.mjs';
+import { validatePetSettings } from './pet-video-pipeline.mjs';
 
 const timestamp = () => new Date().toISOString();
 const fail = message => Object.assign(new Error(message), { status: 409 });
 const active = ['selecting', 'rendering', 'publishing'];
 const DAILY_TICK_INTERVAL_MS = 30000;
+const defaultPetSettings = () => ({ model: '', referenceUrls: [], firstFrames: [], duration: 20, audioMode: 'original-music' });
+const productionMode = config => config.productionMode || 'cards';
+const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+const petSettingsDigest = config => digest(config.petSettings || defaultPetSettings());
+const productionChanged = (a, b) => productionMode(a) !== productionMode(b) || petSettingsDigest(a) !== petSettingsDigest(b);
+const generationUncertain = run => run.generationState === 'uncertain';
+const petSourceIdentity = source => {
+  let url;
+  try { url = new URL(source.url); } catch {}
+  if (!url || url.protocol !== 'https:' || url.username || url.password) throw fail('萌宠参考缺少可核实的公开 HTTPS 来源。');
+  url.hash = '';
+  const content = [source.title, source.summary, ...(Array.isArray(source.paragraphs) ? source.paragraphs : [])]
+    .filter(value => typeof value === 'string').map(value => value.normalize('NFKC').replace(/\s+/g, ' ').trim()).filter(Boolean);
+  if (!content.length || !Number.isFinite(Date.parse(source.observedAt))) throw fail('萌宠参考缺少实际采集文字或采集时间。');
+  const contentHash = digest(content);
+  return { url: url.href, contentHash, key: digest([url.href, contentHash]) };
+};
 // Persist and calculate daily boundaries in Shanghai time.
 const dayStartISO = (day, startTime = '06:00') => `${day}T${startTime}:00+08:00`;
-const defaults = () => ({ version: 1, config: { enabled: false, startTime: '06:00', executionMode: 'daily', executionDate: '', accountId: '', browserId: '', authorizedAt: '', firstDay: '', sourceFolder: '', sourceMode: 'news', newsFeedUrl: defaultNewsFeed, newsKeywords: '' }, runs: [], lastSync: null, newsLastSync: null, newsItems: [] });
+const defaults = () => ({ version: 1, config: { enabled: false, startTime: '06:00', executionMode: 'daily', executionDate: '', accountId: '', browserId: '', authorizedAt: '', firstDay: '', sourceFolder: '', sourceMode: 'news', newsFeedUrl: defaultNewsFeed, newsKeywords: '', productionMode: 'cards', petSettings: defaultPetSettings() }, runs: [], lastSync: null, newsLastSync: null, newsItems: [], petSources: [], petLastSync: null });
 const validDay = day => typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isFinite(Date.parse(`${day}T00:00:00Z`)) && new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) === day;
 const submissionFields = ['submitStartedAt', 'evidence', 'publishedUrl', 'publishedAt', 'boundWorkId', 'boundUrl', 'platformWorkId', 'platformUrl', 'platformReview', 'platformObservedAt', 'platformPublishedAt', 'platformTrackingRef', 'reconciledAt', 'reconciledResult'];
 // An explicitly reauthorized one-time slot may exclude exactly one proven
@@ -28,7 +46,7 @@ const retrySourceRun = state => {
   const run = state.runs.find(item => item.id === state.config.retryOfRunId);
   if (!run || run.previewOnly || run.status !== 'failed' || run.day !== state.config.executionDate
     || !Number.isFinite(Date.parse(run.finishedAt)) || submissionFields.some(key => run[key])
-    || !run.binding || run.binding.accountId !== state.config.accountId
+    || generationUncertain(run) || !run.binding || run.binding.accountId !== state.config.accountId || productionChanged(run.binding, state.config)
     || ['sourceMode', 'newsFeedUrl', 'newsKeywords', 'sourceFolder'].some(key => (run.binding[key] || '') !== (state.config[key] || ''))) return null;
   return run;
 };
@@ -47,6 +65,13 @@ function validate(state) {
   state.config.executionMode ??= 'daily';
   state.config.executionDate ??= '';
   state.config.retryOfRunId ??= '';
+  state.config.productionMode ??= 'cards';
+  state.config.petSettings ??= defaultPetSettings();
+  if (!['cards', 'ai-pet'].includes(state.config.productionMode)) throw new Error('成片方式无效。');
+  state.config.petSettings = validatePetSettings(state.config.petSettings);
+  state.petSources ??= [];
+  if (!Array.isArray(state.petSources) || state.petSources.length > 100) throw new Error('萌宠来源记录无效。');
+  for (const source of state.petSources) petSourceIdentity(source);
   if (typeof state.config.retryOfRunId !== 'string' || state.config.retryOfRunId.length > 100) throw new Error('重新排期的原执行记录标识无效。');
   if (!['daily', 'once'].includes(state.config.executionMode) || typeof state.config.executionDate !== 'string' || state.config.executionMode === 'once' && !validDay(state.config.executionDate)) throw new Error('生产计划的执行模式或单次日期无效。');
   if (state.config.enabled && (!state.config.authorizedAt || !state.config.accountId || !state.config.browserId || !/^\d{4}-\d{2}-\d{2}$/.test(state.config.firstDay))) throw new Error('每日生产缺少账号或启用记录。');
@@ -75,16 +100,25 @@ const articleKey = item => {
 
 // News and product modes share one daily limit, publisher lease and receipt ledger.
 export class DailyProduction {
-  constructor(runtimeDir, workspace, automation, { now = () => Date.now(), intervalMs = DAILY_TICK_INTERVAL_MS, renderNews = renderNewsVideo } = {}) {
+  constructor(runtimeDir, workspace, automation, { now = () => Date.now(), intervalMs = DAILY_TICK_INTERVAL_MS, renderNews = renderNewsVideo, petPipeline } = {}) {
     if (typeof now !== 'function' || !Number.isSafeInteger(intervalMs) || intervalMs < 1 || typeof renderNews !== 'function') throw new Error('生产调度器配置无效。');
     this.directory = join(runtimeDir, 'daily-production');
     this.store = new JsonStore(join(this.directory, 'state.json'), defaults(), validate);
     this.workspace = workspace; this.automation = automation;
     this.inbox = join(runtimeDir, 'product-inbox'); this.uploads = join(runtimeDir, 'uploads');
     this.busy = false; this.stopping = false; this.timer = null; this.error = ''; this.environment = null;
-    this.now = now; this.intervalMs = intervalMs; this.renderNews = renderNews;
+    this.now = now; this.intervalMs = intervalMs; this.renderNews = renderNews; this.petPipeline = petPipeline;
   }
   async candidates(state) {
+    if (productionMode(state.config) === 'ai-pet') {
+      const configured = new Set(state.config.petSettings.referenceUrls.map(value => { const url = new URL(value); url.hash = ''; return url.href; }));
+      const seen = new Set();
+      return (state.petSources || []).filter(source => {
+        const identity = petSourceIdentity(source);
+        if (!configured.has(identity.url) || seen.has(identity.contentHash)) return false;
+        seen.add(identity.contentHash); return true;
+      });
+    }
     if (state.config.sourceMode === 'news') {
       const usedRuns = state.runs.filter(run => ['submitted', 'published', 'uncertain', 'publishing'].includes(run.status));
       const used = new Set(usedRuns.flatMap(run => run.newsItemIds || []));
@@ -113,18 +147,24 @@ export class DailyProduction {
     const nextDay = once ? config.executionDate : config.firstDay > today ? config.firstDay : !todayRun && windowOpen ? today : shanghaiDay(now + 86400000);
     const scheduleState = running ? 'running' : !config.enabled ? 'paused'
       : config.firstDay > today || now < due ? 'waiting' : scheduledRun ? 'done' : windowOpen ? 'due' : 'missed';
-    const newsMode = config.sourceMode === 'news';
+    const petMode = productionMode(config) === 'ai-pet', newsMode = config.sourceMode === 'news';
     return { ...value, config, revision, eligible, todayRun, scheduleState, busy: this.busy || running, error: this.error, environment: this.environment,
-      lastSync: newsMode ? value.newsLastSync : value.lastSync,
+      productionMode: productionMode(config), petReadiness: petMode ? this.environment : null,
+      lastSync: petMode ? value.petLastSync : newsMode ? value.newsLastSync : value.lastSync,
       readiness: await this.readiness(value, eligible), nextRunAt: config.enabled && (!once || !consumedOnce(value) && windowOpen) ? dayStartISO(nextDay, config.startTime) : '',
-      source: newsMode ? '公开 RSS / Atom 资讯' : '本地选品日报＋商品库', sourceConnected: !!(newsMode ? value.newsLastSync : value.lastSync),
-      sourceMessage: newsMode ? `每次开工采集 ${config.newsFeedUrl} 最近 48 小时的资讯标题与出处，去重后最多选 3 条制作一条视频；没有新资讯则跳过。当前不提供热度排名。` : `每次开工前自动同步日报目录：${config.sourceFolder}。1688 联网采集尚未接入。`,
-      metricsMessage: '在效果追踪中核实并绑定作品后，每 15 分钟自动检查审核与可见指标；提交成功不代表平台审核通过。' };
+      source: petMode ? '已配置的萌宠参考内容' : newsMode ? '公开 RSS / Atom 资讯' : '本地选品日报＋商品库', sourceConnected: !!(petMode ? value.petLastSync : newsMode ? value.newsLastSync : value.lastSync),
+      sourceMessage: petMode ? '采集已保存的萌宠参考链接，转化为新的原创剧情，再进行 AI 动态生成和原创音乐合成；参考可复用，已提交的剧情和成片不能重复发布。' : newsMode ? `每次开工采集 ${config.newsFeedUrl} 最近 48 小时的资讯标题与出处，去重后最多选 3 条制作一条视频；没有新资讯则跳过。当前不提供热度排名。` : `每次开工前自动同步日报目录：${config.sourceFolder}。1688 联网采集尚未接入。`,
+      metricsMessage: '审核与可见指标按效果追踪中的每日时间集中回采，每轮复用一个临时窗口，完成后关闭；提交成功不代表平台审核通过。' };
   }
   async readiness(state, eligible) {
     const checks = [];
     const add = (id, label, condition, message, action) => checks.push({ id, label, state: condition, message, ...(action ? { action } : {}) });
-    if (state.config.sourceMode === 'news') {
+    const petMode = productionMode(state.config) === 'ai-pet';
+    if (petMode) {
+      add('source', '萌宠参考来源', state.config.petSettings.referenceUrls.length ? 'ok' : 'blocked', state.config.petSettings.referenceUrls.length ? `已保存 ${state.config.petSettings.referenceUrls.length} 个参考链接；开工时读取实际内容。` : '请保存需要转化的萌宠参考链接。', 'production-settings');
+      add('pet-content', '真实参考内容', eligible ? 'ok' : 'warning', eligible ? `${eligible} 条可用于创作新剧情的真实来源记录。` : '尚未采集到真实参考内容；不会改用科技资讯。', 'sync');
+      if (Array.isArray(this.environment?.checks)) for (const check of this.environment.checks) checks.push({ ...check, id: `pet-${check.id}`, action: check.action || 'check' });
+    } else if (state.config.sourceMode === 'news') {
       add('source', '资讯来源', state.newsLastSync ? 'ok' : 'unknown', state.newsLastSync ? `上次成功采集：${state.newsLastSync.at}。实际开工时会重新采集。` : '已配置公开 RSS 来源，请先采集一次；打开本页不会自动访问网站。', 'sync');
       add('news', '待制作资讯', eligible ? 'ok' : 'warning', eligible ? `${eligible} 条尚未发布的近期资讯，将取最新最多 3 条。` : '暂无新的匹配资讯；开工时会再采集，仍为空则跳过当天。', 'sync');
     } else {
@@ -134,7 +174,7 @@ export class DailyProduction {
       add('source', '商品来源', sourceExists ? 'ok' : eligible ? 'warning' : 'blocked', sourceExists ? '来源目录可读取；开工前会同步新日报。' : eligible ? '来源目录暂不可用，可沿用商品库中的现有图片。' : '来源目录未准备好，先保存来源并同步商品。', 'sync');
       add('products', '待制作商品', eligible ? 'ok' : 'blocked', eligible ? `${eligible} 款待选商品；开工时再检查图片文件。` : '暂无带本地图片的未发布商品，请同步日报或导入商品。', 'shop');
     }
-    add('renderer', '本地视频合成', this.environment ? this.environment.ok ? 'ok' : 'blocked' : 'unknown', this.environment?.message || '尚未检查 Python、字体和视频编码器；开启计划前会自动检查。', 'check');
+    add('renderer', petMode ? 'AI 萌宠有声视频' : '本地视频合成', this.environment ? this.environment.ok ? 'ok' : 'blocked' : petMode ? 'blocked' : 'unknown', this.environment?.message || (petMode ? '尚未确认 AI 模型、首帧、动态生成及真实声音能力；完成检查后才能开启。' : '尚未检查 Python、字体和视频编码器；开启计划前会自动检查。'), 'check');
     try {
       const queue = (await this.automation.store.read()).value;
       const bound = state.config.accountId && queue.config.verifiedAt && state.config.accountId === queue.config.accountId && state.config.browserId === queue.config.browserId;
@@ -144,17 +184,38 @@ export class DailyProduction {
     } catch {
       add('queue', '发布队列', 'blocked', '无法读取发布账号或队列记录，请检查每日自动发布页面。', 'automation');
     }
-    const uncertain = state.runs.some(run => run.status === 'uncertain');
-    add('receipts', '发布结果', uncertain ? 'blocked' : 'ok', uncertain ? '有提交结果不明的任务，请先核实，系统不会自动重发。' : '没有结果不明的提交。', 'reconcile');
+    const uncertain = state.runs.some(run => run.status === 'uncertain' || generationUncertain(run));
+    add('receipts', '生成与发布结果', uncertain ? 'blocked' : 'ok', uncertain ? '有生成或提交结果不明的任务，请先核实原回执，系统不会自动重试。' : '没有结果不明的生成或提交。', 'reconcile');
     add('scheduler', '本地调度', this.timer && !this.stopping ? 'ok' : 'blocked', this.timer && !this.stopping ? '调度已启动；电脑与本地服务需要保持运行。' : '调度尚未启动，请查看服务日志并重启服务。');
     return { checkedAt: timestamp(), canEnable: !this.busy && !state.runs.some(run => active.includes(run.status)) && !checks.some(check => check.state === 'blocked'), checks };
   }
   async check(revision) {
-    if (revision !== (await this.store.read()).revision) throw fail('记录已有更新，请刷新。');
+    const current = await this.store.read();
+    if (revision !== current.revision) throw fail('记录已有更新，请刷新。');
     if (this.busy) throw fail('任务正在处理，请完成后再检查。');
     this.busy = true;
-    try { this.environment = await inspectProductVideoEnvironment(); }
+    try {
+      this.environment = productionMode(current.value.config) === 'ai-pet'
+        ? typeof this.petPipeline?.check === 'function' ? await this.petPipeline.check(current.value.config.petSettings) : { ok: false, message: 'AI 萌宠生产链尚未接入，未启用发布。', checks: [] }
+        : await inspectProductVideoEnvironment();
+    }
     finally { this.busy = false; }
+  }
+  async productionSettings(input, revision) {
+    if (!revision || !input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(key => !['productionMode', 'petSettings'].includes(key)) || !['cards', 'ai-pet'].includes(input.productionMode)) throw fail('请选择有效成片方式和萌宠设置。');
+    const settings = validatePetSettings(input.petSettings || defaultPetSettings());
+    if (this.busy) throw fail('请等当前生产任务完成后再调整成片方式。');
+    this.busy = true; let release;
+    try {
+      release = await this.automation.lease();
+      await this.store.update(state => {
+        if (state.runs.some(run => active.includes(run.status))) throw fail('已有生产任务正在运行。');
+        if (!productionChanged(state.config, { productionMode: input.productionMode, petSettings: settings })) return;
+        Object.assign(state.config, { productionMode: input.productionMode, petSettings: settings, enabled: false, authorizedAt: '', firstDay: '', retryOfRunId: '' });
+        state.petSources = []; state.petLastSync = null;
+      }, revision);
+      this.environment = null; this.error = '';
+    } finally { try { if (release) await release(); } finally { this.busy = false; } }
   }
   async schedule(input, revision) {
     if (!revision || !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.startTime || '')) throw fail('请选择有效的每日开工时间。');
@@ -218,8 +279,29 @@ export class DailyProduction {
       this.error = '';
     } finally { try { if (release) await release(); } finally { this.busy = false; } }
   }
-  async syncSource() {
+  async syncSource({ guard = async () => {} } = {}) {
     const current = (await this.store.read()).value;
+    if (productionMode(current.config) === 'ai-pet') {
+      if (typeof this.petPipeline?.collect !== 'function') throw fail('AI 萌宠参考采集器尚未接入。');
+      await guard();
+      const collected = await this.petPipeline.collect(current.config.petSettings, { binding: structuredClone(current.config), guard });
+      if (!Array.isArray(collected?.sources) || collected.sources.length > 100) throw fail('萌宠采集结果格式无效，未保存来源。');
+      const configured = new Set(current.config.petSettings.referenceUrls.map(value => { const url = new URL(value); url.hash = ''; return url.href; }));
+      const unique = new Map();
+      for (const source of collected.sources) {
+        const identity = petSourceIdentity(source);
+        if (!configured.has(identity.url)) throw fail('采集结果包含未配置的萌宠来源，已停止。');
+        unique.set(identity.key, { ...source, url: identity.url, sourceKey: identity.key, contentHash: identity.contentHash });
+      }
+      const sources = [...unique.values()], known = new Set((current.petSources || []).map(source => petSourceIdentity(source).key));
+      const result = { at: collected.at || timestamp(), scanned: sources.length, added: sources.filter(source => !known.has(source.sourceKey)).length, existing: sources.filter(source => known.has(source.sourceKey)).length, warnings: Array.isArray(collected.warnings) ? collected.warnings : [], source: 'pet-references' };
+      await guard();
+      await this.store.update(state => {
+        if (productionChanged(state.config, current.config)) throw fail('萌宠生产设置已变化，请重新采集。');
+        state.petSources = sources; state.petLastSync = result;
+      });
+      return result;
+    }
     if (current.config.sourceMode === 'news') {
       const collected = await collectNews({ feedUrl: current.config.newsFeedUrl, keywords: current.config.newsKeywords }, join(this.directory, 'news-source'));
       const known = new Set((current.newsItems || []).map(articleKey));
@@ -319,7 +401,10 @@ export class DailyProduction {
         if (Date.parse(dayStartISO(current.config.executionDate, current.config.startTime)) <= this.now()) throw fail('单次执行时间已过，请重新保存一个未来时间；不会自动顺延或补发。');
         if (consumedOnce(current) || queueSubmittedOn(queue, binding.accountId, current.config.executionDate)) throw fail('该日期已有生产或发布记录，请另选日期；不会重复执行。');
       }
-      if (current.config.sourceMode === 'news') {
+      if (current.runs.some(generationUncertain)) throw fail('有 AI 生成结果不明的任务，请先核实原回执；不会新建生成重试。');
+      if (productionMode(current.config) === 'ai-pet') {
+        if (typeof this.petPipeline?.render !== 'function' || typeof this.petPipeline?.collect !== 'function') throw fail('AI 萌宠有声生产链未完整接入。');
+      } else if (current.config.sourceMode === 'news') {
         if (!current.newsLastSync) throw fail('请先采集一次资讯，确认来源可以读取。');
       } else if (!(await this.candidates(current)).length) throw fail('没有可用商品：请先接入选品来源，或导入带商品图的日报。');
       await this.check(revision);
@@ -327,7 +412,7 @@ export class DailyProduction {
     }
     await this.store.update(state => {
       if (input.enabled) requireRetrySource(state);
-      if (input.enabled && state.runs.some(r => active.includes(r.status) || r.status === 'uncertain')) throw fail('请先处理正在运行或结果待核实的任务。');
+      if (input.enabled && state.runs.some(r => active.includes(r.status) || r.status === 'uncertain' || generationUncertain(r))) throw fail('请先处理正在运行或生成、提交结果待核实的任务。');
       if (input.enabled) {
         if (state.config.enabled) return;
         const now = this.now(), day = shanghaiDay(now);
@@ -350,6 +435,7 @@ export class DailyProduction {
       try {
         await this.store.update(state => {
           for (const run of state.runs.filter(r => active.includes(r.status))) {
+            if (productionMode(run.binding || {}) === 'ai-pet' && run.status === 'rendering' && run.generationState !== 'completed') run.generationState = 'uncertain';
             run.status = run.submitStartedAt ? 'uncertain' : 'failed';
             run.message = '上次运行中断，已暂停；提交结果待核实时不能自动重试。'; run.finishedAt = timestamp();
             state.config.enabled = false;
@@ -387,6 +473,28 @@ export class DailyProduction {
     const run = (await this.store.read()).value.runs.find(r => r.asset && resolve(r.asset) === resolve(path));
     return run ? this.media(run.id) : null;
   }
+  async verifyPetRendered(rendered, target) {
+    const receipt = rendered?.generationReceipt, audio = rendered?.audioVerification, motion = rendered?.motionVerification;
+    if (!rendered?.asset || rendered.aiGenerated !== true || rendered.contentDeclaration !== 'ai-generated'
+      || !Number.isFinite(rendered.seconds) || Math.abs(rendered.seconds - target.binding.petSettings.duration) > 0.1 || audio?.decoded !== true || audio.nonSilent !== true
+      || !Number.isFinite(audio.rmsDb) || audio.rmsDb <= -45 || motion?.checked !== true || motion.passed !== true
+      || receipt?.status !== 'completed' || receipt.runId !== target.id || receipt.model !== target.binding.petSettings.model
+      || !/^[a-f0-9]{64}$/.test(receipt.inputHash || '') || !/^[a-f0-9]{64}$/.test(receipt.sourceHash || '') || !/^[a-f0-9]{64}$/.test(receipt.storyHash || '')
+      || !Array.isArray(receipt.shots) || receipt.shots.length !== 4 || receipt.shots.some(shot => !/^[a-f0-9]{64}$/.test(shot.sha256 || ''))
+      || new Set(receipt.shots.map(shot => shot.sha256)).size !== 4 || typeof receipt.path !== 'string') {
+      throw fail('AI 萌宠成片缺少真实生成、有声或动作验证凭据，禁止用静音图卡替代发布。');
+    }
+    const directory = await realpath(join(this.directory, 'videos'));
+    for (const file of [rendered.asset, receipt.path]) {
+      const path = await realpath(file), rel = relative(directory, path);
+      if (!rel || rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel)) throw fail('AI 萌宠成片或回执不在本次生产目录中。');
+    }
+    const sha256 = await hashFile(rendered.asset), persisted = JSON.parse(await readFile(receipt.path, 'utf8'));
+    if (receipt.assetSha256 !== sha256 || persisted.status !== 'completed' || persisted.runId !== target.id || persisted.assetSha256 !== sha256 || persisted.storyHash !== receipt.storyHash) throw fail('AI 萌宠成片与持久生成回执不一致，已停止。');
+    const previous = (await this.store.read()).value.runs.filter(run => run.id !== target.id && ['submitted', 'published', 'uncertain', 'publishing'].includes(run.status));
+    if (previous.some(run => run.sha256 === sha256 || run.generationReceipt?.storyHash === receipt.storyHash)) throw fail('AI 剧情或成片与此前已提交作品重复，本次不发布。');
+    return sha256;
+  }
   async run(previewOnly = false, trigger = previewOnly ? 'preview' : 'direct') {
     if (this.busy || this.stopping) return;
     // Polling a paused or future plan is read-only. It must not briefly mark the
@@ -408,10 +516,10 @@ export class DailyProduction {
       // Share the publisher lease with the manually approved queue across processes.
       release = await this.automation.lease();
       await this.store.update(state => {
-        if (state.runs.some(r => active.includes(r.status) || r.status === 'uncertain')) throw fail('有运行中或结果待核实的任务，已停止。');
+        if (state.runs.some(r => active.includes(r.status) || r.status === 'uncertain' || generationUncertain(r))) throw fail('有运行中或生成、提交结果待核实的任务，已停止。');
         if (!previewOnly) requireRetrySource(state);
         if (!previewOnly && (!state.config.enabled || day < state.config.firstDay || this.now() < Date.parse(dayStartISO(runDay, state.config.startTime)) || state.config.authorizedAt !== saved.config.authorizedAt || dayRuns(state, runDay).length)) return;
-        target = { id: randomUUID(), day: runDay, previewOnly, trigger, sourceMode: state.config.sourceMode, status: 'selecting', startedAt: timestamp(), message: '正在准备当天的内容来源。', binding: structuredClone(state.config) };
+        target = { id: randomUUID(), day: runDay, previewOnly, trigger, sourceMode: state.config.sourceMode, productionMode: productionMode(state.config), status: 'selecting', startedAt: timestamp(), message: '正在准备当天的内容来源。', binding: structuredClone(state.config) };
         state.runs.push(target); target = structuredClone(target);
       });
       if (!target) return;
@@ -424,6 +532,7 @@ export class DailyProduction {
       const guard = async () => {
         const state = (await this.store.read()).value;
         if (!previewOnly) requireRetrySource(state);
+        if (productionChanged(state.config, target.binding)) throw fail('成片方式或萌宠生成设置已变化，停止本次任务。');
         if (['sourceMode', 'newsFeedUrl', 'newsKeywords', 'sourceFolder'].some(key => state.config[key] !== target.binding[key])) throw fail('内容来源已变化，停止本次任务。');
         if (this.stopping || (!previewOnly && (!state.config.enabled || ['authorizedAt', 'startTime', 'executionMode', 'executionDate', 'retryOfRunId'].some(key => state.config[key] !== target.binding[key])))) throw fail('每日生产已暂停或配置发生变化。');
         if (!previewOnly && shanghaiDay(this.now()) !== day) throw fail('已跨日，停止本次发布。');
@@ -433,12 +542,19 @@ export class DailyProduction {
         }
       };
       await guard();
-      const newsMode = target.sourceMode === 'news';
-      await update({ message: newsMode ? '正在采集近期资讯标题与出处。' : '正在同步选品日报和商品图片。' });
+      const petMode = target.productionMode === 'ai-pet', newsMode = !petMode && target.sourceMode === 'news';
+      if (petMode) {
+        if (typeof this.petPipeline?.check !== 'function' || typeof this.petPipeline?.render !== 'function') throw fail('AI 萌宠有声生产链尚未接入。');
+        this.environment = await this.petPipeline.check(target.binding.petSettings);
+        if (!this.environment?.ok) throw fail(this.environment?.message || 'AI 萌宠生成环境未就绪。');
+        await guard();
+      }
+      await update({ message: petMode ? '正在采集已保存的萌宠参考内容。' : newsMode ? '正在采集近期资讯标题与出处。' : '正在同步选品日报和商品图片。' });
       let sourceResult;
       const warnings = [];
-      try { sourceResult = await this.syncSource(); }
+      try { sourceResult = await this.syncSource({ guard }); }
       catch (error) {
+        if (petMode) throw error;
         if (!(await this.candidates((await this.store.read()).value)).length) {
           if (!newsMode) throw error;
           await update({ status: 'skipped', message: '资讯来源暂不可用，且没有近期缓存，本次不发布。' + (target.binding.executionMode === 'once' && !previewOnly ? '单次计划已暂停，不顺延。' : '计划开启时下个执行日再采集。'), warnings: [error.message], finishedAt: timestamp() });
@@ -449,8 +565,26 @@ export class DailyProduction {
       if (sourceResult) warnings.push(...sourceResult.warnings);
       await update({ ...(sourceResult ? { sourceResult } : {}), warnings: warnings.slice(0, 30) });
       const candidates = await this.candidates((await this.store.read()).value);
-      let product, rendered, articles = [];
-      if (newsMode) {
+      let product, rendered, verifiedPetSha256, articles = [], references = [];
+      if (petMode) {
+        references = candidates.slice(0, 3);
+        if (!references.length) {
+          await update({ status: 'skipped', message: '本次没有可读取的真实萌宠参考内容，跳过发布；不会改用静音图卡。', finishedAt: timestamp() });
+          this.error = ''; return;
+        }
+        await guard();
+        const identities = references.map(petSourceIdentity);
+        await update({ status: 'rendering', generationState: 'running', sourceReferences: references,
+          petSourceKeys: identities.map(item => item.key), petSourceHashes: identities.map(item => item.contentHash),
+          message: '正在将萌宠参考转化为 AI 分镜、生成动态镜头并合成原创音乐。' });
+        rendered = await this.petPipeline.render(references, join(this.directory, 'videos'), {
+          runId: target.id, settings: target.binding.petSettings, guard,
+          previousStoryHashes: (await this.store.read()).value.runs.filter(run => ['submitted', 'published', 'uncertain', 'publishing'].includes(run.status)).map(run => run.generationReceipt?.storyHash).filter(Boolean),
+          onProgress: async progress => { await guard(); await update({ message: String(progress?.message || progress || '正在制作 AI 萌宠有声视频。').slice(0, 1500) }); }
+        });
+        verifiedPetSha256 = await this.verifyPetRendered(rendered, target);
+        await update({ generationState: 'completed', sha256: verifiedPetSha256 });
+      } else if (newsMode) {
         const selection = selectNewsForVideo(candidates, { day });
         articles = selection.items;
         warnings.push(...selection.warnings);
@@ -476,20 +610,22 @@ export class DailyProduction {
         await update({ status: 'rendering', productId: product.id, productKey: keyFor(product), title: product.title, message: '正在用本地图片合成竖屏字幕视频。' });
         rendered = await renderProductVideo(product, join(this.directory, 'videos'));
       }
-      await update({ ...rendered, sha256: await hashFile(rendered.asset) });
+      // Keep the hash accepted with the audio/motion/generation evidence. A
+      // later file replacement must fail beforeSubmit, not become the new baseline.
+      await update({ ...rendered, sha256: petMode ? verifiedPetSha256 : await hashFile(rendered.asset) });
       const videoId = randomUUID(), draftId = randomUUID();
       const productLink = product ? { sourceProductId: product.id } : {};
-      const notes = newsMode ? '公开资讯标题编排为原创信息卡画面，非现场画面，不含热度排名。\n' + articles.map(item => `${item.sourceName}：${item.title}\n${item.url}`).join('\n') : '';
+      const notes = petMode ? '依据实际采集的参考内容转化为 AI 萌宠动态视频，搭配原创音乐；不是现场实拍。\n' + references.map(item => `${item.title || '参考来源'}\n${item.url}`).join('\n') : newsMode ? '公开资讯标题编排为原创信息卡画面，非现场画面，不含热度排名。\n' + articles.map(item => `${item.sourceName}：${item.title}\n${item.url}`).join('\n') : '';
       await this.workspace.update(state => {
-        state.videos.push({ ...newVideo(), id: videoId, title: rendered.title, subject: product?.title || '每日资讯标题速览', notes, asset: rendered.asset, status: 'completed', provider: newsMode ? '本地资讯图卡字幕合成' : '本地图片字幕合成', cost: '0', ...productLink, createdAt: timestamp(), updatedAt: timestamp(), shots: [{ seconds: rendered.seconds, action: newsMode ? '按资讯逐条展示信息卡、标题、发布日期和来源，附字幕说明。' : '按商品图片依次展示商品资料，字幕来自保存的中文文案。', camera: newsMode ? '竖屏资讯图卡' : '竖屏商品展示' }] });
-        state.drafts.push({ id: draftId, title: rendered.title, pubTitle: rendered.title, caption: rendered.caption, asset: rendered.asset, platform: 'douyin', format: '视频', status: '待检查', ...productLink, sourceVideoId: videoId, sourceProductionId: target.id, sourceMode: target.sourceMode, sourceArticles: articles, createdAt: timestamp(), updatedAt: timestamp() });
+        state.videos.push({ ...newVideo(), id: videoId, title: rendered.title, subject: product?.title || (petMode ? 'AI 萌宠有声故事' : '每日资讯标题速览'), notes, asset: rendered.asset, status: 'completed', provider: petMode ? 'AI 萌宠动态生成与原创音乐合成' : newsMode ? '本地资讯图卡字幕合成' : '本地图片字幕合成', cost: '0', ...productLink, ...(petMode ? { aiGenerated: true, generationReceipt: rendered.generationReceipt, audioVerification: rendered.audioVerification, motionVerification: rendered.motionVerification } : {}), createdAt: timestamp(), updatedAt: timestamp(), shots: [{ seconds: Math.round(rendered.seconds), action: petMode ? 'AI 生成萌宠动态镜头并配原创音乐。' : newsMode ? '按资讯逐条展示信息卡、标题、发布日期和来源，附字幕说明。' : '按商品图片依次展示商品资料，字幕来自保存的中文文案。', camera: petMode ? '竖屏 AI 萌宠动态镜头' : newsMode ? '竖屏资讯图卡' : '竖屏商品展示' }] });
+        state.drafts.push({ id: draftId, title: rendered.title, pubTitle: rendered.title, caption: rendered.caption, asset: rendered.asset, platform: 'douyin', format: '视频', status: '待检查', ...productLink, sourceVideoId: videoId, sourceProductionId: target.id, sourceMode: target.sourceMode, productionMode: target.productionMode, sourceArticles: articles, ...(petMode ? { aiGenerated: true, contentDeclaration: 'ai-generated', sourceReferences: references, generationReceipt: rendered.generationReceipt, audioVerification: rendered.audioVerification, motionVerification: rendered.motionVerification } : {}), createdAt: timestamp(), updatedAt: timestamp() });
       });
       await update({ videoId, draftId });
       await guard();
       if (previewOnly) { await update({ status: 'preview', message: '成片已生成，仅预览，没有发布。', finishedAt: timestamp() }); this.error = ''; return; }
       const queue = (await this.automation.store.read()).value;
       if (queue.config.enabled || queue.config.accountId !== target.binding.accountId || queue.config.browserId !== target.binding.browserId || queue.items.some(i => ['running', 'uncertain'].includes(i.status)) || queueSubmittedOn(queue, target.binding.accountId, day)) throw fail('账号设置变化、旧队列启用，或今天已有发布记录，已停止。');
-      await update({ status: 'publishing', message: newsMode ? '正在上传并公开发布资讯卡片视频。' : '正在上传并公开发布商品介绍视频。' });
+      await update({ status: 'publishing', message: petMode ? '正在上传并公开发布 AI 萌宠有声视频。' : newsMode ? '正在上传并公开发布资讯卡片视频。' : '正在上传并公开发布商品介绍视频。' });
       const approval = { ...rendered, accountId: target.binding.accountId, browserId: target.binding.browserId };
       const beforeSubmit = async () => { await guard(); if (await hashFile(rendered.asset) !== target.sha256) throw fail('视频文件发生变化，已停止。'); await update({ submitStartedAt: timestamp(), message: '正在单次提交；结果不明时禁止自动重发。' }); };
       const result = await this.automation.publisher.publish({ approval }, { guard, beforeSubmit });
@@ -499,6 +635,8 @@ export class DailyProduction {
       this.error = error.message;
       if (target) await this.store.update(state => {
         const run = state.runs.find(r => r.id === target.id);
+        if (target.productionMode === 'ai-pet' && (error.code === 'uncertain' || error.status === 'uncertain')) run.generationState = 'uncertain';
+        else if (target.productionMode === 'ai-pet' && run.generationState === 'running') run.generationState = 'failed';
         run.status = run.submitStartedAt ? 'uncertain' : 'failed'; run.message = error.message; run.finishedAt = timestamp();
         if (!previewOnly) state.config.enabled = false;
       });

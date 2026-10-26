@@ -16,8 +16,9 @@ export function createDouyinTracking({ notify, refreshWorkspace }) {
   const root = () => document.querySelector('#douyin-tracking-root');
   function markup() {
     const disabled = busy || loading || snapshot?.scheduler.busy;
-    const header = `<div class="card-title"><h3>抖音审核与自动回采</h3><span class="pill">${snapshot?.scheduler.running ? '每 15 分钟检查' : '服务未运行'}</span></div>
-      <p class="form-hint">提交成功后，服务会自动核对账号、完整文案、提交时间和作品链接，唯一匹配后建立绑定并回采审核状态与可见指标。电脑、本地服务和浏览器扩展需保持运行。</p>
+    const header = `<div class="card-title"><h3>抖音审核与自动回采</h3><span class="pill">${snapshot?.scheduler.running ? snapshot.config?.enabled ? `每天 ${esc(snapshot.config.dailyTime)} 集中检查` : '自动回采已暂停' : '服务未运行'}</span></div>
+      <p class="form-hint">每天集中检查一次，同一轮复用一个临时窗口，完成后关闭。服务启动和刷新本页不会打开抖音。电脑、本地服务和浏览器扩展需保持运行。</p>
+      ${snapshot?.config ? `<div class="form-grid"><div class="field"><label for="tracking-daily-time">每日回采时间（北京时间）</label><input type="time" id="tracking-daily-time" value="${esc(snapshot.config.dailyTime)}" ${disabled ? 'disabled' : ''}></div><div class="field"><label class="check-row"><input type="checkbox" id="tracking-enabled" ${snapshot.config.enabled ? 'checked' : ''} ${disabled ? 'disabled' : ''}>每天自动回采</label></div></div><div class="form-actions"><button type="button" class="button button-light" data-douyin-tracking="settings" ${disabled ? 'disabled' : ''}>保存回采安排</button></div><p class="form-hint">下次自动回采：${snapshot.scheduler.nextRunAt ? when(snapshot.scheduler.nextRunAt) : '未安排'}。立即回采会打开一个临时窗口。</p>` : ''}
       <div class="form-actions"><button type="button" class="button button-green" data-douyin-tracking="check" ${disabled || !snapshot?.targets.some(target => target.boundWorkId || ['submitted', 'published'].includes(target.status)) ? 'disabled' : ''}>立即识别并回采作品</button><button type="button" class="button button-light" data-douyin-tracking="refresh" ${disabled ? 'disabled' : ''}>刷新状态</button></div>`;
     const warning = problem || snapshot?.scheduler.error;
     if (!snapshot) return `<section class="card">${header}<p role="status">${esc(problem || '正在读取回采状态…')}</p></section>`;
@@ -63,11 +64,17 @@ export function createDouyinTracking({ notify, refreshWorkspace }) {
     const action = button.dataset.douyinTracking;
     if (action === 'refresh') { await load(); return; }
     const targetRef = button.closest('[data-tracking-target]')?.dataset.trackingTarget;
-    if (!['check', 'check-one', 'bind'].includes(action)) return;
+    if (!['check', 'check-one', 'bind', 'settings'].includes(action)) return;
+    const settings = action === 'settings' ? { enabled: root().querySelector('#tracking-enabled').checked, dailyTime: root().querySelector('#tracking-daily-time').value } : null;
     const workURL = action === 'bind' ? workLink(drafts.get(targetRef)) : '';
     if (action === 'bind' && !workURL) { notify('请填写包含作品编号的抖音完整链接。'); return; }
     busy = true; problem = ''; paint();
     try {
+      if (action === 'settings') {
+        snapshot = await request('/api/douyin-tracking/settings', { method: 'POST', headers: { 'If-Match': snapshot.revision }, body: JSON.stringify(settings) });
+        notify('每日集中回采安排已保存');
+        return;
+      }
       snapshot = await request('/api/douyin-tracking/' + (action === 'bind' ? 'bind' : 'check'), {
         method: 'POST', body: JSON.stringify(action === 'bind' ? { targetRef, workURL } : targetRef ? { targetRef } : {}),
         signal: AbortSignal.timeout(300000),

@@ -10,22 +10,24 @@ const platformState = run => Object.hasOwn(platformLabels, run.platformReview?.s
 const needsReconcile = run => run.status === 'uncertain' || run.status === 'submitted' && !['published', 'rejected'].includes(platformState(run));
 const workLink = value => typeof value === 'string' && /^https:\/\/www\.douyin\.com\/video\/\d{1,32}$/.test(value) ? value : '';
 const defaultNewsFeed = 'https://www.ithome.com/rss/';
-const runTitle = run => run.title || (run.sourceMode === 'news' ? '每日资讯速览' : '每日商品介绍');
-const runLabel = run => run.status === 'selecting' && run.sourceMode === 'news' ? '整理资讯中' : run.status === 'submitted' && platformState(run) ? '已提交' : labels[run.status] || run.status;
+const runTitle = run => run.title || (run.productionMode === 'ai-pet' ? 'AI 萌宠有声视频' : run.sourceMode === 'news' ? '每日资讯速览' : '每日商品介绍');
+const runLabel = run => run.status === 'selecting' && run.productionMode === 'ai-pet' ? '采集萌宠参考中' : run.status === 'selecting' && run.sourceMode === 'news' ? '整理资讯中' : run.status === 'submitted' && platformState(run) ? '已提交' : labels[run.status] || run.status;
 function sourceLink(value) {
   try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : ''; } catch { return ''; }
 }
 
 export function createDailyProduction({ notify, refreshWorkspace }) {
   let snapshot, problem = '', loading = false, busy = false, authorized = false;
-  let sourceDraft = null, contentDraft = null, scheduleDraft = null, browsers = [], browserId = '', recordFilter = 'all', loadVersion = 0;
+  let sourceDraft = null, contentDraft = null, productionDraft = null, scheduleDraft = null, browsers = [], browserId = '', recordFilter = 'all', loadVersion = 0;
   const isBusy = () => busy || snapshot?.busy;
   const isNews = () => snapshot?.config.sourceMode === 'news';
+  const isPet = () => snapshot?.config.productionMode === 'ai-pet';
+  const productionConfig = () => ({ productionMode: snapshot.config.productionMode || 'cards', petSettings: { model: '', referenceUrls: [], firstFrames: [], duration: 20, audioMode: 'original-music', ...snapshot.config.petSettings } });
   const sourceConfig = () => ({ mode: snapshot.config.sourceMode || 'products', feedUrl: snapshot.config.newsFeedUrl || defaultNewsFeed, keywords: snapshot.config.newsKeywords || '' });
   const scheduleConfig = () => ({ startTime: snapshot.config.startTime, executionMode: snapshot.config.executionMode || 'daily', executionDate: snapshot.config.executionDate || '' });
   const isOnce = () => snapshot?.config.executionMode === 'once';
   const scheduleText = () => isOnce() ? `仅 ${snapshot.config.executionDate} ${snapshot.config.startTime} 执行一次` : `每天 ${snapshot.config.startTime}`;
-  const hasUnsavedSettings = () => contentDraft !== null || !isNews() && sourceDraft !== null || scheduleDraft !== null;
+  const hasUnsavedSettings = () => productionDraft !== null || contentDraft !== null || !isPet() && !isNews() && sourceDraft !== null || scheduleDraft !== null;
   async function request(route = '', body) {
     const mutation = body !== undefined;
     const timeout = ['/connect', '/sync'].includes(route) ? 180000 : ['/check', '/toggle'].includes(route) ? 60000 : 20000;
@@ -40,6 +42,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
     return data;
   }
   function acceptSnapshot(value) {
+    if (snapshot && (snapshot.config.productionMode !== value.config.productionMode || JSON.stringify(snapshot.config.petSettings) !== JSON.stringify(value.config.petSettings))) authorized = false;
     if (snapshot && ['accountId', 'browserId', 'startTime', 'executionMode', 'executionDate', 'retryOfRunId', 'enabled', 'sourceFolder', 'sourceMode', 'newsFeedUrl', 'newsKeywords'].some(key => snapshot.config[key] !== value.config[key])) authorized = false;
     snapshot = value;
   }
@@ -59,12 +62,20 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
     const link = sourceLink(item.url);
     return `<li><b>${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(item.title || '查看原文')}</a>` : esc(item.title || '资讯原文')}</b><small>${esc(item.sourceName || '公开资讯源')}${item.publishedAt ? ` · ${when(item.publishedAt)}` : ''}</small></li>`;
   }
+  function productionMarkup() {
+    const config = productionDraft || productionConfig(), pet = config.petSettings;
+    return `<section class="card daily-section"><div class="card-title"><h3>成片方式</h3><span class="pill">已保存：${isPet() ? 'AI 萌宠有声视频' : '静音图卡字幕'}</span></div>
+      <div class="field"><label for="daily-production-mode">每日制作流程</label><select id="daily-production-mode" ${isBusy() ? 'disabled' : ''}><option value="ai-pet" ${config.productionMode === 'ai-pet' ? 'selected' : ''}>萌宠参考 → AI 原创剧情 → AI 动态视频＋配乐</option><option value="cards" ${config.productionMode === 'cards' ? 'selected' : ''}>资讯／商品静音图卡</option></select></div>
+      ${config.productionMode === 'ai-pet' ? `<p>读取萌宠选题与参考内容，由本地模型生成原创故事和四个镜头，再生成约 20 秒萌宠动态视频并加入原创配乐。现有角色首帧用于保持角色一致；每次重新生成动作，不复用旧成片。</p><div class="field"><label for="daily-pet-urls">萌宠参考内容链接（每行一个，最多 3 个）</label><textarea id="daily-pet-urls" rows="3" ${isBusy() ? 'disabled' : ''}>${esc(pet.referenceUrls.join('\n'))}</textarea><small>只取可核对的主题和文字，不搬运参考视频。需要登录或验证时保留失败原因。</small></div><div class="field"><label for="daily-pet-model">本地剧情模型</label><input id="daily-pet-model" value="${esc(pet.model)}" placeholder="已安装的本地模型名称" ${isBusy() ? 'disabled' : ''}></div><div class="field"><label for="daily-pet-frames">AI 萌宠角色首帧（本机图片路径，每行一个）</label><textarea id="daily-pet-frames" rows="3" ${isBusy() ? 'disabled' : ''}>${esc(pet.firstFrames.join('\n'))}</textarea></div><p class="form-hint">声音：原创配乐；当前没有启用中文旁白。缺少真实生成结果、动态画面或非静音音轨时停止，不降级为图卡。公共免费生成额度与排队时间以服务实际结果为准。</p>` : '<p class="form-hint">此模式制作静音图卡。历史图卡记录保留原来的制作方式。</p>'}
+      <button class="button button-green" data-daily="production-settings" ${isBusy() || productionDraft === null ? 'disabled' : ''}>保存成片方式</button><p class="form-hint">修改成片方式或模型、素材后暂停计划，重新检查运行条件后开启。</p></section>`;
+  }
   function contentSourceMarkup() {
+    if (isPet()) return '';
     const config = contentDraft || sourceConfig();
     const news = config.mode === 'news';
     const items = [...(snapshot.newsItems || [])].sort((a, b) => (Date.parse(b.publishedAt) || 0) - (Date.parse(a.publishedAt) || 0)).slice(0, 5);
     return `<section class="card daily-section daily-content-source"><div class="card-title"><h3>制作什么内容</h3><span class="pill">已保存：${isNews() ? '资讯视频' : '商品介绍'}</span></div>
-      <p>现阶段选择资讯视频即可：自动采集公开资讯，制作原创排版的静音图卡字幕视频，再按计划发布。</p>
+      <p>图卡模式使用公开资讯或商品图片制作字幕视频，不调用 AI 生成动态画面。</p>
       <div class="daily-source-modes" role="group" aria-label="内容来源模式">
         <label class="check-row"><input type="radio" name="daily-source-mode" value="news" ${news ? 'checked' : ''} ${isBusy() ? 'disabled' : ''}>资讯视频（推荐）</label>
         <label class="check-row"><input type="radio" name="daily-source-mode" value="products" ${!news ? 'checked' : ''} ${isBusy() ? 'disabled' : ''}>商品介绍</label>
@@ -77,7 +88,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
   }
   function readinessMarkup() {
     const readiness = snapshot.readiness;
-    const actionText = { sync: isNews() ? '采集资讯' : '同步商品', connect: '识别账号', check: '检查环境', shop: isNews() ? '采集资讯' : '查看商品', automation: '查看发布队列', reconcile: '核实记录' };
+    const actionText = { sync: isPet() ? '采集萌宠参考' : isNews() ? '采集资讯' : '同步商品', connect: '识别账号', check: '检查环境', shop: isNews() ? '采集资讯' : '查看商品', automation: '查看发布队列', reconcile: '核实记录' };
     const checks = readiness?.checks || [];
     return `<section class="card daily-section"><div class="card-title"><h3>运行准备</h3><button class="button button-light" data-daily="check" ${isBusy() || hasUnsavedSettings() ? 'disabled' : ''}>检查运行条件</button></div>
       <p class="form-hint">${readiness?.checkedAt ? `检查时间：${when(readiness.checkedAt)}。` : `先检查来源、${isNews() ? '资讯' : '商品'}、制作环境和发布账号。`}检查不会生成视频或发布作品。</p>
@@ -92,7 +103,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
   }
   function setupMarkup() {
     return `<section class="card daily-section"><div class="card-title"><h3>首次连接，以后沿用</h3><span class="pill">本机保存</span></div>
-      ${!isNews() ? `<details data-daily-detail="source" ${!snapshot.lastSync || sourceDraft !== null ? 'open' : ''}><summary>商品日报来源</summary>
+      ${!isPet() && !isNews() ? `<details data-daily-detail="source" ${!snapshot.lastSync || sourceDraft !== null ? 'open' : ''}><summary>商品日报来源</summary>
         <div class="field"><label for="daily-source-folder">原选品项目的 output 目录</label><input id="daily-source-folder" value="${esc(sourceDraft ?? snapshot.config.sourceFolder)}" ${isBusy() ? 'disabled' : ''}><small>可直接使用默认收件目录，也可只改一次为原项目的 output、日期或单品目录。</small></div>
         <p class="form-hint">自动识别 01_全链路分析.md、05_发布文案.md 和 06_素材/images/；只导入有图片的新商品，保留已有编辑。更换来源会暂停计划。</p>
         <div class="form-actions"><button class="button button-light" data-daily="source" ${isBusy() ? 'disabled' : ''}>保存来源</button><button class="button button-light" data-daily="sync" ${isBusy() || hasUnsavedSettings() ? 'disabled' : ''}>立即同步商品</button></div>
@@ -106,14 +117,14 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
   function scheduleMarkup() {
     const settings = scheduleDraft || scheduleConfig();
     const once = settings.executionMode === 'once';
-    return `<section class="card daily-section"><div class="card-title"><h3>${esc(scheduleText())} · 免费本地合成 · 抖音 1 条</h3><span class="pill">${snapshot.config.enabled ? '已开启' : '已暂停'}</span></div>
-      <p>${isNews() ? '自动采集公开资讯 → 选择近 48 小时的最新内容 → 制作原创静音图卡字幕视频 → 制作完成后公开发布。' : '从商品库选择尚未发布的商品 → 商品图片配字幕 → 生成竖屏视频 → 制作完成后公开发布。'}</p>
+    return `<section class="card daily-section"><div class="card-title"><h3>${esc(scheduleText())} · ${isPet() ? 'AI 萌宠有声视频' : '本地图卡合成'} · 抖音 1 条</h3><span class="pill">${snapshot.config.enabled ? '已开启' : '已暂停'}</span></div>
+      <p>${isPet() ? '采集萌宠参考 → AI 原创故事与分镜 → 生成新动态镜头 → 原创配乐与剪辑 → 检查后公开发布。' : isNews() ? '自动采集公开资讯 → 选择近 48 小时的最新内容 → 制作原创静音图卡字幕视频 → 制作完成后公开发布。' : '从商品库选择尚未发布的商品 → 商品图片配字幕 → 生成竖屏视频 → 制作完成后公开发布。'}</p>
       ${snapshot.config.retryOfRunId ? '<p class="form-hint"><b>本次是针对提交前失败记录重新授权的一次尝试。</b>原失败记录保留；本次结束即暂停，不自动重试。</p>' : ''}
-      <p class="form-hint">${isNews() ? '免费生成资讯速览，成片保留原文出处。' : '普通商品介绍，不挂商品链接。'}同一账号每天最多 1 条。单次计划完成、跳过或失败后暂停，过期不顺延；每日计划若已过开工时间或今天已有执行记录，从明天开始。</p>
+      <p class="form-hint">${isPet() ? '每天新生成约 20 秒萌宠剧情，保留来源和 AI 生成回执。' : isNews() ? '免费生成资讯速览，成片保留原文出处。' : '普通商品介绍，不挂商品链接。'}同一账号每天最多 1 条。单次计划完成、跳过或失败后暂停，过期不顺延；每日计划若已过开工时间或今天已有执行记录，从明天开始。</p>
       <div class="daily-schedule"><div class="field"><label for="daily-execution-mode">执行方式</label><select id="daily-execution-mode" ${isBusy() ? 'disabled' : ''}><option value="once" ${once ? 'selected' : ''}>只执行一次，随后暂停</option><option value="daily" ${!once ? 'selected' : ''}>每天执行，直到手动暂停</option></select></div>${once ? `<div class="field"><label for="daily-execution-date">单次日期（北京时间）</label><input id="daily-execution-date" type="date" required value="${esc(settings.executionDate)}" ${isBusy() ? 'disabled' : ''}></div>` : ''}<div class="field"><label for="daily-start-time">开始时间（北京时间）</label><input id="daily-start-time" type="time" required step="60" value="${esc(settings.startTime)}" ${isBusy() ? 'disabled' : ''}></div><button class="button button-light" data-daily="schedule" ${isBusy() || scheduleDraft === null ? 'disabled' : ''}>保存执行计划</button></div>
       <p class="form-hint">更改执行方式、日期或时间后计划暂停，核对后重新开启。允许在计划时间后 6 小时内开工；单次计划不会改到其他日期。${hasUnsavedSettings() ? '<b>有尚未保存的设置，请先保存后再检查或启动。</b>' : ''}</p>
-      <p>目标抖音号：<b>${esc(snapshot.config.accountId || '尚未绑定')}</b> · ${isNews() ? '可选资讯' : '可选商品'}：<b>${snapshot.eligible}</b> ${isNews() ? '条' : '款'}</p>
-      ${!snapshot.config.enabled ? `<label class="check-row"><input type="checkbox" data-daily-consent ${authorized ? 'checked' : ''} ${busy || hasUnsavedSettings() ? 'disabled' : ''}>允许${esc(scheduleText())}，${isNews() ? '从已保存的公开 RSS 来源选择最近 48 小时内最多 3 条资讯，制作 1 条原创排版的静音图卡字幕视频' : '从我的商品库选 1 款，使用已有图片和文案制作 1 条商品介绍视频'}，并公开发布到抖音号 ${esc(snapshot.config.accountId || '尚未绑定')}，无需逐条批准。${isOnce() ? '本次结束即暂停，不授权后续日期的发布。' : '此授权持续每天执行，直到我暂停或修改计划。'}</label>` : ''}
+      <p>目标抖音号：<b>${esc(snapshot.config.accountId || '尚未绑定')}</b> · ${isPet() ? '参考内容' : isNews() ? '可选资讯' : '可选商品'}：<b>${snapshot.eligible}</b> ${isNews() ? '条' : '款'}</p>
+      ${!snapshot.config.enabled ? `<label class="check-row"><input type="checkbox" data-daily-consent ${authorized ? 'checked' : ''} ${busy || hasUnsavedSettings() ? 'disabled' : ''}>允许${esc(scheduleText())}，${isPet() ? '采集已保存的萌宠参考内容，使用本地模型改写原创故事，再生成 1 条 AI 萌宠动态视频并加入原创配乐' : isNews() ? '从已保存的公开 RSS 来源选择最近 48 小时内最多 3 条资讯，制作 1 条原创排版的静音图卡字幕视频' : '从我的商品库选 1 款，使用已有图片和文案制作 1 条商品介绍视频'}，并公开发布到抖音号 ${esc(snapshot.config.accountId || '尚未绑定')}，无需逐条批准。${isOnce() ? '本次结束即暂停，不授权后续日期的发布。' : '此授权持续每天执行，直到我暂停或修改计划。'}</label>` : ''}
       ${snapshot.busy ? '<p class="form-hint">当前任务正在处理，可随时暂停后续发布。</p>' : ''}
       <div class="form-actions"><button class="button button-green" data-daily="toggle" ${busy || !snapshot.config.enabled && (!authorized || hasUnsavedSettings()) ? 'disabled' : ''}>${snapshot.config.enabled ? '暂停生产计划' : isOnce() ? '开启单次生产' : '开启每日生产'}</button><button class="button button-light" data-daily="preview" ${isBusy() || hasUnsavedSettings() ? 'disabled' : ''}>仅生成一条预览</button><button class="button button-light" data-daily="export">导出运行记录</button></div>
     </section>`;
@@ -126,7 +137,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
       <small>${when(run.startedAt)}${run.previewOnly ? ' · 仅预览' : run.trigger === 'scheduler' ? ' · 定时触发' : ''}${run.binding?.executionMode === 'once' && !run.previewOnly ? ' · 单次计划' : ''}${run.binding?.retryOfRunId && !run.previewOnly ? ' · 重新授权的一次尝试' : ''}${run.seconds ? ` · ${esc(run.seconds)} 秒` : ''}</small><p>${reviewState ? '提交时回执：' : ''}${esc(run.message || '')}</p>
       ${reviewState ? `<p><b>平台审核：${platformLabels[reviewState]}</b></p><p class="form-hint">最近回采：${when(run.platformObservedAt || run.platformReview.observedAt)}。提交记录保留，用于防止重复发布。</p>` : ''}
       ${warningMarkup(run.warnings, '处理提示', `run-${run.id}`)}
-      ${run.sourceMode === 'news' || run.sourceArticles?.length ? `<details class="daily-warnings" data-daily-detail="articles-${esc(run.id)}"><summary>资讯出处${run.sourceArticles?.length ? `（${run.sourceArticles.length}）` : ''}</summary>${run.sourceArticles?.length ? `<ul class="daily-news-articles">${run.sourceArticles.map(articleMarkup).join('')}</ul>` : '<p class="form-hint">此记录未保存原文链接。</p>'}</details>` : ''}
+      ${run.productionMode === 'ai-pet' ? `<details class="daily-warnings" data-daily-detail="pet-sources-${esc(run.id)}"><summary>萌宠参考与生成检查</summary><ul class="daily-news-articles">${(run.sourceReferences || []).map(articleMarkup).join('')}</ul><p class="form-hint">声音：${run.audioVerification?.nonSilent ? '已验证非静音音轨' : '尚未完成'}；动态镜头：${run.motionVerification?.passed ? '已通过技术检查' : '尚未完成'}。技术检查不能替代画面与听感审看。</p></details>` : run.sourceMode === 'news' || run.sourceArticles?.length ? `<details class="daily-warnings" data-daily-detail="articles-${esc(run.id)}"><summary>资讯出处${run.sourceArticles?.length ? `（${run.sourceArticles.length}）` : ''}</summary>${run.sourceArticles?.length ? `<ul class="daily-news-articles">${run.sourceArticles.map(articleMarkup).join('')}</ul>` : '<p class="form-hint">此记录未保存原文链接。</p>'}</details>` : ''}
       ${run.asset ? `<video class="automation-review-video" controls preload="none" src="/api/daily-production/media?id=${encodeURIComponent(run.id)}"></video>` : ''}
       ${needsReconcile(run) ? `<button class="button button-light" data-daily="reconcile" data-id="${esc(run.id)}" ${busy ? 'disabled' : ''}>核实发布结果</button>` : ''}
       ${link ? `<a class="button button-light" href="${esc(link)}" target="_blank" rel="noopener noreferrer">${platformLink ? '查看已绑定作品' : '查看作品'}</a>` : ''}
@@ -144,8 +155,8 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
   function markup() {
     if (!snapshot) return `<div class="card empty">${esc(problem || '正在读取每日生产状态…')}</div>`;
     return `${problem ? `<div class="notice orange" role="alert">${esc(problem)}</div>` : ''}${busy ? '<p role="status">正在处理，请稍候…</p>' : ''}
-      ${summaryMarkup()}${contentSourceMarkup()}${readinessMarkup()}${scheduleMarkup()}${setupMarkup()}
-      <section class="card daily-section"><div class="card-title"><h3>当前接入情况</h3></div><p><b>${isNews() ? '资讯' : '商品'}来源：</b>${esc(snapshot.sourceMessage)}</p><p><b>视频制作：</b>${isNews() ? '本机生成 720×1280 原创静音图卡字幕视频，无旁白，不下载他人视频或配图，不调用付费模型。' : '本机生成 720×1280 静音字幕视频，无旁白，不调用付费模型。'}</p><p><b>效果数据：</b>${esc(snapshot.metricsMessage)}</p>${!isNews() ? '<div class="form-actions"><button class="button button-light" data-go="shop">查看 / 导入商品库</button></div>' : ''}${snapshot.error ? `<p class="form-error" role="alert">${esc(snapshot.error)}</p>` : ''}</section>
+      ${summaryMarkup()}${productionMarkup()}${contentSourceMarkup()}${readinessMarkup()}${scheduleMarkup()}${setupMarkup()}
+      <section class="card daily-section"><div class="card-title"><h3>当前接入情况</h3></div><p><b>${isPet() ? '萌宠参考' : isNews() ? '资讯' : '商品'}来源：</b>${esc(snapshot.sourceMessage)}</p><p><b>视频制作：</b>${isPet() ? '真实 AI 生成动态镜头，约 20 秒，加入原创配乐；完成视频运动、非静音音频与解码检查后才进入发布。缺依赖时停止，不回退图卡。' : isNews() ? '本机生成 720×1280 原创静音图卡字幕视频，无旁白，不下载他人视频或配图，不调用付费模型。' : '本机生成 720×1280 静音字幕视频，无旁白，不调用付费模型。'}</p><p><b>效果数据：</b>${esc(snapshot.metricsMessage)}</p>${!isPet() && !isNews() ? '<div class="form-actions"><button class="button button-light" data-go="shop">查看 / 导入商品库</button></div>' : ''}${snapshot.error ? `<p class="form-error" role="alert">${esc(snapshot.error)}</p>` : ''}</section>
       ${recordsMarkup()}`;
   }
   function update() {
@@ -202,8 +213,19 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
     if (saveTime) saveTime.disabled = isBusy() || scheduleDraft === null;
     const saveContent = document.querySelector('[data-daily="content-source"]');
     if (saveContent) saveContent.disabled = isBusy() || contentDraft === null;
+    const saveProduction = document.querySelector('[data-daily="production-settings"]');
+    if (saveProduction) saveProduction.disabled = isBusy() || productionDraft === null;
     const consent = document.querySelector('[data-daily-consent]');
     if (consent) consent.disabled = busy || unsaved;
+  }
+  function editProduction(key, value) {
+    productionDraft = structuredClone(productionDraft || productionConfig());
+    if (key === 'productionMode') productionDraft.productionMode = value;
+    else productionDraft.petSettings[key] = value;
+    if (JSON.stringify(productionDraft) === JSON.stringify(productionConfig())) productionDraft = null;
+    authorized = false;
+    const consent = document.querySelector('[data-daily-consent]');
+    if (consent) consent.checked = false;
   }
   function editContent(key, value) {
     contentDraft = { ...(contentDraft || sourceConfig()), [key]: value };
@@ -224,7 +246,10 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
   }
   document.addEventListener('input', event => {
     if (!snapshot) return;
-    if (event.target.id === 'daily-source-folder') sourceDraft = event.target.value === snapshot.config.sourceFolder ? null : event.target.value;
+    if (event.target.id === 'daily-pet-model') editProduction('model', event.target.value);
+    else if (event.target.id === 'daily-pet-urls') editProduction('referenceUrls', event.target.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean));
+    else if (event.target.id === 'daily-pet-frames') editProduction('firstFrames', event.target.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean));
+    else if (event.target.id === 'daily-source-folder') sourceDraft = event.target.value === snapshot.config.sourceFolder ? null : event.target.value;
     else if (event.target.id === 'daily-start-time') editSchedule('startTime', event.target.value);
     else if (event.target.id === 'daily-execution-date') editSchedule('executionDate', event.target.value);
     else if (event.target.id === 'daily-news-feed') editContent('feedUrl', event.target.value);
@@ -233,6 +258,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
     updateSettingButtons();
   });
   document.addEventListener('change', event => {
+    if (event.target.id === 'daily-production-mode') { editProduction('productionMode', event.target.value); update(); }
     if (event.target.matches('[data-daily-consent]')) { authorized = event.target.checked; updateSettingButtons(); }
     if (event.target.id === 'daily-browser') browserId = event.target.value;
     if (event.target.id === 'daily-execution-mode') { editSchedule('executionMode', event.target.value); update(); }
@@ -281,7 +307,7 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
     if (!snapshot) return;
     if (action === 'reconcile') { reconcile(button.dataset.id ? snapshot.runs.find(r => r.id === button.dataset.id) : snapshot.runs.find(r => r.status === 'uncertain') || snapshot.runs.find(needsReconcile)); return; }
     if (action === 'export') { download({ exportedAt: new Date().toISOString(), ...snapshot }, 'doufeng-daily-production.json'); return; }
-    if (!['browsers', 'toggle', 'source', 'content-source', 'default-news', 'schedule', 'sync', 'connect', 'preview', 'check'].includes(action)) return;
+    if (!['production-settings', 'browsers', 'toggle', 'source', 'content-source', 'default-news', 'schedule', 'sync', 'connect', 'preview', 'check'].includes(action)) return;
     if (action === 'schedule' && (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(scheduleDraft?.startTime || '') || scheduleDraft.executionMode === 'once' && !/^\d{4}-\d{2}-\d{2}$/.test(scheduleDraft.executionDate))) { notify('请选择有效的开始时间和单次日期。'); return; }
     if (action === 'content-source' && (contentDraft || sourceConfig()).mode === 'news') {
       const feed = sourceLink((contentDraft || sourceConfig()).feedUrl);
@@ -294,24 +320,27 @@ export function createDailyProduction({ notify, refreshWorkspace }) {
         if (!browsers.length) throw new Error('没有可用浏览器，请连接扩展后重试。');
         problem = '';
       } else {
-        if (action === 'toggle' && !snapshot.config.enabled && !snapshot.eligible) acceptSnapshot(await request('/sync', {}));
+        if (action === 'toggle' && !isPet() && !snapshot.config.enabled && !snapshot.eligible) acceptSnapshot(await request('/sync', {}));
         const body = action === 'toggle' ? { enabled: !snapshot.config.enabled, authorized }
+          : action === 'production-settings' ? (productionDraft || productionConfig())
           : action === 'source' ? { folder: sourceDraft ?? snapshot.config.sourceFolder }
           : action === 'content-source' ? { ...(contentDraft || sourceConfig()) }
           : action === 'default-news' ? { mode: 'news', feedUrl: defaultNewsFeed, keywords: '' }
           : action === 'schedule' ? { ...scheduleDraft }
           : action === 'connect' ? { browserId } : {};
         acceptSnapshot(await request('/' + (action === 'default-news' ? 'content-source' : action), body));
+        if (action === 'production-settings') { productionDraft = null; contentDraft = null; sourceDraft = null; authorized = false; }
         if (action === 'source') { sourceDraft = null; authorized = false; }
         if (['content-source', 'default-news'].includes(action)) { contentDraft = null; authorized = false; }
         if (action === 'schedule') { scheduleDraft = null; authorized = false; }
         problem = '';
         notify({
           preview: '已开始生成预览，不会发布', source: '来源已保存，以后开工前自动同步',
+          'production-settings': '成片方式已保存，请检查制作条件后开启计划',
           'content-source': '内容来源已保存，请核对后重新开启计划',
           'default-news': '已保存科技资讯来源，可先采集资讯和生成预览',
           schedule: `已保存：${scheduleText()}，请核对并重新开启计划`,
-          sync: isNews() ? '资讯采集完成' : '商品同步完成', connect: '账号已识别，请核对目标抖音号',
+          sync: isPet() ? '萌宠参考采集完成' : isNews() ? '资讯采集完成' : '商品同步完成', connect: '账号已识别，请核对目标抖音号',
           check: '运行条件检查完成，请查看准备清单',
           toggle: snapshot.config.enabled ? `已开启：${scheduleText()}` : '已暂停生产计划'
         }[action]);

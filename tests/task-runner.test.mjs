@@ -139,3 +139,21 @@ test('取消结果未知的周期只读任务不会清除 unknown 防重试保�
   assert.equal((await runner.snapshot()).tasks[0].status, 'unknown');
   await assert.rejects(runner.resume(id), /只有确认/); await assert.rejects(runner.runNow(id), /禁止再次执行/);
 });
+
+test('已保存周期任务的 handler 权限改变或缺失时暂停，不执行新外部写处理器', async t => {
+  const { runner } = await setup(t); let called = false;
+  const first = await runner.create({ ...base, schedule: { type: 'daily', time: '07:00' } }), firstId = first.tasks[0].id;
+  runner.handlers.set('collect', { ...handler(async () => { called = true; return { status: 'completed', output: {} }; }), readOnly: false });
+  assert.equal((await runner.runNow(firstId)).status, 'requires_action'); assert.equal(called, false);
+  runner.handlers.set('collect', handler()); const second = await runner.create(base), secondId = second.tasks.at(-1).id; runner.handlers.delete('collect');
+  const receipt = await runner.runNow(secondId); assert.equal(receipt.status, 'requires_action'); assert.match(receipt.error, /未配置/);
+  assert.ok((await runner.snapshot()).tasks.every(task => !task.enabled));
+});
+
+test('非只读 handler 在 execute 之前校验失败记为需处理，执行后未知仍保持 unknown', async t => {
+  const { runner } = await setup(t); let valid = true, calls = 0;
+  runner.handlers.set('local-work', { readOnly: false, validate: input => { if (!valid) throw new Error('运行环境尚未配置'); return input; }, execute: async () => { calls++; throw new Error('lost after start'); } });
+  const state = await runner.create({ ...base, kind: 'local-work' }); valid = false;
+  const first = await runner.runNow(state.tasks.at(-1).id); assert.equal(first.status, 'requires_action'); assert.equal(calls, 0);
+  valid = true; const second = await runner.create({ ...base, kind: 'local-work' }); assert.equal((await runner.runNow(second.tasks.at(-1).id)).status, 'unknown'); assert.equal(calls, 1);
+});

@@ -9,8 +9,9 @@ import { parseDouyinMetrics, readDouyinManageDOM } from './douyin-inspector.mjs'
 import { validateProduct, reportNames } from '../workbuddy/connector/lib/shop-products.mjs';
 import { shanghaiDay } from '../shared/automation-model.mjs';
 import { downloadPublicImage } from './content-download.mjs';
+import { setTimeout as delay } from 'node:timers/promises';
 
-const kinds = ['research', 'ideas', 'diagnosis', 'insights', 'remix', 'comments', 'productResearch', 'capture'];
+const kinds = ['research', 'ideas', 'diagnosis', 'insights', 'remix', 'comments', 'productDiscover', 'productResearch', 'capture'];
 const clean = (value, max = 12000) => String(value ?? '').replace(/\u0000/g, '').trim().slice(0, max);
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 28);
 const issue = (message, code = 'SOURCE_REQUIRED') => Object.assign(new Error(message), { status: 400, code });
@@ -19,6 +20,15 @@ const checkSignal = signal => { if (signal?.aborted) throw signal.reason || issu
 const domains = ['douyin.com', 'ithome.com', '1688.com', 'taobao.com', 'tmall.com', 'jd.com'];
 const shopDomains = ['1688.com', 'taobao.com', 'tmall.com', 'jd.com'];
 const hostIn = (host, hosts) => hosts.some(domain => host === domain || host.endsWith(`.${domain}`));
+
+export function productSearchUrl(keywords) {
+  if (typeof keywords !== 'string' || !keywords.trim() || [...keywords.trim()].length > 80 || /[\u0000-\u001f\u007f]/.test(keywords)) {
+    throw issue('商品发现需要 1–80 字的明确关键词，不能包含控制字符。', 'KEYWORDS_REQUIRED');
+  }
+  const url = new URL('https://s.1688.com/selloffer/offer_search.htm');
+  url.searchParams.set('keywords', keywords.trim());
+  return url.href;
+}
 
 // Only these known sites are navigated by the signed-in browser. RSS fetching
 // has its own pinned-DNS, redirect and decompression limits in news-source.mjs.
@@ -31,6 +41,22 @@ export function validateContentUrl(value, purpose = 'research') {
   }
   if (purpose === 'comments' && (!['www.douyin.com', 'douyin.com'].includes(url.hostname) || !/^\/video\/\d{1,32}\/?$/.test(url.pathname))) {
     throw issue('评论采集需要一个明确的抖音作品链接。', 'INVALID_WORK_URL');
+  }
+  if (purpose === 'comments' && url.searchParams.has('modal_id') && url.searchParams.get('modal_id') !== url.pathname.split('/')[2]) {
+    throw issue('页面播放器与指定作品编号不同。', 'WORK_MISMATCH');
+  }
+  if (purpose === 'productResearch') {
+    const detail = hostIn(url.hostname, ['1688.com']) && /^\/offer\/\d+\.html\/?$/.test(url.pathname)
+      || hostIn(url.hostname, ['taobao.com', 'tmall.com']) && /^\/item\.htm\/?$/.test(url.pathname) && /^\d+$/.test(url.searchParams.get('id') || '')
+      || hostIn(url.hostname, ['jd.com']) && /^\/\d+\.html\/?$/.test(url.pathname);
+    if (!detail) throw issue('请提供具体商品详情链接，不能用商城首页或搜索页代替商品。', 'INVALID_PRODUCT_URL');
+  }
+  if (purpose === 'productDiscover') {
+    if (url.hostname !== 's.1688.com' || url.pathname !== '/selloffer/offer_search.htm'
+      || url.searchParams.getAll('keywords').length !== 1 || [...url.searchParams.keys()].some(key => key !== 'keywords')) {
+      throw issue('商品发现仅允许由关键词构造的 1688 公开搜索页面。', 'INVALID_SEARCH_URL');
+    }
+    productSearchUrl(url.searchParams.get('keywords'));
   }
   url.hash = '';
   return url.href;
@@ -94,9 +120,35 @@ export function readContentDOM(purpose) {
     const nodes = all(selector);
     if (nodes.length === 1) publicMetrics[label] = text(nodes[0]);
   }
-  return { url: location.href, title: title.slice(0, 300), text: body.slice(0, 18000), paragraphs, accountIds,
+  const offers = [];
+  if (purpose === 'productDiscover') {
+    const seen = new Set();
+    for (const anchor of all('a[href]').slice(0, 300)) {
+      const rect = anchor.getBoundingClientRect();
+      if (rect.bottom <= 0 || rect.right <= 0 || rect.top >= innerHeight || rect.left >= innerWidth) continue;
+      let url;
+      try { url = new URL(anchor.href); } catch { continue; }
+      if (url.protocol !== 'https:' || url.hostname !== 'detail.1688.com' || url.username || url.password || url.port || !/^\/offer\/\d+\.html\/?$/.test(url.pathname)) continue;
+      url.search = ''; url.hash = '';
+      if (seen.has(url.href)) continue;
+      let card = anchor.closest('[data-offer-id],.offer-list-row-offer,[class*="offer-item"],[class*="offerItem"],[class*="search-offer"]') || anchor;
+      const cardOffers = new Set([...card.querySelectorAll('a[href]')].map(node => {
+        try { const candidate = new URL(node.href); return candidate.hostname === 'detail.1688.com' && /^\/offer\/\d+\.html\/?$/.test(candidate.pathname) ? candidate.pathname : ''; } catch { return ''; }
+      }).filter(Boolean));
+      if (cardOffers.size > 1) card = anchor;
+      const titleNode = [...card.querySelectorAll('h2,h3,[class*="title"],[class*="Title"]')].find(node => visible(node) && text(node));
+      const offerTitle = (text(titleNode) || text(anchor)).slice(0, 200);
+      if (!offerTitle || /^(?:查看详情|立即购买|进店|详情)$/.test(offerTitle)) continue;
+      const prices = [...card.querySelectorAll('[class*="price"],[class*="Price"]')].filter(visible).map(text).filter(value => value && value.length <= 100);
+      seen.add(url.href); offers.push({ url: url.href, title: offerTitle, priceTexts: [...new Set(prices)].slice(0, 5), visibleText: text(card).slice(0, 600) });
+      if (offers.length >= 12) break;
+    }
+  }
+  const loading = /视频数据加载中|正在加载数据|页面加载中/.test(body) || !title && !paragraphs.length && !comments.length
+    || purpose === 'productDiscover' && !offers.length && /加载中|正在搜索|搜索中/.test(body);
+  return { url: location.href, title: title.slice(0, 300), text: body.slice(0, 18000), paragraphs, accountIds, loading,
     needsHuman, comments, commentStructureFound: rows.length > 0, commentsEmpty: /暂无评论|还没有评论|暂无相关评论/.test(body),
-    priceTexts, images, publicMetrics };
+    priceTexts, images, publicMetrics, offers };
 }
 
 export function parseObservedPrice(values = []) {
@@ -159,10 +211,10 @@ export function commentReply(text, type = classifyComment(text)) {
 
 export class ContentAutomation {
   constructor(runtimeDir, { workspace, publisher = new DouyinPublisher(), tracking, collectNews: collect = collectNews,
-    now = () => Date.now(), readPage, lookup = dnsLookup, downloadImage = downloadPublicImage } = {}) {
+    now = () => Date.now(), readPage, lookup = dnsLookup, downloadImage = downloadPublicImage, pause = delay } = {}) {
     if (!workspace?.read || !workspace?.update) throw new Error('内容自动化需要工作区存储。');
     this.root = resolve(runtimeDir, 'content-automation'); this.workspace = workspace; this.publisher = publisher;
-    this.tracking = tracking; this.collect = collect; this.now = now; this.pageReader = readPage; this.lookup = lookup; this.downloadImage = downloadImage;
+    this.tracking = tracking; this.collect = collect; this.now = now; this.pageReader = readPage; this.lookup = lookup; this.downloadImage = downloadImage; this.pause = pause;
   }
   handlers() {
     return Object.fromEntries(kinds.map(kind => [kind, { readOnly: true,
@@ -178,7 +230,7 @@ export class ContentAutomation {
       if (out[field] !== undefined && (typeof out[field] !== 'string' || out[field].length > (['url', 'feedUrl'].includes(field) ? 4096 : 1000))) throw issue(`${field} 必须为长度受限的文本。`, 'INVALID_INPUT');
     }
     if (out.downloadImages !== undefined && typeof out.downloadImages !== 'boolean') throw issue('downloadImages 必须是布尔值。', 'INVALID_INPUT');
-    if (out.downloadImages && kind !== 'productResearch') throw issue('仅商品研究支持图片下载。', 'INVALID_INPUT');
+    if (out.downloadImages && !['productResearch', 'productDiscover'].includes(kind)) throw issue('仅商品研究支持图片下载。', 'INVALID_INPUT');
     if (out.topic && !out.angle) out.angle = out.topic;
     if (out.url) out.urls = [out.url];
     if (out.urls !== undefined) {
@@ -187,7 +239,7 @@ export class ContentAutomation {
     }
     if (out.feedUrl) Object.assign(out, validateNewsSettings(out));
     out.limit = out.limit === undefined ? 3 : Number(out.limit);
-    if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > (kind === 'comments' ? 50 : 5)) throw issue('资料数量须在允许范围内。', 'INVALID_INPUT');
+    if (!Number.isInteger(out.limit) || out.limit < 1 || out.limit > (kind === 'comments' ? 50 : kind === 'productDiscover' ? 3 : 5)) throw issue('资料数量须在允许范围内。', 'INVALID_INPUT');
     for (const field of ['researchIds', 'productIds']) if (out[field] !== undefined && (!Array.isArray(out[field]) || out[field].length > 20 || out[field].some(value => typeof value !== 'string'))) throw issue(`${field} 必须是记录编号列表。`, 'INVALID_INPUT');
     if (['comments', 'capture'].includes(kind) && out.urls?.length !== 1) throw issue('此任务需要一个明确页面链接。', 'SOURCE_REQUIRED');
     if (kind === 'capture' && !['currentVideo', 'creatorMetrics', 'account'].includes(out.extractor || 'currentVideo')) throw issue('不支持此回采类型。', 'INVALID_INPUT');
@@ -196,6 +248,11 @@ export class ContentAutomation {
       if (!hostIn(url.hostname, ['douyin.com'])) throw issue('回采仅支持抖音页面。', 'INVALID_URL');
       if ((out.extractor || 'currentVideo') === 'currentVideo') validateContentUrl(url.href, 'comments');
       if (out.extractor === 'creatorMetrics' && url.hostname !== 'creator.douyin.com') throw issue('后台数据回采需要创作者中心地址。', 'INVALID_URL');
+    }
+    if (kind === 'productDiscover') {
+      productSearchUrl(out.keywords);
+      if (out.urls?.length || out.feedUrl || out.productIds?.length || out.researchIds?.length) throw issue('商品发现只使用明确关键词，不接受替代来源地址或记录集合。', 'INVALID_INPUT');
+      out.keywords = out.keywords.trim();
     }
     return out;
   }
@@ -232,8 +289,15 @@ export class ContentAutomation {
         checkSignal(context.signal);
         await this.publisher.command(['navigate', url, '--session', session, '--timeout', '25s'], 30000);
         checkSignal(context.signal);
-        const response = await this.publisher.command(['evaluate', `(${readContentDOM.toString()})(${JSON.stringify(kind)})`, '--session', session, '--timeout', '10s'], 15000);
-        const value = response.value;
+        const deadline = Date.now() + 12000;
+        let value;
+        for (let attempt = 0; attempt < 6; attempt++) {
+          checkSignal(context.signal);
+          const remaining = Math.max(1, deadline - Date.now());
+          value = (await this.publisher.command(['evaluate', `(${readContentDOM.toString()})(${JSON.stringify(kind)})`, '--session', session, '--timeout', `${Math.min(10000, remaining)}ms`], Math.min(15000, remaining + 1000))).value;
+          if (!value?.loading || value.needsHuman || Date.now() >= deadline) break;
+          await this.pause(Math.min(1000, deadline - Date.now()), undefined, { signal: context.signal });
+        }
         if (kind === 'capture' && input.extractor === 'creatorMetrics' && !value?.needsHuman) {
           checkSignal(context.signal);
           value.manage = (await this.publisher.command(['evaluate', `(${readDouyinManageDOM.toString()})()`, '--session', session, '--timeout', '10s'], 15000)).value;
@@ -243,14 +307,19 @@ export class ContentAutomation {
     }
     checkSignal(context.signal);
     if (!object(result) || typeof result.url !== 'string') throw issue('页面未提供可核实的读取结果。', 'SOURCE_UNAVAILABLE');
+    if (result.needsHuman) throw issue('来源需要登录、验证码或额外验证，请在浏览器中处理后再执行。', 'LOGIN_REQUIRED');
+    if (result.loading) throw issue('页面在限定等待时间内仍显示加载中；未把未加载数据当作零。', 'PAGE_NOT_READY');
     const finalUrl = validateContentUrl(result.url, kind);
     await assertPublicContentHost(finalUrl, this.lookup);
     if (new URL(finalUrl).hostname !== new URL(url).hostname) throw issue('来源跳转到其他站点，请核对最终链接后重新创建任务。', 'SOURCE_REDIRECTED');
+    if (kind === 'productDiscover' && new URL(finalUrl).searchParams.get('keywords') !== new URL(url).searchParams.get('keywords')) throw issue('搜索页面关键词与任务不一致，已停止读取。', 'SEARCH_MISMATCH');
     if (kind === 'comments' && new URL(finalUrl).pathname.replace(/\/$/, '') !== new URL(url).pathname.replace(/\/$/, '')) throw issue('评论页面已离开指定作品。', 'WORK_MISMATCH');
-    if (result.needsHuman) throw issue('来源需要登录、验证码或额外验证，请在浏览器中处理后再执行。', 'LOGIN_REQUIRED');
     return { ...result, url: finalUrl, observedAt: this.stamp() };
   }
-  evidence(source) { return { url: source.url, observedAt: source.observedAt, title: clean(source.title, 300), scope: '来源页面当前可见文字；未读取视频音轨或不可见数据' }; }
+  evidence(source) {
+    return { url: source.url, observedAt: source.observedAt, title: clean(source.title, 300),
+      scope: source.scope || (source.sourceUrl && source.publishedAt ? 'RSS / Atom 返回的标题、链接与发布时间；未读取文章正文或视频内容' : '来源页面当前可见文字；未读取视频音轨或不可见数据') };
+  }
   async persist(collection, rows, context) {
     checkSignal(context.signal);
     const result = await this.workspace.update(state => {
@@ -274,30 +343,45 @@ export class ContentAutomation {
     return result.result;
   }
   async sources(input, context) {
-    const sources = [], warnings = [];
-    if (input.feedUrl) {
-      checkSignal(context.signal);
-      const feed = await this.collect({ feedUrl: input.feedUrl, keywords: input.keywords || '' }, join(this.root, 'feeds'));
-      checkSignal(context.signal);
-      warnings.push(...(feed.warnings || []));
-      for (const item of feed.items.slice(0, input.limit)) sources.push({ ...item, observedAt: feed.at || this.stamp(), paragraphs: [], sourceName: item.sourceName || feed.feedTitle });
-    }
+    const sources = [], warnings = [], seen = new Set();
+    const add = source => {
+      if (!seen.has(source.url) && sources.length < input.limit) { seen.add(source.url); sources.push(source); }
+    };
+    // Explicit pages take precedence over the form's default RSS feed. Keep the
+    // full observed page when RSS later contains the same URL, and use RSS only
+    // to fill the remaining source budget.
     for (const url of (input.urls || []).slice(0, input.limit)) {
       await context.reportProgress?.({ message: `正在读取来源 ${sources.length + 1}。` });
       const page = await this.page(url, 'research', input, context);
       if (!page.title || !(page.paragraphs?.length || page.text?.trim())) throw issue('来源页面没有足够的可见文字，未生成研究结论。', 'SOURCE_UNAVAILABLE');
-      sources.push({ ...page, sourceName: new URL(page.url).hostname });
+      add({ ...page, sourceName: new URL(page.url).hostname });
+    }
+    if (input.feedUrl && sources.length < input.limit) {
+      checkSignal(context.signal);
+      try {
+        const feed = await this.collect({ feedUrl: input.feedUrl, keywords: input.keywords || '' }, join(this.root, 'feeds'));
+        checkSignal(context.signal);
+        warnings.push(...(feed.warnings || []));
+        for (const item of feed.items.slice(0, 60)) {
+          add({ ...item, observedAt: feed.at || this.stamp(), paragraphs: [], sourceName: item.sourceName || feed.feedTitle });
+          if (sources.length >= input.limit) break;
+        }
+      } catch (error) {
+        checkSignal(context.signal);
+        if (!sources.length) throw error;
+        warnings.push(`补充 RSS 来源未完成，已保留指定网页的真实资料：${clean(error.message, 300)}`);
+      }
     }
     if (!sources.length) {
       const { value } = await this.workspace.read();
       for (const row of value.research.filter(row => !input.researchIds || input.researchIds.includes(row.id)).slice(-input.limit)) {
         if (!row.url || !row.sourceEvidence?.observedAt) continue;
-        sources.push({ title: row.title, url: row.url, observedAt: row.sourceEvidence.observedAt,
-          sourceName: row.creator || row.author, paragraphs: row.sourceEvidence.facts || [], summary: row.sourceSummary || '' });
+        add({ title: row.title, url: row.url, observedAt: row.sourceEvidence.observedAt,
+          sourceName: row.creator || row.author, paragraphs: row.sourceEvidence.facts || [], summary: row.sourceSummary || '', scope: row.sourceEvidence.scope });
       }
     }
     if (!sources.length) throw issue('请提供 RSS / 受支持页面链接，或先建立含来源时间的研究记录。');
-    return { sources: [...new Map(sources.map(source => [source.url, source])).values()].slice(0, input.limit), warnings };
+    return { sources, warnings };
   }
   async research(input, context) {
     const { sources, warnings } = await this.sources(input, context);
@@ -404,6 +488,7 @@ export class ContentAutomation {
       if (!page.accountIds?.length) throw issue('页面未显示可核实的抖音号，请打开账号主页后重试。', 'ACCOUNT_REQUIRED');
       details = { accountIds: page.accountIds, title: clean(page.title, 200), text: clean(page.text, 4000) };
     } else {
+      validateContentUrl(page.url, 'comments');
       if (new URL(page.url).pathname.replace(/\/$/, '') !== new URL(input.urls[0]).pathname.replace(/\/$/, '')) throw issue('页面已离开指定作品。', 'WORK_MISMATCH');
       if (!Object.keys(metrics).length) throw issue('页面未显示可核实的数值指标；“万”等缩写不会当作精确数值。', 'METRICS_REQUIRED');
       details = { title: clean(page.title, 200), metrics };
@@ -413,6 +498,52 @@ export class ContentAutomation {
       details, evidence: this.evidence(page), automationSource: 'content-automation' };
     const ids = await this.persist('records', [row], context);
     return { summary: '已保存真实页面回采记录；未改变发布回执或自动绑定归属。', ids, evidence: [this.evidence(page)], details };
+  }
+  async productDiscover(input, context) {
+    const searchUrl = productSearchUrl(input.keywords), attemptedAt = this.stamp();
+    let page;
+    try { page = await this.page(searchUrl, 'productDiscover', input, context); }
+    catch (error) {
+      checkSignal(context.signal);
+      return { requiresAction: true, summary: error.message, code: error.code || 'SOURCE_UNAVAILABLE', ids: [],
+        evidence: [{ url: searchUrl, attemptedAt, scope: '尝试读取公开搜索页；未取得已验证搜索结果' }], selectedLinks: [] };
+    }
+    const candidates = [], seen = new Set();
+    for (const offer of (Array.isArray(page.offers) ? page.offers : []).slice(0, 50)) {
+      try {
+        const url = new URL(validateContentUrl(offer.url, 'productResearch'));
+        if (url.hostname !== 'detail.1688.com' || !clean(offer.title, 200)) continue;
+        url.search = ''; url.hash = '';
+        if (seen.has(url.href)) continue;
+        seen.add(url.href);
+        candidates.push({ url: url.href, title: clean(offer.title, 200), priceTexts: (Array.isArray(offer.priceTexts) ? offer.priceTexts : []).slice(0, 5).map(value => clean(value, 100)), visibleText: clean(offer.visibleText, 600) });
+        if (candidates.length >= input.limit) break;
+      } catch { /* Malformed or unrelated links are data, never navigation targets. */ }
+    }
+    const selectedLinks = candidates.map(row => row.url), discovery = { ...this.evidence(page), keywords: input.keywords,
+      selectedLinks, candidates, selectionPolicy: '只选当前首屏可见且符合详情地址的前几项；按页面 DOM 顺序，不代表推荐、销量、质量或价格排名。' };
+    const record = { id: `product-discovery-${hash([searchUrl, candidates])}`, date: shanghaiDay(this.now()), type: '观察', category: '选品', title: `公开商品发现：${input.keywords}`,
+      summary: candidates.length ? `${discovery.selectionPolicy}\n${candidates.map((row, index) => `${index + 1}. ${row.title}\n${row.url}\n页面价格片段：${row.priceTexts.join('；') || '未知'}`).join('\n')}` : '当前页面没有可识别的首屏商品详情链接，未虚构候选。',
+      evidence: discovery, automationSource: 'content-automation' };
+    await this.persist('records', [record], context);
+    if (!candidates.length) return { requiresAction: true, summary: record.summary, code: 'PRODUCT_CANDIDATES_REQUIRED', ids: [], discoveryRecordId: record.id, evidence: [discovery], selectedLinks };
+    await context.reportProgress?.({ message: `已读取 ${candidates.length} 个可见商品候选，正在核实详情与生成日报。` });
+    let result;
+    try {
+      result = await this.productResearch({ urls: selectedLinks, limit: candidates.length, browserId: input.browserId,
+        accountId: input.accountId, audience: input.audience, downloadImages: input.downloadImages === true }, context);
+    } catch (error) {
+      checkSignal(context.signal);
+      return { requiresAction: true, summary: `搜索候选已保存；详情研究尚未完成：${error.message}`, code: error.code || 'SOURCE_UNAVAILABLE',
+        ids: [], discoveryRecordId: record.id, evidence: [discovery], selectedLinks };
+    }
+    checkSignal(context.signal);
+    await this.workspace.update(state => {
+      checkSignal(context.signal);
+      for (const product of state.products.filter(row => result.ids.includes(row.id) && row.automationSource === 'content-automation')) product.discoveryEvidence = discovery;
+    });
+    return { ...result, summary: `已从公开搜索页发现并研究 ${result.ids.length} 个商品，每项生成 5 份日报；未发布。`,
+      discoveryRecordId: record.id, evidence: [discovery, ...result.evidence], selectedLinks, warnings: [discovery.selectionPolicy, ...result.warnings] };
   }
   async productResearch(input, context) {
     const { value } = await this.workspace.read();

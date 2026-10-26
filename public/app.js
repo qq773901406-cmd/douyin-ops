@@ -9,6 +9,7 @@ import { createShopWorkspace } from './shop-workspace.js';
 import { createAutomationWorkspace } from './automation.js';
 import { createDailyProduction } from './daily-production.js';
 import { createDouyinTracking } from './douyin-tracking.js';
+import { createOperations } from './operations.js';
 import { dashboard } from './dashboard.js';
 import { renderLegacyPage } from './legacy-pages.js';
 import { esc, request, download, localDay, createFormMemory } from './workspace-ui.js';
@@ -53,6 +54,7 @@ const dataCenter = createDataCenter({ getState: () => state, getSync: () => sync
 const automation = createAutomationWorkspace({ notify });
 const dailyProduction = createDailyProduction({ notify, refreshWorkspace: () => sync.refreshSaved() });
 const douyinTracking = createDouyinTracking({ notify, refreshWorkspace: () => sync.refreshSaved() });
+const operations = createOperations({ notify, go, refreshWorkspace: () => sync.refreshSaved() });
 const sync = createStateSync({ getState: () => state, setState(value, { initial = false } = {}) {
   state = value; studio.reset({ preserveEditor: initial }); planner.reset({ preserveEditor: initial }); shop.reset({ preserveEditor: initial });
   if (!initial) memory.reset();
@@ -72,9 +74,11 @@ const navNames = { home: '总览', account: '账号诊断', research: '推荐流
 navNames.shop = '电商选品';
 navNames.automation = '每日自动发布';
 navNames.production = '每日自动生产';
+navNames.operations = '运营任务中心';
 const pages = { home: () => dashboard(state), video: studio.render, publish: planner.render, knowledge: library.render, data: dataCenter.render, shop: shop.render };
 pages.automation = automation.render;
 pages.production = dailyProduction.render;
+pages.operations = operations.render;
 for (const name of ['account', 'research', 'ideas', 'remix', 'comments', 'tracking', 'live', 'settings']) pages[name] = () => renderLegacyPage(name, { state, runtime, head, card, btn, field, metric, empty });
 
 function connectionStatus() {
@@ -93,6 +97,9 @@ function render() {
   if (page === 'automation') void automation.mount();
   if (page === 'production') void dailyProduction.mount();
   if (page === 'tracking') void douyinTracking.mount();
+  if (page === 'operations') void operations.mount();
+  const automaticPages = { account: ['content.diagnosis', '自动诊断'], research: ['content.research', '自动采集研究'], ideas: ['content.ideas', '从来源生成脚本'], remix: ['content.remix', '自动分析参考'], comments: ['content.comments', '采集评论并拟稿'], video: ['media.wan', '自动生成与剪辑'], shop: ['content.productResearch', '自动研究商品'], tracking: ['content.insights', '生成数据复盘'], data: ['backup.full', '完整素材与回执备份'] };
+  if (automaticPages[page]) { const [kind, label] = automaticPages[page]; const entry = document.createElement('div'); entry.className = 'form-actions'; entry.innerHTML = `<button type="button" class="button button-green" data-operation-kind="${kind}">${label}</button>`; $('#view').prepend(entry); }
 }
 async function refreshRuntime(checkBrowser = false) {
   if (refreshing) return; refreshing = true;
@@ -123,6 +130,7 @@ function addRecord(type, category, title, summary, extra = {}) {
 
 document.addEventListener('click', async event => {
   try {
+    if (await operations.handleClick(event)) return;
     if (await studio.handleClick(event)) return;
     const target = event.target;
     const nav = target.closest('[data-page]'); if (nav) { go(nav.dataset.page); return; }
@@ -185,6 +193,7 @@ const formHandlers = {
   'record-form'(x) { if (!x.recordTitle.trim()) throw new Error('请填写标题'); addRecord('手动记录', x.category, x.recordTitle, x.recordSummary || ''); }
 };
 document.addEventListener('submit', async event => {
+  if (operations.handleSubmit(event)) return;
   if (studio.handleSubmit(event) || planner.handleSubmit(event)) return;
   const form = event.target; if (!(form instanceof HTMLFormElement) || form.closest('dialog')) return;
   event.preventDefault(); if (form.dataset.busy) return;

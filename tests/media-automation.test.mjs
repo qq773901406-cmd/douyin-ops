@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
+import { EventEmitter } from 'node:events';
+import { Readable } from 'node:stream';
 import { join } from 'node:path';
-import { MediaAutomation, runMediaProcess } from '../server/media-automation.mjs';
+import { MediaAutomation, runMediaProcess, returnedWanFile, createWanDownloadFetch } from '../server/media-automation.mjs';
 import { JsonStore } from '../workbuddy/connector/lib/json-store.mjs';
 import { normalizeState } from '../workbuddy/connector/lib/workspace-model.mjs';
 
@@ -80,10 +83,10 @@ test('missing ffprobe falls back to FFmpeg stream inspection and completed-only 
   } });
   const result = await f.media.execute('news', { items: [article] }, f.context);
   assert.equal(result.output.media.seconds, 20); assert.equal(f.media.ffprobeAvailable, false);
-  assert.equal((await f.media.mediaByPath(result.output.asset)).path, result.output.asset);
-  await assert.rejects(f.media.mediaByPath(f.image), /仅可预览/);
+  assert.equal((await f.media.mediaByPath(result.output.asset)).path, await realpath(result.output.asset));
+  assert.equal(await f.media.mediaByPath(f.image), null);
   await writeFile(result.output.asset, Buffer.alloc(64, 8));
-  await assert.rejects(f.media.mediaByPath(result.output.asset), /仅可预览/);
+  await assert.rejects(f.media.mediaByPath(result.output.asset), /校验不一致/);
 });
 
 test('post-generation decode failure leaves output for review and does not archive it', async () => {
@@ -122,4 +125,141 @@ test('cancelled contexts start no process and owned subprocess timeouts terminat
   const literal = '$(echo should-not-run)';
   const result = await runMediaProcess(process.execPath, ['-e', 'process.stdout.write(process.argv[1])', literal]);
   assert.equal(result.stdout, literal);
+});
+
+const wanOrigin = 'https://zerogpu-aoti-wan2-2-fp8da-aoti-faster.hf.space';
+const returnedPath = `/tmp/gradio/${'a'.repeat(64)}/returned.mp4`;
+const returnedUrl = `${wanOrigin}/gradio_api/file=${returnedPath}`;
+const mp4Bytes = () => { const bytes = Buffer.alloc(128, 7); bytes.write('ftyp', 4); return bytes; };
+function downloadableReceipt(extra = {}) {
+  return { space: 'zerogpu-aoti/wan2-2-fp8da-aoti-faster', anonymous: true, paid_subscription_or_trial: false, status: 'unknown', video_produced: false, error_type: 'URLError', error: 'SSL EOF while downloading',
+    parameters: { duration_seconds: 3.5, prompt: 'A harmless ball moves slowly.' }, result: [{ path: returnedPath, url: returnedUrl, meta: { _type: 'gradio.FileData' } }, 42], download_url: returnedUrl, ...extra };
+}
+async function recoveryFixture(options = {}) {
+  const f = await fixture(options), originalId = 'b'.repeat(32), directory = join(f.media.directory, 'jobs', originalId, 'wan');
+  await mkdir(directory, { recursive: true });
+  const receiptPath = join(directory, 'request.json'), receipt = downloadableReceipt(); await writeFile(receiptPath, JSON.stringify(receipt, null, 2));
+  const original = { id: originalId, kind: 'wan', taskId: 'original-task', runId: 'original-run', directory, status: 'uncertain', platform: 'douyin', title: '原始 AI 图生视频', caption: '原始提示词', submitIntentAt: '2026-10-23T11:00:00Z', remoteStatus: 'unknown' };
+  await f.media.store.update(state => state.jobs.push(original));
+  return { ...f, original, receiptPath, originalRaw: await readFile(receiptPath, 'utf8'), recoveryContext: { task: { id: 'recovery-task' }, runId: 'recovery-run' } };
+}
+
+test('Wan恢复只GET已返回文件，原失败回执与原记录不变，归档保留AI属性和任务关系', async () => {
+  const requests = [], f = await recoveryFixture({ services: { downloadFetch: async (url, options) => { requests.push({ url, options }); return new Response(mp4Bytes(), { headers: { 'Content-Type': 'video/mp4' } }); } } });
+  const handler = f.media.handlers()['media.wanRecover']; assert.equal(handler.readOnly, true);
+  const result = await handler.execute({ taskId: 'original-task' }, f.recoveryContext);
+  assert.equal(result.status, 'completed'); assert.equal(requests.length, 1); assert.equal(requests[0].url, returnedUrl); assert.equal(requests[0].options.method, 'GET'); assert.equal(requests[0].options.redirect, 'manual'); assert.equal(requests[0].options.credentials, 'omit');
+  assert.equal(result.output.remoteResubmitted, false); assert.equal(result.output.originalTaskId, 'original-task'); assert.equal(result.output.publicationSubmitted, false);
+  assert.equal(await readFile(f.receiptPath, 'utf8'), f.originalRaw); assert.deepEqual((await f.media.store.read()).value.jobs.find(job => job.id === f.original.id), f.original);
+  const wb = (await f.workspace.read()).value; assert.equal(wb.drafts[0].aiGenerated, true); assert.equal(wb.drafts[0].originalWanTaskId, 'original-task'); assert.equal(wb.drafts[0].status, '待检查'); assert.equal(wb.videos[0].provider, '免费 Wan2.2 公共 Space');
+  assert.equal((await f.media.mediaByPath(result.output.asset)).path, await realpath(result.output.asset));
+  assert.ok(!f.calls.some(call => call.args[0].endsWith('free_wan.py'))); assert.ok(f.calls.some(call => call.args.includes('-xerror')));
+  const receipt = JSON.parse(await readFile(result.output.receipt, 'utf8')); assert.equal(receipt.status, 'completed'); assert.equal(receipt.attempts.length, 1); assert.equal(receipt.sourceReceiptUnchanged, true);
+  await handler.execute({ taskId: 'original-task' }, { ...f.recoveryContext, runId: 'later' }); assert.equal(requests.length, 1); assert.equal((await f.workspace.read()).value.drafts.length, 1);
+});
+
+test('Wan恢复拒绝任意URL、路径穿越、编码路径、账号凭据及缺少已返回FileData', () => {
+  assert.equal(returnedWanFile(downloadableReceipt()).url, returnedUrl);
+  const altered = [
+    { result: [] }, { anonymous: false }, { space: 'other/space' }, { download_url: 'https://evil.example/movie.mp4' },
+    { result: [{ path: returnedPath, url: `https://user:password@${new URL(wanOrigin).hostname}/gradio_api/file=${returnedPath}`, meta: { _type: 'gradio.FileData' } }] },
+    { result: [{ path: '/tmp/gradio/../secrets.mp4', url: returnedUrl, meta: { _type: 'gradio.FileData' } }] },
+    { result: [{ path: returnedPath, url: returnedUrl + '?download=1', meta: { _type: 'gradio.FileData' } }] },
+    { result: [{ path: returnedPath, url: returnedUrl.replace('/tmp/', '/%74mp/'), meta: { _type: 'gradio.FileData' } }] },
+  ];
+  for (const extra of altered) assert.throws(() => returnedWanFile(downloadableReceipt(extra)));
+});
+
+test('Wan恢复网络GET最多2次，成功不重新submit；重定向/登录响应直接停止', async () => {
+  let gets = 0;
+  const f = await recoveryFixture({ services: { downloadFetch: async () => { gets++; if (gets === 1) throw new Error('connection reset'); return new Response(mp4Bytes()); } } });
+  const result = await f.media.recoverWan({ taskId: 'original-task' }, f.recoveryContext); assert.equal(result.status, 'completed'); assert.equal(gets, 2);
+  const saved = JSON.parse(await readFile(result.output.receipt, 'utf8')); assert.deepEqual(saved.attempts.map(attempt => attempt.status), ['failed', 'downloaded']);
+  for (const response of [new Response(null, { status: 302, headers: { Location: 'https://evil.example/video' } }), new Response('login required', { status: 403 })]) {
+    let count = 0; const blocked = await recoveryFixture({ services: { downloadFetch: async () => { count++; return response; } } });
+    await assert.rejects(blocked.media.recoverWan({ taskId: 'original-task' }, blocked.recoveryContext), /下载恢复未完成/); assert.equal(count, 1); assert.equal((await blocked.workspace.read()).value.drafts.length, 0);
+  }
+});
+
+test('Wan恢复体积限制、MP4文件头、实际时长与完整解码均必须通过', async () => {
+  const scenarios = [
+    { services: { downloadFetch: async () => new Response(mp4Bytes()), recoveryMaxBytes: 64 } },
+    { services: { downloadFetch: async () => new Response(Buffer.alloc(128, 1)) } },
+    { services: { downloadFetch: async () => new Response(mp4Bytes()) }, override: async (_executable, args) => args.includes('-show_streams') ? { code: 0, stdout: JSON.stringify({ format: { duration: 9 }, streams: [{ codec_type: 'video', width: 720, height: 1280 }] }), stderr: '' } : undefined },
+    { services: { downloadFetch: async () => new Response(mp4Bytes()) }, override: async (_executable, args) => args.includes('-xerror') ? { code: 1, stdout: '', stderr: 'decode error' } : undefined },
+  ];
+  for (const options of scenarios) {
+    const f = await recoveryFixture(options); await assert.rejects(f.media.recoverWan({ taskId: 'original-task' }, f.recoveryContext), /下载恢复未完成/);
+    assert.equal((await f.workspace.read()).value.drafts.length, 0); assert.equal(await readFile(f.receiptPath, 'utf8'), f.originalRaw);
+    assert.equal((await f.media.store.read()).value.jobs.find(job => job.kind === 'wanRecover').status, 'requires_action');
+  }
+});
+
+test('Wan恢复取消不启动新GET，进行中的下载可中断并保留原生成证据', async () => {
+  let count = 0;
+  const controller = new AbortController(), f = await recoveryFixture({ services: { downloadFetch: async () => { count++; return new Response(new ReadableStream({ start(stream) { stream.enqueue(mp4Bytes()); setTimeout(() => controller.abort(), 10); } })); } } });
+  await assert.rejects(f.media.recoverWan({ taskId: 'original-task' }, { ...f.recoveryContext, signal: controller.signal }), error => error.code === 'cancelled'); assert.equal(count, 1);
+  assert.equal(await readFile(f.receiptPath, 'utf8'), f.originalRaw); assert.equal((await f.workspace.read()).value.drafts.length, 0);
+  await assert.rejects(f.media.recoverWan({ taskId: 'original-task' }, { ...f.recoveryContext, signal: controller.signal }), error => error.code === 'cancelled'); assert.equal(count, 1);
+});
+
+test('后续Wan任务下载失败有完整返回文件时自动GET恢复，生成命令始终只提交一次', async () => {
+  let submits = 0, gets = 0;
+  const f = await fixture({ services: { downloadFetch: async () => { gets++; return new Response(mp4Bytes()); } }, override: async (_executable, args) => {
+    if (args[0].endsWith('free_wan.py') && !args.includes('--dry-run')) {
+      submits++; const output = args[args.indexOf('--out-dir') + 1]; await mkdir(output); await writeFile(join(output, 'request.json'), JSON.stringify(downloadableReceipt()));
+      return { code: 2, stdout: '', stderr: 'SSL download EOF after completed generation' };
+    }
+  } });
+  const result = await f.media.execute('wan', { image: f.image, prompt: 'Move the ball', title: '测试球', duration: 3.5 }, f.context);
+  assert.equal(result.status, 'completed'); assert.equal(result.output.downloadRecovery, true); assert.equal(submits, 1); assert.equal(gets, 1);
+  const jobs = (await f.media.store.read()).value.jobs; assert.equal(jobs.find(job => job.kind === 'wan').status, 'uncertain'); assert.equal(jobs.find(job => job.kind === 'wanRecover').status, 'completed');
+  assert.equal(JSON.parse(await readFile(join(jobs.find(job => job.kind === 'wan').directory, 'request.json'), 'utf8')).status, 'unknown');
+});
+
+test('Wan恢复超时最多两次GET，仍失败就保留证据并停止', async () => {
+  let gets = 0;
+  const f = await recoveryFixture({ services: { recoveryTimeoutMs: 10, downloadFetch: async () => { gets++; return new Promise(() => {}); } } });
+  const keepAlive = setTimeout(() => {}, 1000);
+  try { await assert.rejects(f.media.recoverWan({ taskId: 'original-task' }, f.recoveryContext), /下载恢复未完成/); }
+  finally { clearTimeout(keepAlive); }
+  assert.equal(gets, 2); const job = (await f.media.store.read()).value.jobs.find(row => row.kind === 'wanRecover');
+  const receipt = JSON.parse(await readFile(job.recoveryReceipt, 'utf8')); assert.equal(receipt.attempts.length, 2); assert.equal(receipt.status, 'requires_action'); assert.equal(receipt.remoteResubmitted, false);
+});
+
+test('Wan恢复不覆盖已有归档路径的素材', async () => {
+  const f = await recoveryFixture({ services: { downloadFetch: async () => new Response(mp4Bytes()) } });
+  const id = createHash('sha256').update(JSON.stringify(['wan-recovery', f.original.id, f.recoveryContext.task.id])).digest('hex').slice(0, 32);
+  const directory = join(f.media.directory, 'jobs', id, 'wan-recovery'), asset = join(directory, 'video.mp4');
+  await mkdir(directory, { recursive: true }); await writeFile(asset, 'existing material that must remain unchanged');
+  await assert.rejects(f.media.recoverWan({ taskId: 'original-task' }, f.recoveryContext), /下载恢复未完成/);
+  assert.equal(await readFile(asset, 'utf8'), 'existing material that must remain unchanged'); assert.equal((await f.workspace.read()).value.drafts.length, 0);
+});
+
+test('Wan专用HTTPS客户端只对已返回文件使用独立env代理，TLS校验与请求header不放宽', async () => {
+  const agents = [], calls = [], originalFetch = globalThis.fetch;
+  class FakeAgent { constructor(options) { this.options = options; this.destroyed = false; agents.push(this); } destroy() { this.destroyed = true; } }
+  const request = (url, options, callback) => {
+    calls.push({ url, options }); const req = new EventEmitter(); req.destroy = () => {}; req.end = () => queueMicrotask(() => {
+      const response = Readable.from([mp4Bytes()]); response.statusCode = 200; response.headers = { 'content-type': 'video/mp4', 'content-length': '128' }; callback(response);
+    }); return req;
+  };
+  const client = createWanDownloadFetch({ Agent: FakeAgent, request, proxyEnv: { HTTPS_PROXY: 'http://127.0.0.1:7890', NO_PROXY: 'localhost,127.0.0.1', UNRELATED_SECRET: 'not-forwarded' } });
+  const response = await client(returnedUrl, { method: 'GET', headers: { Authorization: 'should-never-pass', Cookie: 'should-never-pass' } });
+  assert.deepEqual(Buffer.from(await new Response(response.body).arrayBuffer()), mp4Bytes());
+  assert.equal(calls.length, 1); assert.equal(calls[0].options.agent, agents[0]); assert.equal(calls[0].options.rejectUnauthorized, true); assert.equal(agents[0].options.rejectUnauthorized, true);
+  assert.deepEqual(agents[0].options.proxyEnv, { HTTPS_PROXY: 'http://127.0.0.1:7890', NO_PROXY: 'localhost,127.0.0.1' });
+  assert.deepEqual(Object.keys(calls[0].options.headers), ['Accept']); assert.equal(calls[0].options.method, 'GET'); assert.equal(agents[0].destroyed, true); assert.equal(globalThis.fetch, originalFetch);
+});
+
+test('Wan专用HTTPS客户端拒绝任意目标与非GET，返回重定向状态但绝不跟随', async () => {
+  let count = 0;
+  class FakeAgent { destroy() {} }
+  const request = (_url, _options, callback) => { count++; const req = new EventEmitter(); req.destroy = () => {}; req.end = () => queueMicrotask(() => {
+    const response = Readable.from([]); response.statusCode = 302; response.headers = { location: 'https://unapproved.example/' }; callback(response);
+  }); return req; };
+  const client = createWanDownloadFetch({ Agent: FakeAgent, request, proxyEnv: {} });
+  await assert.rejects(client('https://unapproved.example/movie.mp4'), /仅允许/);
+  await assert.rejects(client(returnedUrl, { method: 'POST' }), /仅允许/); assert.equal(count, 0);
+  const response = await client(returnedUrl); assert.equal(response.status, 302); assert.equal(response.body, null); assert.equal(count, 1);
 });

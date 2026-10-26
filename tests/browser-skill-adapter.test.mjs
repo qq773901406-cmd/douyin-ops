@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startBrowserSkillSession, executeBrowserSkill } from '../server/browser-skill-adapter.mjs';
+import { startBrowserSkillSession, executeBrowserSkill, browserSkillStatus } from '../server/browser-skill-adapter.mjs';
 
 function fixture({ browsers = [{ instance_id: 'selected' }], claim = true } = {}) {
   const calls = [];
@@ -45,4 +45,48 @@ test('非法输入和非目标页面在运行命令前被拒绝', async () => {
   await assert.rejects(executeBrowserSkill(null), { status: 400 });
   await assert.rejects(executeBrowserSkill({ action: 'navigate', sessionId: 'unit-test', url: 'invalid' }), { status: 400 });
   await assert.rejects(executeBrowserSkill({ action: 'navigate', sessionId: 'unit-test', url: 'https://example.com/' }), { status: 400 });
+});
+
+test('浏览器状态查询只读status，不运行会同步skill的doctor', async () => {
+  const calls = [];
+  const result = await browserSkillStatus(async args => {
+    calls.push(args);
+    return { ok: true, stdout: args[0] === '--version' ? 'bsk 0.3.2'
+      : JSON.stringify({ pid: 42, browsers: [{ instance_id: 'fresh' }], sessions: [] }) };
+  });
+  assert.deepEqual(calls, [['--version'], ['status', '--json']]);
+  assert.equal(result.connected, true);
+  assert.equal(result.responsiveBrowserCount, 1);
+});
+
+test('daemon启动、扩展无响应和协议不兼容都不能误报浏览器已连接', async () => {
+  for (const payload of [
+    { pid: 42, browsers: [], sessions: [] },
+    { pid: 42, browsers: [{ instance_id: 'fresh', unresponsive: true }], sessions: [] },
+    { pid: 42, browsers: [{ instance_id: 'fresh' }], sessions: [], version_skew_browsers: ['fresh'] },
+    { pid: 42 },
+  ]) {
+    const result = await browserSkillStatus(async args => ({ ok: true,
+      stdout: args[0] === '--version' ? 'bsk 0.3.2' : JSON.stringify(payload) }));
+    assert.equal(result.installed, true);
+    assert.equal(result.connected, false);
+    assert.equal(result.sessionId, null);
+  }
+});
+
+test('daemon探针失败时报告未连接并隐藏凭据', async () => {
+  const result = await browserSkillStatus(async args => args[0] === '--version'
+    ? { ok: true, stdout: 'bsk 0.3.2' }
+    : { ok: false, message: 'IPC timeout token=secret-value' });
+  assert.equal(result.connected, false);
+  assert.equal(result.state, 'daemon_unavailable');
+  assert.equal(result.message.includes('secret-value'), false);
+});
+
+test('零浏览器状态不猜测后台是否配置了自动恢复', async () => {
+  const result = await browserSkillStatus(async args => ({ ok: true,
+    stdout: args[0] === '--version' ? 'bsk 0.3.2' : JSON.stringify({ pid: 42, browsers: [], sessions: [] }) }));
+  assert.equal(result.state, 'disconnected');
+  assert.equal(result.message.includes('尚未配置'), false);
+  assert.equal(result.message.includes('后台恢复状态'), true);
 });

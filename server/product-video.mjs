@@ -1,18 +1,16 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { existsSync, constants } from 'node:fs';
+import { constants } from 'node:fs';
 import { mkdir, writeFile, stat, realpath, copyFile, access } from 'node:fs/promises';
 import { join, extname, isAbsolute } from 'node:path';
-import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { resolveMediaPython } from '../lib/python-runtime.mjs';
 
 const execute = promisify(execFile);
 const script = fileURLToPath(new URL('../tools/product_video/render.py', import.meta.url));
 export function productVideoPython() {
-  if (process.env.DOUFENG_PYTHON) return process.env.DOUFENG_PYTHON;
-  const bundled = join(homedir(), '.workbuddy', 'binaries', 'python', 'envs', 'default', 'Scripts', 'python.exe');
-  return process.platform === 'win32' && existsSync(bundled) ? bundled : 'python';
+  return resolveMediaPython({ projectRoot: fileURLToPath(new URL('../', import.meta.url)) });
 }
 
 export async function inspectProductVideoEnvironment() {

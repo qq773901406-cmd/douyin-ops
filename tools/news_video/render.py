@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -17,6 +18,17 @@ DISCLAIMER = "资讯标题速览·非现场画面"
 INK = "#F5F4ED"
 MUTED = "#B7C8D7"
 ACCENTS = ["#A2F2CD", "#BFC7FF", "#FFCBA8"]
+
+# Keep prices, percentages, versions and common measurements together when
+# they fit a line. Explicit newlines remain hard breaks. Very long tokens still
+# fall back to measured character wrapping rather than overflowing the card.
+NUMBER = r"(?:[¥￥$€£][ \t]*)?[+-]?(?:\d{1,3}(?:[,，]\d{3})+|\d+)(?:[.．]\d+)*(?:[x×X]\d+(?:[.．]\d+)?)*(?:[-–~～至]\d+(?:[.．]\d+)*)*"
+UNIT = (
+    r"(?:[%％‰℃°]|[ \t]*(?:"
+    r"[万亿千百]?(?:平方公里|平方米|公里|纳米|毫米|厘米|美元|港元|欧元|日元|人民币|瓦时|毫秒|分钟|小时|英寸|元|人|台|辆|棵|个|次|吨|米|秒|天|日|周|月|年|岁|瓦|寸)"
+    r"|[万亿千百]|(?:GiB|MiB|KiB|GB|MB|KB|TB|Gbps|Mbps|Kbps|GHz|MHz|kHz|Hz|kWh|Wh|mAh|mW|kW|W|kg|mg|km|cm|mm|nm|ms|fps|px)(?![A-Za-z])))?"
+)
+WRAP_TOKEN = re.compile(r"\n|" + NUMBER + UNIT + r"|[A-Za-z][A-Za-z0-9]*(?:[-_.][A-Za-z0-9]+)*|[^\n]")
 
 
 def font_path():
@@ -34,16 +46,32 @@ def font_path():
 
 
 def wrapped(text, font, width):
+    if width <= 0:
+        raise ValueError("图卡文字区域宽度必须大于零。")
     result, current = [], ""
-    for char in text:
-        if char == "\n":
+    for token in WRAP_TOKEN.findall(text):
+        if token == "\n":
             result.append(current)
             current = ""
-        elif current and font.getlength(current + char) > width:
+            continue
+        if font.getlength(token) > width:
+            if current:
+                result.append(current)
+                current = ""
+            for char in token:
+                if font.getlength(char) > width:
+                    raise ValueError("单个字符超出图卡文字区域，不能完整排版。")
+                if current and font.getlength(current + char) > width:
+                    result.append(current)
+                    current = char
+                else:
+                    current += char
+            continue
+        if current and font.getlength(current + token) > width:
             result.append(current)
-            current = char
+            current = token
         else:
-            current += char
+            current += token
     if current:
         result.append(current)
     return result

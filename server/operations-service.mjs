@@ -1,4 +1,8 @@
 import { join, resolve } from 'node:path';
+import { isAbsolute } from 'node:path';
+import { access, realpath } from 'node:fs/promises';
+import { JsonStore } from '../workbuddy/connector/lib/json-store.mjs';
+import { LocalTextGeneration } from './local-text-generation.mjs';
 import { TaskRunner } from './task-runner.mjs';
 import { ContentAutomation } from './content-automation.mjs';
 import { MediaAutomation } from './media-automation.mjs';
@@ -17,6 +21,8 @@ export class OperationsService {
     this.content = content || new ContentAutomation(runtimeDir, { workspace, publisher: automation.publisher, tracking });
     this.media = media || new MediaAutomation(runtimeDir, { workspace });
     this.bilibili = bilibili || new BilibiliTracking(runtimeDir, { workspace });
+    this.text = new LocalTextGeneration(runtimeDir, { workspace, content: this.content, getBinding: () => this.binding() });
+    this.settings = new JsonStore(join(runtimeDir, 'operations', 'settings.json'), { wanDepsDir: '' });
     const contentHandlers = Object.fromEntries(Object.entries(this.content.handlers()).map(([kind, handler]) => [`content.${kind}`, {
       ...handler, execute: async (input, context) => {
         const binding = await this.binding();
@@ -25,7 +31,7 @@ export class OperationsService {
     }]));
     const backup = runtimeBackupHandler(runtimeDir);
     const backupDir = join(resolve(runtimeDir, '..'), '.runtime-backups');
-    const handlers = { ...contentHandlers, ...this.media.handlers(), ...this.bilibili.handlers(),
+    const handlers = { ...contentHandlers, ...this.media.handlers(), ...this.bilibili.handlers(), ...this.text.handlers(),
       'backup.full': { ...backup, validate: input => backup.validate({ ...input, backupDir: input.backupDir || backupDir }) },
       'distribution.prepare': distributionHandler(runtimeDir, workspace),
       'workflow.news': this.workflowHandler('news'), 'workflow.product': this.workflowHandler('product'),
@@ -74,14 +80,28 @@ export class OperationsService {
     };
   }
   async snapshot() {
-    const [state, wb, bili] = await Promise.all([this.runner.snapshot(), this.workspace.read(), this.bilibili.snapshot()]);
+    const [state, wb, bili, settings] = await Promise.all([this.runner.snapshot(), this.workspace.read(), this.bilibili.snapshot(), this.settings.read()]);
     const kinds = new Map(state.kinds.map(row => [row.kind, row]));
     return { ...state, catalog: operationsCatalog.filter(row => kinds.has(row.kind)).map(row => ({ ...row, recurring: kinds.get(row.kind).readOnly && row.recurring !== false })),
       products: wb.value.products.map(p => ({ id: p.id, title: p.title, imageCount: p.images?.length || 0 })),
       drafts: wb.value.drafts.map(d => ({ id: d.id, title: d.pubTitle || d.title, platform: d.platform || 'douyin', format: d.format || '视频', asset: d.asset || '' })),
-      bilibili: bili, legacy: this.legacy ? { error: this.legacy.lastError || '' } : null,
+      bilibili: bili, settings: settings.value, settingsRevision: settings.revision, legacy: this.legacy ? { error: this.legacy.lastError || '' } : null,
     };
   }
-  async start() { await this.runner.start(); await this.legacy?.start(); }
+  async configure(input, revision) {
+    if (!input || Object.keys(input).some(key => key !== 'wanDepsDir') || typeof input.wanDepsDir !== 'string') throw problem('制作设置只接受本机 Wan 依赖目录。');
+    let path = input.wanDepsDir.trim();
+    if (path) {
+      if (!isAbsolute(path) || /^\\\\/.test(path)) throw problem('依赖目录必须为本机绝对路径。');
+      path = await realpath(path);
+      if (/^\\\\/.test(path)) throw problem('依赖目录不能使用网络共享。');
+      await access(join(path, 'gradio_client', '__init__.py'));
+    }
+    await this.settings.replace({ wanDepsDir: path }, revision);
+    this.media.depsDir = path || process.env.DOUFENG_WAN_DEPS || '';
+    return this.snapshot();
+  }
+  async environment() { const [media, text] = await Promise.all([this.media.readiness(), this.text.readiness()]); return { media, text }; }
+  async start() { const config = await this.settings.read(); if (config.value.wanDepsDir) this.media.depsDir = config.value.wanDepsDir; await this.runner.start(); await this.legacy?.start(); }
   async stop() { await this.legacy?.stop(); await this.runner.stop(); }
 }

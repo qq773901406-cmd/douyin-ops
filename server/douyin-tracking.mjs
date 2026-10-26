@@ -14,6 +14,26 @@ const validTime = value => typeof value === 'string' && Number.isFinite(Date.par
 const sameOrNewer = (a, b) => validTime(a) && Date.parse(a) >= Date.parse(b);
 const compact = value => String(value || '').replace(/\s+/g, '');
 const automaticStatuses = new Set(['submitted', 'published']);
+const dailyTimePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+const dayPattern = /^\d{4}-\d{2}-\d{2}$/;
+const automaticWindowMs = 10 * 60000;
+const scheduledAt = (day, time) => new Date(`${day}T${time}:00+08:00`).toISOString();
+const nextDay = day => shanghaiDay(Date.parse(`${day}T12:00:00+08:00`) + 86400000);
+const firstFutureDay = (now, time) => {
+  const day = shanghaiDay(now);
+  return now < Date.parse(scheduledAt(day, time)) ? day : nextDay(day);
+};
+const defaultConfig = now => ({ enabled: true, dailyTime: '06:30', timeZone: 'Asia/Shanghai', firstDay: firstFutureDay(now, '06:30') });
+
+function nextAutomaticAt(state, now) {
+  const config = state.config || defaultConfig(now);
+  if (!config.enabled) return '';
+  let day = shanghaiDay(now);
+  if (day < config.firstDay) day = config.firstDay;
+  const consumed = new Set((state.automaticRuns || []).map(run => run.day));
+  while (consumed.has(day) || now - Date.parse(scheduledAt(day, config.dailyTime)) > automaticWindowMs) day = nextDay(day);
+  return scheduledAt(day, config.dailyTime);
+}
 
 function workUrl(input, workId) {
   let url;
@@ -115,6 +135,22 @@ function bindingFrom(input, target, observation) {
 
 function validate(state) {
   if (state?.version !== 1 || !Array.isArray(state.records)) throw new Error('抖音回采记录格式无效，请保留原文件。');
+  if (state.config !== undefined) {
+    const config = state.config;
+    if (!object(config) || typeof config.enabled !== 'boolean' || !dailyTimePattern.test(config.dailyTime || '')
+      || config.timeZone !== 'Asia/Shanghai' || !dayPattern.test(config.firstDay || '')
+      || !Number.isFinite(Date.parse(`${config.firstDay}T00:00:00+08:00`))) throw new Error('抖音回采排期格式无效。');
+  }
+  if (state.automaticRuns !== undefined) {
+    if (!Array.isArray(state.automaticRuns)) throw new Error('抖音自动回采执行记录格式无效。');
+    const days = new Set();
+    for (const run of state.automaticRuns) {
+      if (!object(run) || !dayPattern.test(run.day || '') || days.has(run.day) || run.trigger !== 'scheduler'
+        || !['running', 'completed', 'failed', 'skipped'].includes(run.status)
+        || !validTime(run.startedAt) || !validTime(run.scheduledAt)) throw new Error('抖音自动回采执行记录无效。');
+      days.add(run.day);
+    }
+  }
   const refs = new Set(), works = new Set();
   for (const row of state.records) {
     const target = row?.target;
@@ -150,10 +186,11 @@ function validate(state) {
  * Titles alone are not proof of ownership. This module never publishes or retries.
  */
 export class DouyinTracking {
-  constructor(runtimeDir, { workspace, automation, dailyProduction, inspect, discover, intervalMs = 15 * 60000 } = {}) {
+  constructor(runtimeDir, { workspace, automation, dailyProduction, inspect, discover, collectBatch, intervalMs = 30000, now = () => Date.now() } = {}) {
     this.store = new JsonStore(join(runtimeDir, 'douyin-tracking', 'state.json'), { version: 1, records: [] }, validate);
     this.workspace = workspace; this.automation = automation; this.dailyProduction = dailyProduction;
-    this.inspect = inspect; this.discover = discover; this.intervalMs = intervalMs; this.timer = null; this.busy = false; this.stopping = false; this.error = '';
+    this.inspect = inspect; this.discover = discover; this.collectBatch = collectBatch; this.now = now;
+    this.intervalMs = intervalMs; this.timer = null; this.busy = false; this.stopping = false; this.error = '';
   }
 
   async targets() {
@@ -166,7 +203,31 @@ export class DouyinTracking {
 
   async snapshot() {
     const { value, revision } = await this.store.read();
-    return { ...value, revision, scheduler: { running: !!this.timer, busy: this.busy, error: this.error, intervalMs: this.intervalMs } };
+    const config = value.config || defaultConfig(this.now());
+    return { ...value, config, automaticRuns: value.automaticRuns || [], revision,
+      scheduler: { running: !!this.timer, busy: this.busy, error: this.error, intervalMs: this.intervalMs,
+        mode: 'daily', nextRunAt: nextAutomaticAt({ ...value, config }, this.now()), lateMinutes: automaticWindowMs / 60000 } };
+  }
+
+  async initialize() {
+    const current = (await this.store.read()).value;
+    if (current.config && current.automaticRuns) return;
+    await this.store.update(state => {
+      state.config ||= defaultConfig(this.now());
+      state.automaticRuns ||= [];
+    });
+  }
+
+  async configure(input, revision) {
+    if (!revision || !object(input) || Object.keys(input).some(key => !['enabled', 'dailyTime'].includes(key))
+      || typeof input.enabled !== 'boolean' || !dailyTimePattern.test(input.dailyTime || '')) throw fail('请提供启用状态和有效的每日回采时间。', 400);
+    if (this.busy) throw fail('回采正在进行，结束后再调整排期。');
+    await this.store.update(state => {
+      const previous = state.config || defaultConfig(this.now());
+      state.automaticRuns ||= [];
+      if (previous.enabled === input.enabled && previous.dailyTime === input.dailyTime) { state.config = previous; return; }
+      state.config = { enabled: input.enabled, dailyTime: input.dailyTime, timeZone: 'Asia/Shanghai', firstDay: firstFutureDay(this.now(), input.dailyTime) };
+    }, revision);
   }
 
   async recordObservation(ref, input, { target: inspectedTarget, binding: bindingInput } = {}) {
@@ -305,24 +366,41 @@ export class DouyinTracking {
     finally { try { if (release) await release(); } finally { this.busy = false; } }
   }
 
-  async checkNow(ref) {
-    if (this.busy || this.stopping) throw fail('回采正在执行或已停止，请稍后再试。', 503);
-    if (typeof this.inspect !== 'function') throw fail('尚未接入已验证的抖音页面读取器。', 503);
-    this.busy = true;
-    let release;
+  async performChecks(ref, { automatic = false } = {}) {
     const results = [];
-    try {
-      release = await this.automation.lease();
-      const targets = (await this.targets()).filter(target => ref ? target.ref === ref : target.boundWorkId || automaticStatuses.has(target.status));
+      let targets = (await this.targets()).filter(target => ref ? target.ref === ref : target.boundWorkId || automaticStatuses.has(target.status));
       if (ref && !targets.length) throw fail('没有可回采的提交记录。');
+      if (automatic) {
+        if (typeof this.collectBatch !== 'function') throw fail('集中回采读取器尚未接入，未打开浏览器。', 503);
+        const [queue, daily] = await Promise.all([this.automation.store.read(), this.dailyProduction.store.read()]);
+        const binding = queue.value.config;
+        if (!binding.accountId || !binding.browserId || !binding.verifiedAt
+          || daily.value.config.accountId !== binding.accountId || daily.value.config.browserId !== binding.browserId) {
+          throw fail('自动回采需要当前已确认且一致的账号与浏览器绑定，未打开浏览器。');
+        }
+        targets = targets.filter(target => {
+          if (target.accountId === binding.accountId && target.browserId === binding.browserId) return true;
+          results.push({ ref: target.ref, error: '作品与当前已确认的账号或浏览器不同，本轮未打开其他窗口。' });
+          return false;
+        });
+      }
+      let batch;
+      if (targets.length && typeof this.collectBatch === 'function') {
+        const rows = await this.collectBatch(structuredClone(targets));
+        if (!Array.isArray(rows) || rows.length !== targets.length || new Set(rows.map(row => row?.ref)).size !== targets.length
+          || rows.some(row => !row || !targets.some(target => target.ref === row.ref))) throw fail('集中回采返回的作品归属不完整，未写入观察。');
+        batch = new Map(rows.map(row => [row.ref, row]));
+      }
       for (const target of targets) {
         if (this.stopping) break;
         try {
           let observation, binding;
-          if (target.boundWorkId) observation = await this.inspect(structuredClone(target));
+          const collected = batch?.get(target.ref);
+          if (collected?.error) throw fail(String(collected.error));
+          if (target.boundWorkId) observation = batch ? collected.observation : await this.inspect(structuredClone(target));
           else if (automaticStatuses.has(target.status)) {
-            if (typeof this.discover !== 'function') throw fail('尚未接入作品自动识别，请核实并提供作品链接。', 503);
-            const proposal = await this.discover(structuredClone(target));
+            if (!batch && typeof this.discover !== 'function') throw fail('尚未接入作品自动识别，请核实并提供作品链接。', 503);
+            const proposal = batch ? collected.proposal : await this.discover(structuredClone(target));
             if (proposal) {
               observation = observationFrom(proposal.candidate);
               binding = { source: 'automatic', proof: automaticProofFrom(proposal, target, observation) };
@@ -333,7 +411,7 @@ export class DouyinTracking {
             accepted: false, unresolved: true,
             error: target.boundWorkId ? '本次未能唯一核实目标作品，未采到新的审核状态或指标；保留上次数据，请检查作品是否仍可见或存在同名作品。'
               : target.status === 'uncertain' ? '提交结果不确定，不能自动建立首次绑定；请核实作品并提供完整链接。'
-                : '本次未能唯一核实新作品，尚未自动绑定；稍后会继续检查，也可提供完整作品链接核实。'
+                : '本次未能唯一核实新作品，尚未自动绑定；下次每日回采会继续检查，也可提供完整作品链接核实。'
           };
           results.push({ ref: target.ref, ...result });
         } catch (error) { results.push({ ref: target.ref, error: error.message }); }
@@ -341,16 +419,74 @@ export class DouyinTracking {
       const projections = await this.projectPending(ref);
       this.error = [...results, ...projections].filter(row => row.error).map(row => `${row.ref}：${row.error}`).join('\n');
       return { results, projections };
+  }
+
+  async checkNow(ref) {
+    if (this.busy || this.stopping) throw fail('回采正在执行或已停止，请稍后再试。', 503);
+    if (typeof this.inspect !== 'function' && typeof this.collectBatch !== 'function') throw fail('尚未接入已验证的抖音页面读取器。', 503);
+    this.busy = true;
+    let release;
+    try {
+      release = await this.automation.lease();
+      return await this.performChecks(ref);
     } catch (error) { this.error = error.message; throw error; }
     finally { try { if (release) await release(); } finally { this.busy = false; } }
   }
 
-  start() {
+  async tick() {
+    if (this.busy || this.stopping) return;
+    await this.initialize();
+    const saved = (await this.store.read()).value, now = this.now(), day = shanghaiDay(now);
+    if (this.busy || this.stopping) return;
+    if (!saved.config.enabled || day < saved.config.firstDay
+      || now < Date.parse(scheduledAt(day, saved.config.dailyTime)) || saved.automaticRuns.some(run => run.day === day)) return;
+    this.busy = true;
+    let release, claimed;
+    try {
+      // The same process-wide publication lease serializes restart, manual reads
+      // and scheduler claims. Persist the claim before creating any window.
+      release = await this.automation.lease();
+      await this.store.update(state => {
+        if (!state.config.enabled || day < state.config.firstDay || state.automaticRuns.some(run => run.day === day)
+          || now < Date.parse(scheduledAt(day, state.config.dailyTime))) return;
+        const at = scheduledAt(day, state.config.dailyTime);
+        claimed = { day, trigger: 'scheduler', scheduledAt: at, startedAt: new Date(now).toISOString(),
+          status: now - Date.parse(at) > automaticWindowMs ? 'skipped' : 'running' };
+        if (claimed.status === 'skipped') {
+          claimed.finishedAt = new Date(now).toISOString();
+          claimed.message = '已超过每日回采时段，今天不补开窗口，等待下一天。';
+        }
+        state.automaticRuns.push(claimed);
+      });
+      if (!claimed || claimed.status === 'skipped') return;
+      const result = await this.performChecks(undefined, { automatic: true });
+      const errors = [...result.results, ...result.projections].filter(row => row.error);
+      await this.store.update(state => {
+        const run = state.automaticRuns.find(row => row.day === day);
+        if (run?.status !== 'running') return;
+        Object.assign(run, { status: errors.length ? 'failed' : 'completed', finishedAt: new Date(this.now()).toISOString(),
+          targetCount: result.results.length, message: errors.length ? this.error.slice(0, 1500) : '本日集中回采结束；不会再次自动开窗。' });
+      });
+      return result;
+    } catch (error) {
+      this.error = error.message;
+      if (claimed?.status === 'running') await this.store.update(state => {
+        const run = state.automaticRuns.find(row => row.day === day);
+        if (run?.status === 'running') Object.assign(run, { status: 'failed', finishedAt: new Date(this.now()).toISOString(), message: error.message.slice(0, 1500) });
+      });
+      throw error;
+    } finally { try { if (release) await release(); } finally { this.busy = false; } }
+  }
+
+  async start() {
     if (this.timer) return;
-    if (typeof this.inspect !== 'function' || !Number.isSafeInteger(this.intervalMs) || this.intervalMs < 1000) throw fail('回采读取器或检查间隔未配置。', 503);
+    if (typeof this.collectBatch !== 'function' || !Number.isSafeInteger(this.intervalMs) || this.intervalMs < 1000) throw fail('集中回采读取器或检查间隔未配置。', 503);
+    await this.initialize();
+    if (this.timer) return;
     this.stopping = false;
-    const tick = () => { if (!this.busy) void this.checkNow().catch(error => { this.error = error.message; }); };
-    this.timer = setInterval(tick, this.intervalMs); this.timer.unref?.(); tick();
+    const tick = () => { if (!this.busy) void this.tick().catch(error => { this.error = error.message; }); };
+    // A service restart must not immediately create a fresh browser window.
+    this.timer = setInterval(tick, this.intervalMs); this.timer.unref?.();
   }
 
   stop() { this.stopping = true; if (this.timer) clearInterval(this.timer); this.timer = null; }

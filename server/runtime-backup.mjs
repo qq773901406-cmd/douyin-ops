@@ -107,7 +107,8 @@ export async function createRuntimeBackup(runtimeDir, { backupDir, clock = () =>
   } catch (error) { manifest.status = signal?.aborted ? 'interrupted' : 'requires_action'; manifest.issues.push({ path: '', message: String(error.message || error) }); }
   manifest.finishedAt = stamp(clock);
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
-  return { status: manifest.status === 'completed' ? 'completed' : 'requires_action', output: { backupId, directory, manifestPath, fileCount: manifest.fileCount, totalBytes: manifest.totalBytes, consistency: manifest.consistency, stable: manifest.status === 'completed', issues: manifest.issues, observedChanges: manifest.observedChanges }, message: manifest.status === 'completed' ? 'runtime 文件、媒体和账本已复制并校验；一致性边界见 manifest。' : '已保留备份及校验报告，但存在变化或未复制项，请查看 manifest 后重新安排备份。' };
+  const summary = manifest.status === 'completed' ? 'runtime 文件、媒体和账本已复制并校验；一致性边界见 manifest。' : '已保留备份及校验报告，但存在变化或未复制项，请查看 manifest 后重新安排备份。';
+  return { status: manifest.status === 'completed' ? 'completed' : 'requires_action', output: { summary, backupId, directory, manifestPath, fileCount: manifest.fileCount, totalBytes: manifest.totalBytes, consistency: manifest.consistency, stable: manifest.status === 'completed', issues: manifest.issues, observedChanges: manifest.observedChanges }, message: summary };
 }
 
 export function runtimeBackupHandler(runtimeDir, options = {}) {

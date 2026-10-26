@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { workbenchHealth, workbenchFailure, browserHealth, browserFailure, shortDiagnostic, restartDelayMs, mayStart, mayStopOwnedChild } from '../lib/background-service-policy.mjs';
+import { workbenchHealth, workbenchFailure, browserHealth, browserFailure, shortDiagnostic, restartDelayMs, mayStart, mayStopOwnedChild, stalledRecoveryDecision } from '../lib/background-service-policy.mjs';
 
 const missing = 'ensure daemon is running: automatic daemon startup is disabled (BSK_AUTO_START=0); restore the daemon in its owning environment with its original configuration';
 
@@ -49,4 +49,31 @@ test('短诊断剔除凭据和URL并限制长度', () => {
   for (const secret of ['abcdef', 'secret text', 'session', 'abc.def.ghi', 'https://example.com']) assert.equal(value.includes(secret), false);
   assert.ok(value.length <= 400);
   assert.equal(shortDiagnostic('{"token":"sensitive-value"}').includes('sensitive-value'), false);
+});
+
+test('连续超时仅在自有进程已验证、无活动会话且超过观察期时恢复', () => {
+  const service = { name: 'browser', owned: true, process: { pid: 123, exitCode: null, signalCode: null },
+    health: { state: 'unknown', recoverable: true }, lastHealthyPid: 123, lastSessionCount: 0, stallCount: 4, stalledSince: 1000 };
+  assert.equal(stalledRecoveryDecision(service, 100000).action, 'recover');
+  for (const change of [{ owned: false }, { lastHealthyPid: 456 }, { lastSessionCount: 1 }, { lastSessionCount: null }]) {
+    assert.equal(stalledRecoveryDecision({ ...service, ...change }, 100000).action, 'blocked');
+  }
+  for (const change of [{ stallCount: 1 }, { stalledSince: 95000 }, { lastRecoveryAt: 90000 }]) {
+    assert.equal(stalledRecoveryDecision({ ...service, ...change }, 100000).action, 'wait');
+  }
+  assert.equal(stalledRecoveryDecision({ ...service, health: { state: 'unknown', recoverable: false } }, 100000).action, 'none');
+  assert.equal(browserFailure({ killed: true, message: 'IPC probe timed out' }).recoverable, true);
+  assert.equal(browserFailure({ killed: true, message: 'permission denied; timed out' }).recoverable, false);
+  assert.equal(workbenchFailure({ name: 'TimeoutError', code: 23 }).recoverable, true);
+  assert.equal(stalledRecoveryDecision({ ...service, recoveryAttempts: 3, lastRecoveryAt: 1 }, 1000000).action, 'blocked');
+  assert.equal(stalledRecoveryDecision({ ...service, recoveryAttempts: 3, lastRecoveryAt: 1 }, 4000000).action, 'recover');
+});
+
+test('扩展全无响应时只在会话为空且协议匹配时考虑daemon重连', () => {
+  const payload = { pid: 123, browsers: [{ instance_id: 'current', unresponsive: true }], sessions: [], version_skew_browsers: [] };
+  assert.equal(browserHealth(payload).recoverable, true);
+  assert.equal(browserHealth(payload).daemonResponsive, true);
+  assert.equal(browserHealth({ ...payload, sessions: [{ session_id: 'active' }] }).recoverable, undefined);
+  assert.equal(browserHealth({ ...payload, version_skew_browsers: ['current'] }).recoverable, undefined);
+  assert.equal(browserHealth({ ...payload, browsers: [] }).state, 'healthy');
 });

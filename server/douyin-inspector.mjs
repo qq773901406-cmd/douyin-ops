@@ -244,77 +244,135 @@ export class DouyinInspector {
     return null;
   }
   async collect(target, discovery) {
+    if (!this.canCollect(target, discovery)) return null;
+    return this.publisher.session(target.browserId, session => this.collectInSession(target, discovery, session));
+  }
+  canCollect(target, discovery) {
     if (!target?.browserId || !target.accountId) throw new Error('检查作品需要已确认的浏览器和抖音账号。');
-    if (!discovery && !workIdPattern.test(String(target.boundWorkId || ''))) return null;
-    if (!discovery && target.boundUrl && douyinWorkIdFromUrl(target.boundUrl) !== target.boundWorkId) return null;
-    if (!target.title || !Number.isFinite(Date.parse(target.submitStartedAt))) return null;
-    if (typeof this.previewReader !== 'function') return null;
-    return this.publisher.session(target.browserId, async session => {
-      const account = await this.publisher.accountInSession(session);
-      if (account.accountId !== target.accountId) throw new Error('当前登录抖音账号与目标作品绑定不一致。');
-      await this.publisher.command(['navigate', manageUrl, '--session', session, '--timeout', '60s'], BSK_TIMEOUTS.NAVIGATE_PUBLISHER_MS);
-      const card = await this.findManageCard(session, target);
-      if (!card?.cover) return null;
-      const before = agentTabs(await this.publisher.command(['tab', 'list', '--session', session, '--scope', 'agent']));
-      const previousIds = new Set(before.map(tab => tab.tab_id));
-      const manageTabs = before.filter(tab => {
-        try { const url = new URL(tab.url); return url.origin === 'https://creator.douyin.com' && url.pathname === '/creator-micro/content/manage' && tab.active; } catch { return false; }
-      });
-      if (manageTabs.length !== 1) return null;
-      await this.publisher.command(['click', '--selector', card.cover, '--session', session], BSK_TIMEOUTS.CLICK_MS);
-      let opened;
-      for (let attempt = 0; attempt < this.pageAttempts; attempt++) {
-        const tabs = agentTabs(await this.publisher.command(['tab', 'list', '--session', session, '--scope', 'agent']));
-        const additions = tabs.filter(tab => !previousIds.has(tab.tab_id));
-        if (additions.length > 1) return null;
-        if (additions.length === 1) { opened = additions[0]; break; }
-        if (attempt + 1 < this.pageAttempts) await this.pause(this.sampleDelayMs);
+    if (!discovery && !workIdPattern.test(String(target.boundWorkId || ''))) return false;
+    if (!discovery && target.boundUrl && douyinWorkIdFromUrl(target.boundUrl) !== target.boundWorkId) return false;
+    if (!target.title || !Number.isFinite(Date.parse(target.submitStartedAt))) return false;
+    return typeof this.previewReader === 'function';
+  }
+  async collectInSession(target, discovery, session) {
+    if (!this.canCollect(target, discovery)) return null;
+    const account = await this.publisher.accountInSession(session);
+    if (account.accountId !== target.accountId) throw new Error('当前登录抖音账号与目标作品绑定不一致。');
+    await this.publisher.command(['navigate', manageUrl, '--session', session, '--timeout', '60s'], BSK_TIMEOUTS.NAVIGATE_PUBLISHER_MS);
+    const card = await this.findManageCard(session, target);
+    if (!card?.cover) return null;
+    const before = agentTabs(await this.publisher.command(['tab', 'list', '--session', session, '--scope', 'agent']));
+    const previousIds = new Set(before.map(tab => tab.tab_id));
+    const manageTabs = before.filter(tab => {
+      try { const url = new URL(tab.url); return url.origin === 'https://creator.douyin.com' && url.pathname === '/creator-micro/content/manage' && tab.active; } catch { return false; }
+    });
+    if (manageTabs.length !== 1) return null;
+    await this.publisher.command(['click', '--selector', card.cover, '--session', session], BSK_TIMEOUTS.CLICK_MS);
+    let opened;
+    for (let attempt = 0; attempt < this.pageAttempts; attempt++) {
+      const tabs = agentTabs(await this.publisher.command(['tab', 'list', '--session', session, '--scope', 'agent']));
+      const additions = tabs.filter(tab => !previousIds.has(tab.tab_id));
+      if (additions.length > 1) return null;
+      if (additions.length === 1) { opened = additions[0]; break; }
+      if (attempt + 1 < this.pageAttempts) await this.pause(this.sampleDelayMs);
+    }
+    if (!opened) return null;
+    await this.publisher.command(['tab', 'select', String(opened.tab_id), '--session', session]);
+    const preview = await this.stablePreview(session, card, target.accountId);
+    if (!preview || !discovery && preview.workId !== target.boundWorkId) return null;
+    // Re-read the card after resolving its actual work ID. Never mix metrics
+    // from an earlier card render with a different or newly reordered item.
+    await this.publisher.command(['tab', 'select', String(manageTabs[0].tab_id), '--session', session]);
+    const freshPage = await this.managePage(session);
+    if (freshPage.accountIds.length && (freshPage.accountIds.length !== 1 || freshPage.accountIds[0] !== target.accountId)) return null;
+    const fresh = selectDouyinCard(freshPage.cards, target, this.matchWindowMs);
+    if (!fresh || compact(fresh.title) !== compact(card.title) || fresh.time !== card.time) return null;
+    const observedAt = new Date().toISOString();
+    // This proposal is not itself a binding. The tracker independently checks
+    // the complete content and submission identity before automatic linking.
+    const bindingProof = {
+      kind: 'douyin-rendered-dom-v1', targetRef: target.ref, browserId: target.browserId,
+      assetSha256: target.sha256, submittedAt: target.submitStartedAt,
+      accountId: account.accountId, workId: preview.workId,
+      cardTitle: fresh.title, cardTime: parseDouyinCardTime(fresh.time),
+      previewTitle: preview.title, previewUrl: preview.url, profileUrl: preview.profileUrl,
+      cardMatches: 1, profileMatches: 1, stableSamples: this.stableSamples,
+    };
+    const evidence = {
+      url: preview.url,
+      text: JSON.stringify({
+        accountId: target.accountId, cardTitle: fresh.title, cardTime: fresh.time,
+        cardStatus: fresh.status, previewTitle: preview.title,
+        previewUrl: preview.url, profileUrl: preview.profileUrl,
+        stableSamples: this.stableSamples, rawMetrics: fresh.metrics, bindingProof,
+      }),
+    };
+    const observation = {
+      accountId: target.accountId, workId: preview.workId,
+      url: `https://www.douyin.com/video/${preview.workId}`,
+      reviewState: reviewState(fresh.status), observedAt, evidence,
+      metrics: parseDouyinMetrics(fresh.metrics),
+      ...(reviewState(fresh.status) === 'published' ? { publishedAt: parseDouyinCardTime(fresh.time) } : {}),
+    };
+    return discovery ? {
+      requiresExplicitBinding: true, candidate: observation,
+      metadata: { cardTitle: fresh.title, cardTime: fresh.time, previewTitle: preview.title },
+      bindingProof,
+    } : observation;
+  }
+  async collectBatch(targets) {
+    if (!Array.isArray(targets)) throw new Error('集中回采需要作品列表。');
+    if (!targets.length) return [];
+    const first = targets[0];
+    // Validate the complete batch before creating any browser window. A batch
+    // cannot silently switch to another browser or another signed-in account.
+    const eligible = targets.map(target => {
+      const valid = this.canCollect(target, !target?.boundWorkId);
+      if (target.browserId !== first.browserId || target.accountId !== first.accountId) throw new Error('一次集中回采只能检查同一浏览器和抖音账号。');
+      return valid;
+    });
+    const results = targets.map(target => ({ ref: target.ref, [target.boundWorkId ? 'observation' : 'proposal']: null }));
+    if (!eligible.some(Boolean)) return results;
+    return this.publisher.session(first.browserId, async session => {
+      for (let index = 0; index < targets.length; index++) {
+        if (!eligible[index]) continue;
+        const target = targets[index];
+        let before;
+        try {
+          before = agentTabs(await this.publisher.command(['tab', 'list', '--session', session, '--scope', 'agent']));
+        } catch {
+          for (let remaining = index; remaining < targets.length; remaining++) {
+            if (eligible[remaining]) results[remaining] = { ref: targets[remaining].ref, error: '无法确认集中回采会话，剩余作品本轮未检查。' };
+          }
+          break;
+        }
+        const previousIds = new Set(before.map(tab => tab.tab_id));
+        const returnTab = before.find(tab => tab.active);
+        try {
+          const value = await this.collectInSession(target, !target.boundWorkId, session);
+          results[index] = { ref: target.ref, [target.boundWorkId ? 'observation' : 'proposal']: value };
+        } catch (error) {
+          results[index] = { ref: target.ref, error: error?.message || '作品回采失败。' };
+        }
+        try {
+          // Only close tabs first observed after this target's preview click,
+          // inside this session's Agent Window. Never select or close user tabs.
+          const after = agentTabs(await this.publisher.command(['tab', 'list', '--session', session, '--scope', 'agent']));
+          for (const tab of after.filter(tab => !previousIds.has(tab.tab_id))) {
+            await this.publisher.command(['tab', 'close', String(tab.tab_id), '--session', session]);
+          }
+          if (returnTab) await this.publisher.command(['tab', 'select', String(returnTab.tab_id), '--session', session]);
+        } catch {
+          // A disconnected session must not prompt replacement windows. Its
+          // owner still stops the session when this callback returns.
+          for (let remaining = index + 1; remaining < targets.length; remaining++) {
+            if (eligible[remaining]) results[remaining] = { ref: targets[remaining].ref, error: '集中回采会话清理失败，剩余作品本轮未检查。' };
+          }
+          results[index].error ||= '集中回采标签页清理失败。';
+          break;
+        }
       }
-      if (!opened) return null;
-      await this.publisher.command(['tab', 'select', String(opened.tab_id), '--session', session]);
-      const preview = await this.stablePreview(session, card, target.accountId);
-      if (!preview || !discovery && preview.workId !== target.boundWorkId) return null;
-      // Re-read the card after resolving its actual work ID. Never mix metrics
-      // from an earlier card render with a different or newly reordered item.
-      await this.publisher.command(['tab', 'select', String(manageTabs[0].tab_id), '--session', session]);
-      const freshPage = await this.managePage(session);
-      if (freshPage.accountIds.length && (freshPage.accountIds.length !== 1 || freshPage.accountIds[0] !== target.accountId)) return null;
-      const fresh = selectDouyinCard(freshPage.cards, target, this.matchWindowMs);
-      if (!fresh || compact(fresh.title) !== compact(card.title) || fresh.time !== card.time) return null;
-      const observedAt = new Date().toISOString();
-      // This proposal is not itself a binding. The tracker independently checks
-      // the complete content and submission identity before automatic linking.
-      const bindingProof = {
-        kind: 'douyin-rendered-dom-v1', targetRef: target.ref, browserId: target.browserId,
-        assetSha256: target.sha256, submittedAt: target.submitStartedAt,
-        accountId: account.accountId, workId: preview.workId,
-        cardTitle: fresh.title, cardTime: parseDouyinCardTime(fresh.time),
-        previewTitle: preview.title, previewUrl: preview.url, profileUrl: preview.profileUrl,
-        cardMatches: 1, profileMatches: 1, stableSamples: this.stableSamples,
-      };
-      const evidence = {
-        url: preview.url,
-        text: JSON.stringify({
-          accountId: target.accountId, cardTitle: fresh.title, cardTime: fresh.time,
-          cardStatus: fresh.status, previewTitle: preview.title,
-          previewUrl: preview.url, profileUrl: preview.profileUrl,
-          stableSamples: this.stableSamples, rawMetrics: fresh.metrics, bindingProof,
-        }),
-      };
-      const observation = {
-        accountId: target.accountId, workId: preview.workId,
-        url: `https://www.douyin.com/video/${preview.workId}`,
-        reviewState: reviewState(fresh.status), observedAt, evidence,
-        metrics: parseDouyinMetrics(fresh.metrics),
-        ...(reviewState(fresh.status) === 'published' ? { publishedAt: parseDouyinCardTime(fresh.time) } : {}),
-      };
-      return discovery ? {
-        requiresExplicitBinding: true, candidate: observation,
-        metadata: { cardTitle: fresh.title, cardTime: fresh.time, previewTitle: preview.title },
-        bindingProof,
-      } : observation;
-      // publisher.session owns this window and always stops its own session.
-      // No user tab is borrowed or closed, including on ambiguity or failure.
+      return results;
     });
   }
   async inspect(target) { return this.collect(target, false); }
