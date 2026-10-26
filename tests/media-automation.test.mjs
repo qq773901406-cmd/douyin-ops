@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { Readable } from 'node:stream';
 import { join } from 'node:path';
-import { MediaAutomation, runMediaProcess, returnedWanFile, createWanDownloadFetch } from '../server/media-automation.mjs';
+import { MediaAutomation, runMediaProcess, returnedWanFile, verifiedWanEventOutcome, createWanDownloadFetch } from '../server/media-automation.mjs';
 import { JsonStore } from '../workbuddy/connector/lib/json-store.mjs';
 import { normalizeState } from '../workbuddy/connector/lib/workspace-model.mjs';
 
@@ -180,6 +180,86 @@ test('Wan已观察副本的返回文件沿原副本下载，保留原FileData且
   for (const extra of [{ observed_replica: '../other' }, { observed_replica: 'other' }, { app_url: wanOrigin }, { app_url: 'https://other.hf.space/--replicas/observed-replica' },
     { route_verified_at: '' }, { download_url: returnedUrl }, { result: [{ ...receipt.result[0], url: pinned.replace(replica, 'other-replica') }] }])
     assert.throws(() => returnedWanFile({ ...receipt, ...extra }));
+});
+
+async function eventRecoveryFixture({ failed = false, services = {} } = {}) {
+  const f = await recoveryFixture({ services });
+  const replica = 'observed-replica', app = `${wanOrigin}/--replicas/${replica}`;
+  const original = downloadableReceipt({ result: undefined, download_url: undefined, observed_replica: replica, app_url: app,
+    route_verified_at: '2026-10-26T00:00:00Z', session_hash: 'fixture-session', event_id: 'fixture-event' });
+  const originalRaw = JSON.stringify(original, null, 2), sum = createHash('sha256').update(originalRaw).digest('hex');
+  await writeFile(f.receiptPath, originalRaw);
+  const evidence = { version: 1, status: failed ? 'failed' : 'completed', method: 'GET', remoteResubmitted: false,
+    originalTaskId: f.original.taskId, originalMediaId: f.original.id, originalReceiptSha256: sum,
+    space: original.space, app_url: app, observed_replica: replica, session_hash: original.session_hash, event_id: original.event_id,
+    requestUrl: `${app}/gradio_api/queue/data?session_hash=${original.session_hash}`, httpStatus: 200, observedReplica: replica,
+    startedAt: '2026-10-26T09:24:44Z', completedAt: '2026-10-26T09:24:45Z',
+    completion: { msg: 'process_completed', event_id: original.event_id, success: !failed,
+      output: failed ? { title: 'ZeroGPU quota exceeded', error: 'You have exceeded your ZeroGPU quota (105s requested vs. 71s left). Try again in 23:55:20. Authenticate with a Hugging Face token for more quota - https://huggingface.co/settings/tokens' }
+        : { data: downloadableReceipt().result } } };
+  const evidencePath = join(f.original.directory, 'result-recovery.json'); await writeFile(evidencePath, JSON.stringify(evidence));
+  return { ...f, originalReceipt: original, originalRaw, sum, evidence, evidencePath, pinnedUrl: `${app}/gradio_api/file=${returnedPath}` };
+}
+
+test('跨进程原事件成功证据只恢复GET下载，原unknown回执与任务不变且幂等', async () => {
+  const urls = [], f = await eventRecoveryFixture({ services: { downloadFetch: async url => { urls.push(url); return new Response(mp4Bytes()); } } });
+  const beforeCalls = f.calls.length;
+  const inspect = await f.media.inspectWanOutcome({ taskId: f.original.taskId });
+  assert.equal(inspect.status, 'completed'); assert.equal(inspect.terminalFailure, false); assert.equal(f.calls.length, beforeCalls);
+  const result = await f.media.recoverWan({ taskId: f.original.taskId }, f.recoveryContext);
+  assert.equal(result.status, 'completed'); assert.deepEqual(urls, [f.pinnedUrl]);
+  assert.equal(result.output.originalTaskId, f.original.taskId); assert.equal(result.output.originalMediaId, f.original.id); assert.equal(result.output.remoteResubmitted, false);
+  const receipt = JSON.parse(await readFile(result.output.receipt, 'utf8'));
+  assert.equal(receipt.eventEvidence.originalReceiptSha256, f.sum); assert.equal(receipt.eventEvidence.method, 'GET');
+  assert.equal(receipt.eventEvidence.sha256, createHash('sha256').update(await readFile(f.evidencePath)).digest('hex'));
+  await f.media.recoverWan({ taskId: f.original.taskId }, f.recoveryContext); assert.equal(urls.length, 1);
+  assert.equal(await readFile(f.receiptPath, 'utf8'), f.originalRaw);
+  assert.deepEqual((await f.media.store.read()).value.jobs.find(job => job.id === f.original.id), f.original);
+  assert.ok(!f.calls.some(call => call.args[0].endsWith('free_wan.py')));
+});
+
+test('跨进程原事件明确额度失败提供可核实等待时间，不下载、不生成、不改未知历史', async () => {
+  let gets = 0;
+  const f = await eventRecoveryFixture({ failed: true, services: { downloadFetch: async () => { gets++; throw new Error('must not download'); } } });
+  const outcome = await f.media.inspectWanOutcome({ taskId: f.original.taskId });
+  assert.equal(outcome.status, 'failed'); assert.equal(outcome.terminalFailure, true); assert.equal(outcome.remoteFailure.quotaExceeded, true);
+  assert.equal(outcome.remoteFailure.requestedSeconds, 105); assert.equal(outcome.remoteFailure.remainingSeconds, 71);
+  assert.equal(outcome.remoteFailure.retryNotBefore, '2026-10-27T09:25:04.000Z'); assert.equal(outcome.remoteFailure.retrySafetySeconds, 300);
+  await assert.rejects(f.media.recoverWan({ taskId: f.original.taskId }, f.recoveryContext), error => error.code === 'remote_failed' && error.terminalFailure && error.eventEvidence.originalReceiptSha256 === f.sum);
+  assert.equal(gets, 0); assert.equal(f.calls.length, 0); assert.equal(await readFile(f.receiptPath, 'utf8'), f.originalRaw);
+  assert.equal((await f.media.store.read()).value.jobs.length, 1); assert.equal((await f.workspace.read()).value.drafts.length, 0);
+});
+
+test('原事件证据拒绝其他任务/文件/事件/副本/POST/伪终态，未知不变且不下载', async () => {
+  const f = await eventRecoveryFixture();
+  for (const patch of [{ originalTaskId: 'other' }, { originalMediaId: 'a'.repeat(32) }, { originalReceiptSha256: 'a'.repeat(64) },
+    { method: 'POST' }, { remoteResubmitted: true }, { session_hash: 'other' }, { event_id: 'other' }, { app_url: wanOrigin },
+    { observedReplica: 'other' }, { httpStatus: 302 }, { requestUrl: f.evidence.requestUrl + '&x=1' },
+    { completion: { ...f.evidence.completion, event_id: 'other' } }, { completion: { ...f.evidence.completion, success: false } },
+    { completedAt: '2026-10-25T00:00:00Z' }, { status: 'failed' }])
+    assert.throws(() => verifiedWanEventOutcome(f.originalReceipt, { ...f.evidence, ...patch }, f.original, f.sum));
+  await writeFile(f.evidencePath, JSON.stringify({ ...f.evidence, originalReceiptSha256: '0'.repeat(64) }));
+  await assert.rejects(f.media.recoverWan({ taskId: f.original.taskId }, f.recoveryContext), /原任务不匹配/);
+  assert.equal((await f.media.store.read()).value.jobs.length, 1); assert.equal(f.calls.length, 0);
+});
+
+test('失败事件带文件或不明确错误不能算额度失败，不规范额度字符串没有自动续做时间', async () => {
+  const f = await eventRecoveryFixture({ failed: true }), check = evidence => verifiedWanEventOutcome(f.originalReceipt, evidence, f.original, f.sum);
+  for (const output of [{ ...f.evidence.completion.output, data: downloadableReceipt().result }, { error: '' }, { error: null }])
+    assert.throws(() => check({ ...f.evidence, completion: { ...f.evidence.completion, output } }));
+  for (const error of ['Temporary transport error', 'You have exceeded your ZeroGPU quota (71s requested vs. 105s left). Try again in 23:55:20.',
+    'You have exceeded your ZeroGPU quota (105s requested vs. 71s left). Try again in 99:55:20.',
+    'You have exceeded your ZeroGPU quota (105s requested vs. 71s left). Try again now.']) {
+    const outcome = check({ ...f.evidence, completion: { ...f.evidence.completion, output: { ...f.evidence.completion.output, error } } });
+    assert.equal(outcome.status, 'failed'); assert.equal(outcome.remoteFailure.quotaExceeded, false); assert.equal(outcome.remoteFailure.retryNotBefore, undefined);
+  }
+});
+
+test('原事件证据下载期间改变则不归档，也不修改原回执', async () => {
+  let f;
+  f = await eventRecoveryFixture({ services: { downloadFetch: async () => { await writeFile(f.evidencePath, JSON.stringify({ ...f.evidence, completedAt: '2026-10-26T09:24:46Z' })); return new Response(mp4Bytes()); } } });
+  await assert.rejects(f.media.recoverWan({ taskId: f.original.taskId }, f.recoveryContext), /GET 证据在恢复期间发生变化/);
+  assert.equal(await readFile(f.receiptPath, 'utf8'), f.originalRaw); assert.equal((await f.workspace.read()).value.drafts.length, 0);
 });
 
 test('Wan恢复网络GET最多2次，成功不重新submit；重定向/登录响应直接停止', async () => {

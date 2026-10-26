@@ -81,6 +81,47 @@ export function returnedWanFile(receipt) {
   return { url: expected, path: file.path, duration };
 }
 
+// A stopped CLI may have submitted successfully but received no FileData. A
+// separately persisted GET observation can recover that same original event;
+// it never changes the original unknown receipt or authorizes another POST.
+export function verifiedWanEventOutcome(original, evidence, source, originalReceiptSha256) {
+  const replica = original?.observed_replica, session = original?.session_hash, event = original?.event_id;
+  if (original?.space !== WAN_SPACE || original.anonymous !== true || original.paid_subscription_or_trial !== false
+    || original.status !== 'unknown' || original.video_produced !== false || original.result != null || original.download_url != null
+    || original.output_file != null || original.partial_file != null
+    || !/^[A-Za-z0-9][A-Za-z0-9-]{0,127}$/.test(replica || '') || original.app_url !== `${WAN_ORIGIN}/--replicas/${replica}`
+    || !Number.isFinite(Date.parse(original.route_verified_at || ''))
+    || !/^[A-Za-z0-9_-]{1,128}$/.test(session || '') || !/^[A-Za-z0-9_-]{1,128}$/.test(event || '')) throw fail('原回执缺少可核对的固定副本与原事件，不能取代原结果。');
+  const started = Date.parse(evidence?.startedAt || ''), completed = Date.parse(evidence?.completedAt || '');
+  if (evidence?.version !== 1 || !['completed', 'failed'].includes(evidence.status) || evidence.method !== 'GET' || evidence.remoteResubmitted !== false
+    || evidence.originalTaskId !== source.taskId || evidence.originalMediaId !== source.id
+    || !/^[a-f0-9]{64}$/.test(originalReceiptSha256 || '') || evidence.originalReceiptSha256 !== originalReceiptSha256
+    || evidence.space !== original.space || evidence.app_url !== original.app_url || evidence.observed_replica !== replica
+    || evidence.session_hash !== session || evidence.event_id !== event
+    || evidence.requestUrl !== `${original.app_url}/gradio_api/queue/data?session_hash=${encodeURIComponent(session)}`
+    || evidence.httpStatus !== 200 || evidence.observedReplica !== replica
+    || !Number.isFinite(started) || !Number.isFinite(completed) || completed < started
+    || evidence.completion?.msg !== 'process_completed' || evidence.completion.event_id !== event) throw fail('原事件 GET 证据不完整或与原任务不匹配，未下载或重新生成。');
+  if (evidence.status === 'failed') {
+    const output = evidence.completion.output;
+    if (evidence.completion.success !== false || !output || typeof output.error !== 'string' || !output.error.trim()
+      || output.error.length > 8000 || output.data != null) throw fail('原事件没有明确失败且无返回文件的终态，仍需核实。');
+    const title = String(output.title || evidence.completion.title || '').slice(0, 200);
+    const quota = /^You have exceeded your ZeroGPU quota \((\d{1,5})s requested vs\. (\d{1,5})s left\)\. Try again in (\d{1,2}):([0-5]\d):([0-5]\d)\.(?: Authenticate with a Hugging Face token for more quota - https:\/\/huggingface\.co\/settings\/tokens)?$/.exec(output.error);
+    const delaySeconds = quota ? Number(quota[3]) * 3600 + Number(quota[4]) * 60 + Number(quota[5]) : 0;
+    const quotaExceeded = title === 'ZeroGPU quota exceeded' && !!quota && Number(quota[1]) > Number(quota[2])
+      && delaySeconds > 0 && delaySeconds <= 48 * 3600;
+    return { status: 'failed', terminalFailure: true, remoteFailure: { title,
+      message: output.error.slice(0, 2000), quotaExceeded, observedAt: evidence.completedAt,
+      ...(quotaExceeded ? { requestedSeconds: Number(quota[1]), remainingSeconds: Number(quota[2]), retryAfterSeconds: delaySeconds,
+        retrySafetySeconds: 300, retryNotBefore: new Date(started + (delaySeconds + 300) * 1000).toISOString() } : {}) } };
+  }
+  if (evidence.completion.success !== true || !Array.isArray(evidence.completion.output?.data) || !evidence.completion.output.data.length) throw fail('原事件没有成功返回文件，未下载或重新生成。');
+  const returned = { ...original, result: evidence.completion.output.data };
+  returnedWanFile(returned);
+  return { status: 'completed', terminalFailure: false, returned };
+}
+
 /** Spawn only the requested executable. Timeout/cancel terminates this owned process tree. */
 export function runMediaProcess(executable, args, { signal, timeout = 960000, env = process.env, cwd } = {}) {
   return new Promise((resolveRun, reject) => {
@@ -287,8 +328,8 @@ export class MediaAutomation {
       if (fileHandle) await fileHandle.close();
     }
   }
-  async recoverWan(raw, context = {}, { automatic = false, ffmpeg: preparedFfmpeg } = {}) {
-    const input = this.validate('wanRecover', raw), taskId = text(context.task?.id, 200, '恢复任务编号'), runId = text(context.runId, 200, '恢复运行编号');
+  async readWanOutcome(raw, context = {}) {
+    const input = this.validate('wanRecover', raw);
     cancelled(context.signal);
     const source = (await this.store.read()).value.jobs.find(job => job.kind === 'wan' && job.taskId === input.taskId);
     if (!source || !/^[a-f0-9]{32}$/.test(source.id) || !['uncertain', 'requires_action', 'completed'].includes(source.status)) throw fail('未找到已结束且有返回文件的原 Wan 制作记录。');
@@ -299,19 +340,57 @@ export class MediaAutomation {
     if (!receiptInfo.isFile() || receiptInfo.size > 1024 * 1024) throw fail('原 Wan 回执无效或过大。');
     const originalRaw = await readFile(originalReceipt, 'utf8'), originalHash = digest(originalRaw);
     let returned; try { returned = JSON.parse(originalRaw); } catch { throw fail('原 Wan 回执无法解析，未下载。'); }
-    const file = returnedWanFile(returned), id = digest(['wan-recovery', source.id, taskId]).slice(0, 32);
+    let eventEvidence, outcome = { status: 'completed', terminalFailure: false };
+    if (returned.result == null) {
+      if (source.status === 'completed' || source.asset || source.media) throw fail('原制作记录已有成片痕迹，不能按缺失结果处置。');
+      const path = join(source.directory, 'result-recovery.json');
+      try {
+        const info = await stat(path);
+        if (!info.isFile() || info.size < 1 || info.size > 1024 * 1024 || await realpath(path) !== join(canonicalSource, 'result-recovery.json')) throw fail('原事件 GET 证据路径无效或过大。');
+        const raw = await readFile(path, 'utf8');
+        if (Buffer.byteLength(raw) > 1024 * 1024) throw fail('原事件 GET 证据读取期间发生变化。');
+        const originalReceiptSha256 = createHash('sha256').update(originalRaw).digest('hex');
+        const evidence = JSON.parse(raw);
+        outcome = verifiedWanEventOutcome(returned, evidence, source, originalReceiptSha256);
+        if (outcome.returned) returned = outcome.returned;
+        eventEvidence = { path, sha256: createHash('sha256').update(raw).digest('hex'), originalReceiptSha256,
+          method: 'GET', originalTaskId: source.taskId, originalMediaId: source.id, eventId: returned.event_id,
+          sessionHash: returned.session_hash, appUrl: returned.app_url, observedReplica: returned.observed_replica,
+          observedAt: evidence.completedAt, remoteResubmitted: false };
+      } catch (error) {
+        throw fail(error.code === 'ENOENT' ? '原 Wan 回执没有返回文件，尚无匹配的原事件 GET 完成证据；不会重新生成。' : `原事件 GET 证据未通过核对：${error.message}`);
+      }
+    }
+    const file = outcome.status === 'completed' ? returnedWanFile(returned) : null;
+    return { ...outcome, source, canonicalRoot, canonicalSource, originalReceipt, originalRaw, originalHash, returned, file, eventEvidence };
+  }
+  async inspectWanOutcome(raw, context = {}) {
+    const observed = await this.readWanOutcome(raw, context);
+    return { status: observed.status, terminalFailure: observed.terminalFailure, originalTaskId: observed.source.taskId, originalMediaId: observed.source.id,
+      originalReceipt: observed.originalReceipt, originalReceiptPreserved: true, remoteResubmitted: false,
+      ...(observed.eventEvidence ? { eventEvidence: observed.eventEvidence } : {}),
+      ...(observed.remoteFailure ? { remoteFailure: observed.remoteFailure } : {}) };
+  }
+  async recoverWan(raw, context = {}, { automatic = false, ffmpeg: preparedFfmpeg } = {}) {
+    const taskId = text(context.task?.id, 200, '恢复任务编号'), runId = text(context.runId, 200, '恢复运行编号');
+    const observed = await this.readWanOutcome(raw, context);
+    if (observed.status === 'failed') throw Object.assign(fail(`原事件已明确返回失败：${observed.remoteFailure.message}`, 'remote_failed'),
+      { terminalFailure: true, eventEvidence: observed.eventEvidence, remoteFailure: observed.remoteFailure });
+    const { source, canonicalRoot, originalReceipt, originalHash, returned, file, eventEvidence } = observed;
+    const id = digest(['wan-recovery', source.id, taskId]).slice(0, 32);
     const directory = join(this.directory, 'jobs', id, 'wan-recovery'), recoveryReceipt = join(directory, 'download-recovery.json'), asset = join(directory, 'video.mp4');
     const existing = (await this.store.read()).value.jobs.find(job => job.id === id);
     if (existing) {
-      if (existing.status === 'completed' && existing.originalReceiptHash === originalHash && await hashFile(existing.asset) === existing.media.sha256) return { status: 'completed', output: await this.archive(existing) };
+      if (existing.status === 'completed' && existing.originalReceiptHash === originalHash
+        && existing.eventEvidence?.sha256 === eventEvidence?.sha256 && await hashFile(existing.asset) === existing.media.sha256) return { status: 'completed', output: await this.archive(existing) };
       throw fail('此恢复任务已有未完成或不一致的记录，请检查回执；不会覆盖原素材或自动重放。');
     }
     const ffmpeg = preparedFfmpeg || await this.probeTools(context);
-    const record = { id, kind: 'wanRecover', taskId, runId, directory, recoveryReceipt, originalTaskId: source.taskId, originalMediaId: source.id, originalReceipt, originalReceiptHash: originalHash,
+    const record = { id, kind: 'wanRecover', taskId, runId, directory, recoveryReceipt, originalTaskId: source.taskId, originalMediaId: source.id, originalReceipt, originalReceiptHash: originalHash, ...(eventEvidence ? { eventEvidence } : {}),
       status: 'recovering', createdAt: timestamp(), platform: source.platform, automatic, remoteResubmitted: false, title: source.title || '免费 Wan 视频（恢复下载）', caption: source.caption || String(returned.parameters?.prompt || '').slice(0, 6000) };
     await this.store.update(state => { if (state.jobs.some(job => job.id === id)) throw fail('同一恢复任务已被认领。'); state.jobs.push(record); });
     const update = async fields => { const saved = await this.store.update(state => Object.assign(state.jobs.find(job => job.id === id), fields)); return saved.value.jobs.find(job => job.id === id); };
-    const receipt = { version: 1, recoveryId: id, taskId, runId, originalTaskId: source.taskId, originalMediaId: source.id, originalReceipt, originalReceiptHash: originalHash,
+    const receipt = { version: 1, recoveryId: id, taskId, runId, originalTaskId: source.taskId, originalMediaId: source.id, originalReceipt, originalReceiptHash: originalHash, ...(eventEvidence ? { eventEvidence } : {}),
       url: file.url, returnedPath: file.path, requestedDuration: file.duration, method: 'GET', remoteResubmitted: false, originalReceiptPreserved: true, automatic, startedAt: timestamp(), status: 'recovering', attempts: [], asset };
     await mkdir(directory, { recursive: true });
     if (await realpath(directory) !== join(canonicalRoot, 'jobs', id, 'wan-recovery')) throw fail('恢复输出目录发生变化。');
@@ -330,6 +409,7 @@ export class MediaAutomation {
           if (Math.abs(media.seconds - file.duration) > 0.6) throw fail('恢复文件实际时长与原请求不符，保留副本但不归档。');
           if (media.sha256 !== downloaded.sha256) throw fail('恢复文件在下载后校验时发生变化。');
           if (digest(await readFile(originalReceipt, 'utf8')) !== originalHash) throw fail('原生成回执在恢复期间发生变化，未归档。');
+          if (eventEvidence && await hashFile(eventEvidence.path) !== eventEvidence.sha256) throw fail('原事件 GET 证据在恢复期间发生变化，未归档。');
           cancelled(context.signal);
           await copyFile(attempt.path, asset, constants.COPYFILE_EXCL);
           if (await hashFile(asset) !== media.sha256) throw fail('归档副本哈希校验失败。');

@@ -151,12 +151,13 @@ const server = createServer(async (req, res) => {
         const route = url.pathname.slice('/api/daily-production'.length);
         if (req.method === 'GET' && route === '') { sendJson(res, 200, { ok: true, ...(await dailyProduction.snapshot()) }); return; }
         if (req.method === 'GET' && route === '/browsers') { sendJson(res, 200, { browsers: await automation.browsers() }); return; }
+        if (req.method === 'GET' && route === '/preview-resume-state') { sendJson(res, 200, { ok: true, ...(await dailyProduction.inspectGenerationResume(String(url.searchParams.get('id') || ''))) }); return; }
         if (['GET', 'HEAD'].includes(req.method) && route === '/media') { const media = await dailyProduction.media(String(url.searchParams.get('id') || '')); await serveMedia(req, res, media.directory, media.path); return; }
-        if (req.method === 'POST' && ['/toggle', '/preview', '/source', '/sync', '/connect', '/reconcile', '/resolve-generation', '/check', '/schedule', '/content-source', '/production-settings'].includes(route)) {
+        if (req.method === 'POST' && ['/toggle', '/preview', '/source', '/sync', '/connect', '/reconcile', '/resolve-generation', '/resume-generation', '/check', '/schedule', '/content-source', '/production-settings'].includes(route)) {
           const input = await bodyJson(req, ['/production-settings', '/resolve-generation'].includes(route) ? 16 * 1024 : 4096), revision = req.headers['if-match'];
           if (route === '/production-settings' && typeof revision !== 'string') throw Object.assign(new Error('请刷新生产状态后再保存成片方式。'), { status: 428 });
           if (['/preview', '/sync', '/check'].includes(route)) await dailyProduction[route.slice(1)](revision);
-          else await dailyProduction[route === '/content-source' ? 'contentSource' : route === '/production-settings' ? 'productionSettings' : route === '/resolve-generation' ? 'resolveGeneration' : route.slice(1)](input, revision);
+          else await dailyProduction[route === '/content-source' ? 'contentSource' : route === '/production-settings' ? 'productionSettings' : route === '/resolve-generation' ? 'resolveGeneration' : route === '/resume-generation' ? 'resumeGeneration' : route.slice(1)](input, revision);
           sendJson(res, 200, { ok: true, ...(await dailyProduction.snapshot()) }); return;
         }
         sendJson(res, 404, { ok: false, message: '每日生产接口不存在。' }); return;

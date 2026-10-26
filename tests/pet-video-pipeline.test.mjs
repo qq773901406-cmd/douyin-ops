@@ -66,6 +66,74 @@ async function installUnsubmittedFixture(f, { failAt = 1, jobPatch = {}, receipt
   };
 }
 
+async function interruptedResumeFixture(t, { outcome = 'quota' } = {}) {
+  const f = await fixture(t); let now = '2026-10-26T01:00:00Z'; f.pipeline.clock = () => now;
+  f.media.directory = join(f.root, 'media-automation'); f.media.store = new JsonStore(join(f.media.directory, 'state.json'), { jobs: [] });
+  f.media.execute = async (kind, input, context) => {
+    f.calls.push({ kind, input, context });
+    const id = hash(JSON.stringify(['wan', context.task.id])).slice(0, 32), directory = join(f.media.directory, 'jobs', id, 'wan');
+    await mkdir(directory, { recursive: true });
+    const snapshot = join(directory, 'input' + extname(input.imagePath)); await copyFile(input.imagePath, snapshot);
+    const asset = join(directory, 'video.mp4'), receiptPath = join(directory, 'request.json'), failed = context.task.id === 'pet-day-1-shot-3';
+    const bytes = Buffer.from('SIMULATED fresh clip ' + context.task.id), metadata = { decoded: true, seconds: 5.0625, sha256: hash(bytes) };
+    const receipt = { status: failed ? 'unknown' : 'completed', video_produced: !failed, space: 'zerogpu-aoti/wan2-2-fp8da-aoti-faster', anonymous: true, paid_subscription_or_trial: false,
+      out_dir: directory, input_image: input.imagePath, input_snapshot: snapshot, input_sha256: hash(await readFile(snapshot)), parameters: { prompt: input.prompt, duration_seconds: 5, seed: input.seed }, ...(failed ? {} : { output_file: asset }) };
+    await writeFile(receiptPath, JSON.stringify(receipt));
+    await f.media.store.update(state => state.jobs.push({ id, kind, taskId: context.task.id, runId: context.runId, directory, inputHash: hash(JSON.stringify(input)), status: failed ? 'uncertain' : 'completed', ...(failed ? {} : { asset, media: metadata }) }));
+    if (failed) throw Object.assign(new Error('SIMULATED original event connection lost'), { code: 'uncertain' });
+    await writeFile(asset, bytes); return { status: 'completed', output: { asset, receipt: receiptPath, media: metadata } };
+  };
+  await assert.rejects(f.render(), /connection lost/);
+  const original = structuredClone((await f.pipeline.store.read()).value.jobs[0]), originalTaskId = original.shotIntent.taskId, originalMediaId = hash(JSON.stringify(['wan', originalTaskId])).slice(0, 32);
+  const originalReceiptPath = join(f.media.directory, 'jobs', originalMediaId, 'wan', 'request.json'), originalReceiptRaw = await readFile(originalReceiptPath, 'utf8');
+  f.media.inspectWanOutcome = async () => {
+    if (outcome === 'unknown') throw new Error('No matching terminal evidence');
+    return { status: outcome === 'quota' ? 'failed' : 'completed', terminalFailure: outcome === 'quota', originalTaskId, originalMediaId, remoteResubmitted: false,
+      eventEvidence: { sha256: 'e'.repeat(64), originalReceiptSha256: hash(originalReceiptRaw) },
+      ...(outcome === 'quota' ? { remoteFailure: { quotaExceeded: true, retryNotBefore: '2026-10-27T01:00:00Z' } } : {}) };
+  };
+  f.media.recoverWan = async (input, context) => {
+    f.calls.push({ kind: 'recover', input, context }); assert.equal(input.taskId, originalTaskId); assert.equal(context.task.id, originalTaskId + '-recover');
+    const directory = join(f.root, 'recovered'); await mkdir(directory);
+    const asset = join(directory, 'video.mp4'), receipt = join(directory, 'download-recovery.json'), bytes = Buffer.from('SIMULATED recovered original third clip'), media = { decoded: true, seconds: 5.0625, sha256: hash(bytes) };
+    await writeFile(asset, bytes); await writeFile(receipt, JSON.stringify({ status: 'completed', originalMediaId, remoteResubmitted: false }));
+    await f.media.store.update(state => state.jobs.push({ kind: 'wanRecover', taskId: context.task.id, status: 'completed', originalMediaId, asset, media, recoveryReceipt: receipt }));
+    return { status: 'completed', output: { asset, receipt, media, downloadRecovery: true, originalTaskId, originalMediaId, remoteResubmitted: false } };
+  };
+  return { ...f, original, originalReceiptPath, originalReceiptRaw, advance: value => { now = value; },
+    resume: () => f.pipeline.resume([source], join(f.root, 'outputs'), { runId: 'day-1', settings: f.settings }),
+    inspect: () => f.pipeline.inspectResume([source], join(f.root, 'outputs'), { runId: 'day-1', settings: f.settings }) };
+}
+
+test('免费续作在服务证据允许时间前只读等待，到期只新建失败镜头唯一retry和未开始镜头', async t => {
+  const f = await interruptedResumeFixture(t), originalShots = structuredClone(f.original.shots), callsBefore = f.calls.length;
+  const waiting = await f.inspect(); assert.equal(waiting.status, 'quota_wait'); assert.equal(waiting.canResume, false); assert.equal(waiting.completedShots, 2);
+  await assert.rejects(f.resume(), error => error.code === 'quota_wait'); assert.equal(f.calls.length, callsBefore);
+  assert.deepEqual((await f.pipeline.store.read()).value.jobs[0], f.original);
+  f.advance('2026-10-27T01:00:01Z'); assert.equal((await f.inspect()).canResume, true);
+  const result = await f.resume(); assert.equal(result.generationReceipt.shots.length, 4);
+  assert.deepEqual(result.generationReceipt.shots.slice(0, 2), originalShots); assert.equal(f.textCalls.length, 1);
+  assert.deepEqual(f.calls.filter(call => call.kind === 'wan').map(call => call.context.task.id), ['pet-day-1-shot-1', 'pet-day-1-shot-2', 'pet-day-1-shot-3', 'pet-day-1-shot-3-retry-1', 'pet-day-1-shot-4']);
+  assert.equal(await readFile(f.originalReceiptPath, 'utf8'), f.originalReceiptRaw);
+  const saved = (await f.pipeline.store.read()).value.jobs[0]; assert.equal(saved.quotaRetries.length, 1); assert.equal(saved.resumptions.length, 1);
+  assert.deepEqual(JSON.parse(await readFile(saved.resumptions[0].originalSnapshot, 'utf8')), f.original);
+  const count = f.calls.length; await f.resume(); assert.equal(f.calls.length, count, 'completed recovery does not resubmit');
+});
+
+test('成功原event只下载恢复原第三镜头，再生成第四镜头，不重新调用原任务', async t => {
+  const f = await interruptedResumeFixture(t, { outcome: 'completed' }); const result = await f.resume();
+  assert.equal(f.calls.filter(call => call.kind === 'recover').length, 1);
+  assert.deepEqual(f.calls.filter(call => call.kind === 'wan').map(call => call.context.task.id), ['pet-day-1-shot-1', 'pet-day-1-shot-2', 'pet-day-1-shot-3', 'pet-day-1-shot-4']);
+  assert.equal(result.generationReceipt.shots[2].downloadRecovery, true); assert.equal(await readFile(f.originalReceiptPath, 'utf8'), f.originalReceiptRaw);
+});
+
+test('续作拒绝未核实终态和已完成镜头被改动，原意图与视频生成次数保持不变', async t => {
+  const f = await interruptedResumeFixture(t, { outcome: 'unknown' }), count = f.calls.length;
+  assert.equal((await f.inspect()).canResume, false); await assert.rejects(f.resume(), /terminal evidence/);
+  assert.equal(f.calls.length, count); assert.deepEqual((await f.pipeline.store.read()).value.jobs[0], f.original);
+  await writeFile(f.original.shots[0].asset, 'changed'); await assert.rejects(f.resume(), /镜头编号或内容已变化/); assert.equal(f.calls.length, count);
+});
+
 test('萌宠设置可保存未配置状态，严格限定免费本机模型、参考和有声规格', () => {
   assert.deepEqual(validatePetSettings(), { model: '', referenceUrls: [], firstFrames: [], visualBrief: '', duration: 20, audioMode: 'original-music' });
   for (const value of [{ model: 'qwen:cloud' }, { duration: 5 }, { audioMode: 'silent' }, { endpoint: 'https://other.invalid' }, { referenceUrls: ['http://127.0.0.1:4000'] }, { firstFrames: ['relative.png'] }]) assert.throws(() => validatePetSettings(value));

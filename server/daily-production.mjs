@@ -81,6 +81,10 @@ function validate(state) {
   state.config.petSettings = validatePetSettings(state.config.petSettings);
   state.petSources ??= [];
   state.generationResolutions ??= [];
+  state.generationResumptions ??= [];
+  if (!Array.isArray(state.generationResumptions) || state.generationResumptions.some(item => !item || typeof item.id !== 'string' || typeof item.runId !== 'string'
+    || item.confirmed !== true || !Number.isFinite(Date.parse(item.at)) || !/^[a-f0-9]{64}$/.test(item.originalRunSha256 || '')
+    || digest(item.originalRun) !== item.originalRunSha256 || item.originalRun?.id !== item.runId)) throw new Error('生成续作审计无效，请保留原文件。');
   if (!Array.isArray(state.generationResolutions)) throw new Error('生成处置审计格式无效，请保留原文件。');
   const resolutionIds = new Set(), resolvedRuns = new Set();
   for (const item of state.generationResolutions) {
@@ -418,6 +422,82 @@ export class DailyProduction {
           originalGenerationState: run.generationState, originalReceiptPreserved: true, publicationSubmitted: false, ...(evidence ? { evidence } : {}) });
       }, revision);
     } finally { try { if (release) await release(); } finally { this.busy = false; } }
+  }
+  async resumeGeneration(input, revision) {
+    if (!revision || !input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(key => !['id', 'confirmed'].includes(key))
+      || typeof input.id !== 'string' || input.confirmed !== true) throw fail('请明确确认仅续作原来未发布的 AI 预览。');
+    if (this.busy || this.stopping) throw fail('已有任务正在运行或服务停止中。');
+    this.busy = true;
+    let release, launched = false;
+    try {
+      release = await this.automation.lease();
+      const current = await this.store.read(), original = current.value.runs.find(run => run.id === input.id);
+      if (current.revision !== revision) throw fail('记录已有更新，请刷新后续作。');
+      if (current.value.config.enabled || !abandonableGeneration(original) || current.value.generationResolutions.some(item => item.runId === input.id)
+        || current.value.runs.some(run => run.id !== input.id && (active.includes(run.status) || run.status === 'uncertain' || generationBlocked(current.value, run)))) throw fail('仅可续作已暂停、未弃置且没有发布或成片痕迹的失败预览。');
+      if (productionChanged(current.value.config, original.binding) || ['accountId', 'browserId', 'sourceMode', 'newsFeedUrl', 'newsKeywords', 'sourceFolder'].some(key => current.value.config[key] !== original.binding[key])) throw fail('原预览设置已变化，不能续作。');
+      if (typeof this.petPipeline?.resume !== 'function' || !original.sourceReferences?.length) throw fail('原生成续作能力或来源凭据不完整。');
+      const [queue, workspace] = await Promise.all([this.automation.store.read(), this.workspace.read()]);
+      if (queue.value.config.enabled || queue.value.items.some(item => ['approved', 'running', 'uncertain'].includes(item.status) || item.sourceProductionId === original.id)
+        || workspace.value.drafts.some(draft => draft.sourceProductionId === original.id)) throw fail('发布队列或关联草稿存在记录，不能续作此预览。');
+      const auditId = randomUUID();
+      await this.store.update(state => {
+        const run = state.runs.find(row => row.id === input.id);
+        if (digest(run) !== digest(original) || state.config.enabled) throw fail('原任务已有更新，不能重复续作。');
+        state.generationResumptions.push({ id: auditId, runId: run.id, confirmed: true, at: timestamp(), originalRevision: revision,
+          originalRunSha256: digest(original), originalRun: structuredClone(original), publicationSubmitted: false, status: 'running' });
+        Object.assign(run, { status: 'rendering', generationState: 'running', message: '正在核实原镜头终态；只恢复已返回文件或在已确认的免费额度恢复后续作。', generationResumeId: auditId });
+      }, revision);
+      launched = true;
+      void this.finishResumedPreview(structuredClone(original), auditId, release).catch(error => { this.error = error.message; });
+    } finally { if (!launched) { try { if (release) await release(); } finally { this.busy = false; } } }
+  }
+  async inspectGenerationResume(id) {
+    const state = await this.store.read(), original = state.value.runs.find(run => run.id === id);
+    if (typeof id !== 'string' || this.busy || this.stopping || state.value.config.enabled || !abandonableGeneration(original)
+      || state.value.generationResolutions.some(row => row.runId === id)
+      || productionChanged(state.value.config, original.binding)
+      || ['accountId', 'browserId', 'sourceMode', 'newsFeedUrl', 'newsKeywords', 'sourceFolder'].some(key => state.value.config[key] !== original.binding[key])) return { id, revision: state.revision, status: 'blocked', canResume: false, message: '当前记录或计划不符合未发布预览续作条件。' };
+    const [queue, workspace] = await Promise.all([this.automation.store.read(), this.workspace.read()]);
+    if (queue.value.config.enabled || queue.value.items.some(item => ['approved', 'running', 'uncertain'].includes(item.status) || item.sourceProductionId === id)
+      || workspace.value.drafts.some(draft => draft.sourceProductionId === id)) return { id, revision: state.revision, status: 'blocked', canResume: false, message: '存在发布队列或草稿记录，不能续作。' };
+    if (typeof this.petPipeline?.inspectResume !== 'function') return { id, revision: state.revision, status: 'blocked', canResume: false, message: '原预览续作检查未接入。' };
+    return { id, revision: state.revision, ...(await this.petPipeline.inspectResume(original.sourceReferences, join(this.directory, 'videos'), { runId: id, settings: original.binding.petSettings })) };
+  }
+  async finishResumedPreview(target, auditId, release) {
+    const update = async patch => { await this.store.update(state => Object.assign(state.runs.find(run => run.id === target.id), patch)); Object.assign(target, patch); };
+    const guard = async () => {
+      const state = (await this.store.read()).value, current = state.runs.find(run => run.id === target.id);
+      if (this.stopping || state.config.enabled || current?.generationResumeId !== auditId || current.status !== 'rendering' || hasSubmissionEvidence(current)
+        || productionChanged(state.config, target.binding) || ['accountId', 'browserId', 'sourceMode', 'newsFeedUrl', 'newsKeywords', 'sourceFolder'].some(key => state.config[key] !== target.binding[key])) throw fail('续作期间设置或任务状态变化，已停止。');
+      const queue = (await this.automation.store.read()).value;
+      if (queue.config.enabled || queue.items.some(item => ['approved', 'running', 'uncertain'].includes(item.status) || item.sourceProductionId === target.id)) throw fail('发布队列状态变化，已停止续作。');
+    };
+    try {
+      await guard();
+      const rendered = await this.petPipeline.resume(target.sourceReferences, join(this.directory, 'videos'), { runId: target.id, settings: target.binding.petSettings, guard,
+        onProgress: async info => { await guard(); await update({ message: String(info?.message || '正在续作原 AI 萌宠预览。').slice(0, 1500) }); } });
+      await guard();
+      const sha256 = await this.verifyPetRendered(rendered, target);
+      const videoId = randomUUID(), draftId = randomUUID(), references = target.sourceReferences;
+      await this.workspace.update(state => {
+        if (state.drafts.some(draft => draft.sourceProductionId === target.id)) throw fail('此预览已经归档，未重复创建草稿。');
+        state.videos.push({ ...newVideo(), id: videoId, title: rendered.title, subject: 'AI 萌宠有声故事', notes: '从本次中断处续作；保留原镜头与原失败证据。\n' + references.map(item => `${item.title}\n${item.url}`).join('\n'), asset: rendered.asset, status: 'completed', provider: 'AI 萌宠动态生成与原创音乐合成', cost: '0', aiGenerated: true,
+          generationReceipt: rendered.generationReceipt, audioVerification: rendered.audioVerification, motionVerification: rendered.motionVerification, createdAt: timestamp(), updatedAt: timestamp(),
+          shots: [{ seconds: Math.round(rendered.seconds), action: 'AI 生成萌宠动态镜头并配原创音乐。', camera: '竖屏 AI 萌宠动态镜头' }] });
+        state.drafts.push({ id: draftId, title: rendered.title, pubTitle: rendered.title, caption: rendered.caption, asset: rendered.asset, platform: 'douyin', format: '视频', status: '待检查', sourceVideoId: videoId, sourceProductionId: target.id,
+          sourceMode: target.sourceMode, productionMode: 'ai-pet', aiGenerated: true, contentDeclaration: 'ai-generated', sourceReferences: references, generationReceipt: rendered.generationReceipt,
+          audioVerification: rendered.audioVerification, motionVerification: rendered.motionVerification, createdAt: timestamp(), updatedAt: timestamp() });
+      });
+      await update({ ...rendered, sha256, videoId, draftId, generationState: 'completed', status: 'preview', message: '原预览续作完成，有声成片已验证；没有启用计划或发布。', finishedAt: timestamp(), generationWait: null });
+      await this.store.update(state => Object.assign(state.generationResumptions.find(row => row.id === auditId), { status: 'completed', finishedAt: timestamp(), assetSha256: sha256 }));
+      this.error = '';
+    } catch (error) {
+      this.error = error.message;
+      await update({ status: 'failed', generationState: 'uncertain', message: error.message, finishedAt: timestamp(),
+        ...(error.code === 'quota_wait' && error.retryNotBefore ? { generationWait: { reason: 'quota', retryNotBefore: error.retryNotBefore } } : {}) });
+      await this.store.update(state => Object.assign(state.generationResumptions.find(row => row.id === auditId), { status: error.code === 'quota_wait' ? 'quota_wait' : 'failed', finishedAt: timestamp(), message: error.message }));
+    } finally { try { await this.mirrorRun(target.id); } finally { try { if (release) await release(); } finally { this.busy = false; } } }
   }
   async reconcile(input, revision) {
     if (!revision || input.confirmed !== true || !['published', 'not-published'].includes(input.result)) throw fail('请确认已在抖音核实实际结果。');

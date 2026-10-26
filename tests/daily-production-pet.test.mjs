@@ -7,6 +7,7 @@ import { DailyProduction } from '../server/daily-production.mjs';
 import { AutomationService } from '../server/automation-service.mjs';
 import { JsonStore } from '../workbuddy/connector/lib/json-store.mjs';
 import { normalizeState } from '../workbuddy/connector/lib/workspace-model.mjs';
+import { setTimeout as delay } from 'node:timers/promises';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const scratch = resolve('.codex_tmp');
@@ -188,6 +189,49 @@ async function uncertainPreview(f) {
 const abandonment = (run, extra = {}) => ({ id: run.id, action: 'abandon-preview', confirmed: true,
   note: '已核实原生成结果无法取回，明确放弃本次预览，保留未知回执。', ...extra });
 const resolvePreview = async (f, run, extra = {}) => f.daily.resolveGeneration(abandonment(run, extra), (await f.daily.store.read()).revision);
+
+const waitForResume = async f => { for (let index = 0; index < 400 && f.daily.busy; index++) await delay(5); assert.equal(f.daily.busy, false); };
+test('预览断点续作只恢复原run并归档预览，保留失败快照且不会采集、启用或发布', async t => {
+  const f = await fixture(t), original = await uncertainPreview(f), collectCount = f.calls.filter(call => call === 'collect').length;
+  f.failRender(undefined); f.pipeline.resume = async (...args) => { f.calls.push('resume'); return f.pipeline.render(...args); };
+  f.pipeline.inspectResume = async () => ({ status: 'ready', canResume: true, completedShots: 2, remainingShots: 2 });
+  const before = await f.state(), revision = (await f.daily.store.read()).revision;
+  const inspect = await f.daily.inspectGenerationResume(original.id); assert.equal(inspect.canResume, true); assert.deepEqual(await f.state(), before);
+  await f.daily.resumeGeneration({ id: original.id, confirmed: true }, revision); await waitForResume(f);
+  const after = await f.state(), run = after.runs.find(row => row.id === original.id);
+  assert.equal(after.runs.length, 1); assert.equal(run.status, 'preview'); assert.equal(run.generationState, 'completed'); assert.ok(run.asset);
+  assert.equal(after.config.enabled, false); assert.equal(f.calls.filter(call => call === 'collect').length, collectCount); assert.ok(!f.calls.includes('publish'));
+  assert.deepEqual(after.generationResumptions[0].originalRun, original); assert.equal(after.generationResumptions[0].originalRunSha256, hash(JSON.stringify(original)));
+  assert.equal(after.generationResumptions[0].status, 'completed'); assert.equal((await f.workspace.read()).value.drafts.filter(draft => draft.sourceProductionId === original.id).length, 1);
+  await assert.rejects(f.daily.resumeGeneration({ id: original.id, confirmed: true }, (await f.daily.store.read()).revision), /仅可续作/);
+  assert.equal(f.calls.filter(call => call === 'resume').length, 1);
+});
+
+test('续作入口拒绝缺确认、过期版本、弃置记录和任何非未发布预览', async t => {
+  const f = await fixture(t), original = await uncertainPreview(f); f.pipeline.resume = async () => { throw new Error('must not run'); };
+  const revision = (await f.daily.store.read()).revision;
+  await assert.rejects(f.daily.resumeGeneration({ id: original.id, confirmed: false }, revision), /明确确认/);
+  await assert.rejects(f.daily.resumeGeneration({ id: original.id, confirmed: true, retryNotBefore: 'past' }, revision), /明确确认/);
+  await assert.rejects(f.daily.resumeGeneration({ id: original.id, confirmed: true }, 'stale'), /已有更新/);
+  await resolvePreview(f, original); await assert.rejects(f.daily.resumeGeneration({ id: original.id, confirmed: true }, (await f.daily.store.read()).revision), /仅可续作/);
+  for (const patch of [{ previewOnly: false, trigger: 'scheduler' }, { submitStartedAt: '2026-10-26T01:00:00Z' }, { asset: 'existing.mp4' }]) {
+    await f.daily.store.update(state => { state.generationResolutions = []; Object.assign(state.runs[0], original, patch); });
+    await assert.rejects(f.daily.resumeGeneration({ id: original.id, confirmed: true }, (await f.daily.store.read()).revision), /仅可续作/);
+  }
+  assert.equal((await f.state()).generationResumptions.length, 0);
+});
+
+test('额度未恢复的续作返回等待状态，保留原镜头并继续阻止启用', async t => {
+  const f = await fixture(t), original = await uncertainPreview(f), retryNotBefore = '2026-10-27T09:25:04Z';
+  f.pipeline.resume = async () => { throw Object.assign(new Error('免费额度尚未恢复'), { code: 'quota_wait', retryNotBefore }); };
+  f.pipeline.inspectResume = async () => ({ status: 'quota_wait', canResume: false, retryNotBefore, completedShots: 2, remainingShots: 2 });
+  assert.equal((await f.daily.inspectGenerationResume(original.id)).status, 'quota_wait');
+  await f.daily.resumeGeneration({ id: original.id, confirmed: true }, (await f.daily.store.read()).revision); await waitForResume(f);
+  const state = await f.state(); assert.equal(state.runs[0].status, 'failed'); assert.equal(state.runs[0].generationState, 'uncertain');
+  assert.equal(state.runs[0].generationWait.retryNotBefore, retryNotBefore); assert.equal(state.generationResumptions[0].status, 'quota_wait');
+  assert.equal(state.config.enabled, false); assert.equal((await f.workspace.read()).value.drafts.length, 0); assert.ok(!f.calls.includes('publish'));
+  await assert.rejects(f.enable(), /生成结果不明/);
+});
 
 test('人工处置未知预览只追加审计，原回执不改且不自动重生成或启用', async t => {
   const f = await fixture(t), original = await uncertainPreview(f), beforeCalls = [...f.calls];
