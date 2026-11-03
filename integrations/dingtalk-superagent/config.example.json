@@ -1,0 +1,9 @@
+{
+  "mode": "observe",
+  "enabled": false,
+  "corpId": "",
+  "clientId": "",
+  "allowedUserIds": [],
+  "allowedConversationIds": [],
+  "repository": "qq773901406-cmd/douyin-ops"
+}

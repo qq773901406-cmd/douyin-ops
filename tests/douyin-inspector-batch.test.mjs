@@ -64,6 +64,7 @@ function fixture({ accounts = [], failPreview = [], wrongPreview = [], wrongCapt
       throw new Error(`Unexpected command ${args[0]}`);
     },
   };
+  publisher.inspectDOM = (...args) => publisher.command(...args);
   const inspector = new DouyinInspector({
     publisher, pause: async () => {}, pageAttempts: 1, stableSamples: 2,
     previewReader: async () => {

@@ -23,6 +23,7 @@ const preview = {
 
 function fixture({ cards = [card], freshCards = cards, managePages, manageSnapshots, search = null, manageTimeoutMs = 30000, pageAttempts = 2, accountId = target.accountId, previews = [preview], addedTabs = 1, userTab = true, defaultReader = false } = {}) {
   const calls = [];
+  let searchValue = '';
   let clicked = false, readCount = 0, previewCount = 0, stopped = false, elapsed = 0;
   const publisher = {
     session: async (browserId, action) => {
@@ -38,9 +39,10 @@ function fixture({ cards = [card], freshCards = cards, managePages, manageSnapsh
         const pageCards = managePages ? managePages[Math.min(readCount, managePages.length - 1)] : readCount ? freshCards : cards;
         const snapshot = manageSnapshots ? manageSnapshots[Math.min(readCount, manageSnapshots.length - 1)] : { cards: pageCards, search };
         readCount++;
-        return { value: { url: manageUrl, accountIds: [accountId], ...snapshot } };
+        return { value: { url: manageUrl, accountIds: [accountId], searchValue, ...snapshot } };
       }
-      if (['fill', 'press'].includes(args[0])) return {};
+      if (args[0] === 'fill') { searchValue = args[args.indexOf('--value') + 1]; return {}; }
+      if (args[0] === 'press') return {};
       if (args[0] === 'click') { clicked = true; return {}; }
       if (args[0] === 'tab' && args[1] === 'list') {
         const tabs = [{ tab_id: 1, active: !clicked, scope: 'agent', url: manageUrl }];
@@ -52,6 +54,7 @@ function fixture({ cards = [card], freshCards = cards, managePages, manageSnapsh
       throw new Error(`Unexpected command: ${args[0]}`);
     },
   };
+  publisher.inspectDOM = (...args) => publisher.command(...args);
   const inspector = new DouyinInspector({
     publisher, pause: async ms => { elapsed += ms; }, now: () => elapsed, manageTimeoutMs, pageAttempts, stableSamples: 3,
     ...(!defaultReader ? { previewReader: async () => previews[Math.min(previewCount++, previews.length - 1)] } : {}),

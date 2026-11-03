@@ -18,6 +18,16 @@ bsk doctor
 
 在 Chrome 或 Edge 安装 BrowserSkill 扩展，打开扩展并启用本地连接。WorkBuddy 中应能发现 `browser-skill`。
 
+## BrowserSkill 0.4 协作协议
+
+CLI、运行中的 daemon 和扩展必须兼容；只替换 CLI 文件不代表托管 daemon 已重启。服务升级应核实空闲会话和执行中的业务，由原宿主管理重启，不能另起竞争 daemon。
+
+新会话的初次空白页导航后，用 `bsk cooperate sync --session <会话ID>` 获取当前观察和 `context_id`。每个页面动作（包括 `evaluate`、上传、填写、点击和后续导航）只消费一次对应的 `--context <context_id>`，随后重新同步。不要把新 context 填到旧页面上的决策后盲目重试。准确参数以当前 `--help` 和已更新的 browser-skill/cooperation 指引为准。
+
+需要跨 CLI 进程检查读取前后页面是否变化时，使用 `sync --save-full <新的完整观察路径>`，后续 `sync --baseline <前驱完整观察路径>`。只有同一标签、正确前驱、完整历史且明确 unchanged、无活动或变更时，才可以据此确认先前只读检查仍有效；否则重新读取业务状态并重新选择动作。
+
+人工持有页面控制权时让出操作，只等待和同步；`user_aborted` 立即结束任务。未知上传或提交结果先查平台证据，不重复动作。普通协作同步不会修改发布许可，账号、视频哈希、AI 声明和单次提交保护仍必须检查。
+
 ## 会话流程
 
 ```text

@@ -10,6 +10,7 @@ import { createAutomationWorkspace } from './automation.js';
 import { createDailyProduction } from './daily-production.js';
 import { createDouyinTracking } from './douyin-tracking.js';
 import { createOperations } from './operations.js';
+import { createSuperagentPanel } from './superagent-panel.js';
 import { dashboard } from './dashboard.js';
 import { renderLegacyPage } from './legacy-pages.js';
 import { esc, request, download, localDay, createFormMemory } from './workspace-ui.js';
@@ -55,6 +56,7 @@ const automation = createAutomationWorkspace({ notify });
 const dailyProduction = createDailyProduction({ notify, refreshWorkspace: () => sync.refreshSaved() });
 const douyinTracking = createDouyinTracking({ notify, refreshWorkspace: () => sync.refreshSaved() });
 const operations = createOperations({ notify, go, refreshWorkspace: () => sync.refreshSaved() });
+const superagent = createSuperagentPanel({ notify });
 const sync = createStateSync({ getState: () => state, setState(value, { initial = false } = {}) {
   state = value; studio.reset({ preserveEditor: initial }); planner.reset({ preserveEditor: initial }); shop.reset({ preserveEditor: initial });
   if (!initial) memory.reset();
@@ -75,10 +77,12 @@ navNames.shop = '电商选品';
 navNames.automation = '每日自动发布';
 navNames.production = '每日自动生产';
 navNames.operations = '运营任务中心';
+navNames.superagent = 'AI 开发代理';
 const pages = { home: () => dashboard(state), video: studio.render, publish: planner.render, knowledge: library.render, data: dataCenter.render, shop: shop.render };
 pages.automation = automation.render;
 pages.production = dailyProduction.render;
 pages.operations = operations.render;
+pages.superagent = superagent.render;
 for (const name of ['account', 'research', 'ideas', 'remix', 'comments', 'tracking', 'live', 'settings']) pages[name] = () => renderLegacyPage(name, { state, runtime, head, card, btn, field, metric, empty });
 
 function connectionStatus() {
@@ -98,6 +102,7 @@ function render() {
   if (page === 'production') void dailyProduction.mount();
   if (page === 'tracking') void douyinTracking.mount();
   if (page === 'operations') void operations.mount();
+  if (page === 'superagent') void superagent.mount();
   const automaticPages = { account: ['content.diagnosis', '自动诊断'], research: ['content.research', '自动采集研究'], ideas: ['content.ideas', '从来源生成脚本'], remix: ['content.remix', '自动分析参考'], comments: ['content.comments', '采集评论并拟稿'], video: ['media.wan', '自动生成与剪辑'], shop: ['content.productResearch', '自动研究商品'], tracking: ['content.insights', '生成数据复盘'], data: ['backup.full', '完整素材与回执备份'] };
   if (automaticPages[page]) { const [kind, label] = automaticPages[page]; const entry = document.createElement('div'); entry.className = 'form-actions'; entry.innerHTML = `<button type="button" class="button button-green" data-operation-kind="${kind}">${label}</button>`; $('#view').prepend(entry); }
 }
@@ -130,6 +135,7 @@ function addRecord(type, category, title, summary, extra = {}) {
 
 document.addEventListener('click', async event => {
   try {
+    if (await superagent.handleClick(event)) return;
     if (await operations.handleClick(event)) return;
     if (await studio.handleClick(event)) return;
     const target = event.target;

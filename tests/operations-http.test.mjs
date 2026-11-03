@@ -26,7 +26,7 @@ async function fixture(t) {
   const bytes = Buffer.from(Array.from({ length: 64 }, (_, i) => i));
   const upload = join(uploadDirectory, 'original.mp4'), generated = join(generatedDirectory, 'video.mp4'), daily = join(dailyDirectory, 'video.mp4');
   await Promise.all([upload, generated, daily].map(path => writeFile(path, bytes)));
-  const workspace = normalizeState({ drafts: [{ id: 'bili-draft', platform: 'bilibili', format: '视频', pubTitle: 'B站草稿', asset: upload }, { id: 'image-draft', platform: 'douyin', format: '图文', pubTitle: '图文草稿', asset: upload }] });
+  const workspace = normalizeState({ drafts: [{ id: 'bili-draft', platform: 'bilibili', format: '视频', pubTitle: 'B站草稿', asset: upload }, { id: 'image-draft', platform: 'douyin', format: '图文', pubTitle: '图文草稿', asset: upload }, { id: 'ai-draft', platform: 'douyin', format: '视频', pubTitle: 'AI萌宠', asset: upload, aiGenerated: true, contentDeclaration: 'ai-generated' }, { id: 'ai-without-declaration', platform: 'douyin', format: '视频', pubTitle: '旧AI草稿', asset: upload, aiGenerated: true }, { id: 'ai-empty-declaration', platform: 'douyin', format: '视频', pubTitle: 'AI声明被清空', asset: upload, aiGenerated: true, contentDeclaration: '' }] });
   await writeFile(join(runtime, 'workbench.json'), JSON.stringify(workspace));
   const queue = defaultAutomation(); queue.config.folder = uploadDirectory;
   await writeFile(join(runtime, 'automation/queue.json'), JSON.stringify(queue));
@@ -161,6 +161,25 @@ test('isolated operations HTTP routes preserve publishing and preview boundaries
     }
     const after = (await f.request('/api/automation')).body;
     assert.deepEqual(after.items, before.items); assert.equal(after.revision, before.revision);
+  });
+
+  await t.test('AI draft imports preserve declarations, infer legacy AI flags, and reject explicit removal through HTTP', async () => {
+    const before = (await f.request('/api/automation')).body;
+    assert.deepEqual(before.capabilities, { contentDeclaration: true, whenReadySchedule: true, expectedAssetHash: true });
+    assert.ok(Number.isFinite(Date.parse(before.readySuggestedAt)));
+    const rejected = await f.request('/api/automation/import-draft', { method: 'POST', revision: before.revision, body: { draftId: 'ai-empty-declaration' } });
+    assert.equal(rejected.status, 400); assert.match(rejected.body.message, /AI 视频必须保留/);
+    const legacy = await f.request('/api/automation/import-draft', { method: 'POST', revision: before.revision, body: { draftId: 'ai-without-declaration' } });
+    assert.equal(legacy.status, 200);
+    assert.equal(legacy.body.items.find(row => row.sourceDraftId === 'ai-without-declaration').contentDeclaration, 'ai-generated');
+    assert.equal(legacy.body.items.find(row => row.sourceDraftId === 'ai-without-declaration').aiGenerated, true);
+    const imported = await f.request('/api/automation/import-draft', { method: 'POST', revision: legacy.body.revision, body: { draftId: 'ai-draft' } });
+    assert.equal(imported.status, 200);
+    const item = imported.body.items.find(row => row.sourceDraftId === 'ai-draft');
+    assert.equal(item.contentDeclaration, 'ai-generated'); assert.equal(item.aiGenerated, true);
+    const edited = await f.request(`/api/automation/items/${item.id}/edit`, { method: 'POST', revision: imported.body.revision, body: { title: 'AI萌宠续集', caption: '原创AI故事' } });
+    assert.equal(edited.status, 200);
+    assert.equal(edited.body.items.find(row => row.id === item.id).contentDeclaration, 'ai-generated');
   });
 
   await t.test('new checked-media preview coexists with uploads/daily previews and rejects other runtime files', async () => {

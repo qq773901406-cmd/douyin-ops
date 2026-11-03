@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { basename, extname, isAbsolute, join, resolve } from 'node:path';
 import { JsonStore } from '../workbuddy/connector/lib/json-store.mjs';
-import { defaultAutomation, normalizeAutomation, nextSlot, shanghaiDay, validatePublishText, editableStatuses } from '../shared/automation-model.mjs';
+import { defaultAutomation, normalizeAutomation, nextSlot, nextReadySlot, shanghaiDay, validatePublishText, validateContentDeclaration, editableStatuses } from '../shared/automation-model.mjs';
 import { DouyinPublisher } from './douyin-publisher.mjs';
 import { hashFile, isInside } from '../lib/fs-utils.mjs';
 
@@ -12,6 +12,13 @@ const videoExtensions = new Set(['.mp4', '.mov', '.webm']);
 const stamp = () => new Date().toISOString();
 const TICK_INTERVAL_MS = 15000;
 function log(state, id, message) { state.events.push({ id: randomUUID(), itemId: id || '', at: stamp(), message }); state.events = state.events.slice(-300); }
+function declarationFor(input, item = {}) {
+  const previous = validateContentDeclaration(item.contentDeclaration);
+  const explicit = Object.hasOwn(input, 'contentDeclaration') && input.contentDeclaration !== undefined;
+  const declaration = explicit ? validateContentDeclaration(input.contentDeclaration) : (previous || (item.aiGenerated === true || input.aiGenerated === true ? 'ai-generated' : ''));
+  if ((previous === 'ai-generated' || item.aiGenerated === true || input.aiGenerated === true) && declaration !== 'ai-generated') throw error('AI 视频必须保留 AI 生成声明，不能移除或改为其他声明。');
+  return declaration;
+}
 
 export class AutomationService {
   constructor(runtimeDir) {
@@ -21,7 +28,19 @@ export class AutomationService {
   }
   async snapshot() {
     const current = await this.store.read();
-    return { ...current.value, revision: current.revision, suggestedAt: nextSlot(current.value.items, current.value.config.dailyTime), scheduler: { running: !!this.timer && !this.lastError, busy: this.busy, error: this.lastError, checkSeconds: 15, lateMinutes: 10 } };
+    const now = Date.now();
+    return { ...current.value, revision: current.revision, suggestedAt: nextSlot(current.value.items, current.value.config.dailyTime, now), readySuggestedAt: await this.readySlot(current.value.items, current.value.config, now), capabilities: { contentDeclaration: true, whenReadySchedule: true, expectedAssetHash: true }, scheduler: { running: !!this.timer && !this.lastError, busy: this.busy, error: this.lastError, checkSeconds: 15, lateMinutes: 10 } };
+  }
+  async readySlot(items, config, now = Date.now()) {
+    let daily;
+    try { daily = JSON.parse(await readFile(join(this.directory, '..', 'daily-production', 'state.json'), 'utf8')); }
+    catch (problem) { if (problem.code !== 'ENOENT') throw error('每日生产记录无法读取，请检查后再排期。'); }
+    if (daily && (daily.version !== 1 || !Array.isArray(daily.runs))) throw error('每日生产记录格式异常，已停止排期。');
+    const reservations = (daily?.runs || []).filter(run => !run.previewOnly && run.binding?.accountId === config.accountId && ['publishing', 'submitted', 'published', 'uncertain'].includes(run.status)).map(run => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(run.day || '') || !Number.isFinite(Date.parse(`${run.day}T00:00:00+08:00`))) throw error('每日生产发布日期无法确认，已停止排期。');
+      return { status: 'submitted', scheduledAt: `${run.day}T${config.dailyTime}:00+08:00` };
+    });
+    return nextReadySlot([...items, ...reservations], config.dailyTime, now);
   }
   async update(revision, change) {
     if (typeof revision !== 'string') throw error('请先刷新自动发布页面，再执行操作。', 428);
@@ -105,12 +124,13 @@ export class AutomationService {
     const tags = String(input?.tags || '').trim();
     const caption = captionRaw && tags && !captionRaw.includes(tags) ? `${captionRaw}\n\n${tags}` : (captionRaw || tags);
     const content = validatePublishText(title, caption);
+    const contentDeclaration = declarationFor(input);
     const folder = await realpath(value.config.folder);
     const target = join(folder, `${randomUUID()}${ext}`);
     await copyFile(source, target, constants.COPYFILE_EXCL);
     try {
       const copied = await stat(target);
-      const incoming = { id: randomUUID(), sourceDraftId: draftId, sourcePath: target, fileName: basename(target), sourceSize: copied.size, sourceMtime: copied.mtimeMs, title: content.title, caption: content.caption, status: 'pending', scheduledAt: '', approval: null, createdAt: stamp(), message: '已从工作台草稿导入，请预览并审批。' };
+      const incoming = { id: randomUUID(), sourceDraftId: draftId, sourcePath: target, fileName: basename(target), sourceSize: copied.size, sourceMtime: copied.mtimeMs, title: content.title, caption: content.caption, contentDeclaration, ...(input.aiGenerated === true ? { aiGenerated: true } : {}), status: 'pending', scheduledAt: '', approval: null, createdAt: stamp(), message: '已从工作台草稿导入，请预览并审批。' };
       await this.update(revision, state => {
         if (draftId && state.items.some(i => i.sourceDraftId === draftId)) throw error('该草稿已在自动发布队列中。', 409);
         if (state.items.length >= 2000) throw error('队列已达到 2000 条，请先归档历史记录。');
@@ -145,17 +165,22 @@ export class AutomationService {
     await this.update(revision, state => {
       const item = state.items.find(i => i.id === id);
       if (!item || !editableStatuses.includes(item.status)) throw error('请先撤销批准，或选择待审批条目。', 409);
-      Object.assign(item, content, { status: 'pending', approval: null, scheduledAt: '', message: '' }); log(state, id, '已保存待审批内容。');
+      Object.assign(item, content, { contentDeclaration: declarationFor(input, item), status: 'pending', approval: null, scheduledAt: '', message: '' }); log(state, id, '已保存待审批内容。');
     });
   }
   async approve(id, input, revision) {
     if (input.reviewed !== true) throw error('请先确认视频、文案、账号和排期。');
+    const expectedSha256 = input.expectedSha256;
+    if (expectedSha256 !== undefined && (typeof expectedSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(expectedSha256))) throw error('验收视频 SHA256 必须是 64 位小写十六进制。');
     const current = await this.store.read(); if (current.revision !== revision) throw error('队列已有更新，请刷新后审批。', 409);
     const { config, items } = current.value, item = items.find(i => i.id === id);
     if (!item || !editableStatuses.includes(item.status)) throw error('此条目不能再次批准。', 409);
     if (!config.accountId || !config.verifiedAt || !config.browserId) throw error('请先检查浏览器并识别目标抖音号。');
     const content = validatePublishText(input.title, input.caption);
-    const scheduledAt = nextSlot(items, config.dailyTime);
+    const contentDeclaration = declarationFor(input, item);
+    const scheduleMode = input.scheduleMode === undefined ? 'daily-time' : input.scheduleMode;
+    if (!['daily-time', 'when-ready'].includes(scheduleMode)) throw error('自动发布排期方式无效。');
+    const scheduledAt = scheduleMode === 'when-ready' ? await this.readySlot(items, config) : nextSlot(items, config.dailyTime);
     if (input.scheduledAt !== scheduledAt || input.accountId !== config.accountId) throw error('账号或建议排期已变化，请重新查看审批内容。', 409);
     const file = await this.sourceFile(item, config.folder);
     await mkdir(this.mediaDir, { recursive: true });
@@ -165,13 +190,14 @@ export class AutomationService {
       await copyFile(file, asset, constants.COPYFILE_EXCL);
       await this.sourceFile(item, config.folder);
       const sha256 = await hashFile(asset);
+      if (expectedSha256 !== undefined && sha256 !== expectedSha256) throw error('视频 SHA256 与验收授权不一致，未批准发布。', 409);
       if (sha256 !== await hashFile(file)) throw error('复制期间视频发生变化，请重新扫描。');
       await this.update(revision, state => {
         if (Date.parse(scheduledAt) <= Date.now() + 15000) throw error('距离排期太近，请刷新后重新安排。');
         if (state.items.some(i => i.id !== id && ['approved', 'running', 'submitted', 'published', 'uncertain'].includes(i.status) && i.approval?.sha256 === sha256 && i.approval?.accountId === config.accountId)) throw error('相同视频已在该账号的队列或发布记录中，已阻止重复发布。');
         const target = state.items.find(i => i.id === id);
         for (const key of ['startedAt', 'submitStartedAt', 'finishedAt', 'evidence', 'publishedUrl']) delete target[key];
-        Object.assign(target, content, { status: 'approved', scheduledAt, approvedAt: stamp(), message: '', approval: { sha256, asset, accountId: config.accountId, browserId: config.browserId, title: content.title, caption: content.caption, scheduledAt } });
+        Object.assign(target, content, { contentDeclaration, scheduleMode, status: 'approved', scheduledAt, approvedAt: stamp(), message: '', approval: { sha256, asset, accountId: config.accountId, browserId: config.browserId, title: content.title, caption: content.caption, contentDeclaration, scheduleMode, scheduledAt } });
         log(state, id, `已批准，计划 ${scheduledAt} 发布到抖音号 ${config.accountId}。`);
       });
       committed = true;

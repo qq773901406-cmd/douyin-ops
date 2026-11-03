@@ -113,8 +113,11 @@ def measure_audio(ffmpeg, path):
 
 
 def assemble(config, ffmpeg):
-    if not isinstance(config, dict) or set(config) - {"clips", "output", "duration", "seed"} or config.get("duration") != DURATION:
+    if not isinstance(config, dict) or set(config) - {"clips", "output", "duration", "seed", "fit"} or config.get("duration") != DURATION:
         raise ValueError("Assembly requires the fixed 20-second configuration")
+    fit = config.get("fit", "cover")
+    if fit not in ("cover", "contain"):
+        raise ValueError("Assembly fit must be cover or contain")
     if not isinstance(config.get("clips"), list) or len(config["clips"]) != 4:
         raise ValueError("Exactly four newly generated clips are required")
     clips = [Path(path).resolve(strict=True) for path in config["clips"]]
@@ -137,7 +140,11 @@ def assemble(config, ffmpeg):
     if music.exists():
         raise ValueError("Music already exists; inspect the previous attempt instead of overwriting")
     compose_music(music, int(config.get("seed", 0)))
-    filters = [f"[{index}:v]trim=start_frame=0:end_frame={5 * FPS},setpts=PTS-STARTPTS,scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,crop={WIDTH}:{HEIGHT},setsar=1[v{index}]" for index in range(4)]
+    # Imported generators may place branding at the edge. Contain preserves
+    # the entire source frame instead of cropping the wider reference ratio.
+    resize = (f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad={WIDTH}:{HEIGHT}:(ow-iw)/2:(oh-ih)/2"
+              if fit == "contain" else f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,crop={WIDTH}:{HEIGHT}")
+    filters = [f"[{index}:v]trim=start_frame=0:end_frame={5 * FPS},setpts=PTS-STARTPTS,{resize},setsar=1[v{index}]" for index in range(4)]
     filters.append("[v0][v1][v2][v3]concat=n=4:v=1:a=0[outv]")
     args = ["-v", "error", "-n"]
     for path in clips:
@@ -152,7 +159,7 @@ def assemble(config, ffmpeg):
     audio = measure_audio(ffmpeg, output)
     if not audio["nonSilent"]:
         raise ValueError("Output does not contain the expected audible original soundtrack")
-    receipt = {"status": "completed", "asset": str(output), "seconds": video["seconds"], "sha256": sha256(output), "video": video,
+    receipt = {"status": "completed", "asset": str(output), "seconds": video["seconds"], "sha256": sha256(output), "video": video, "fit": fit,
                "audioVerification": audio, "motionVerification": {"checked": True, "passed": True, "shots": motions, "distinctSourceCount": 4},
                "sourceHashes": hashes, "visualAndListeningReview": "Technical verification only; not a human semantic, visual or listening review"}
     (output.parent / "assembly-verification.json").write_text(json.dumps(receipt, ensure_ascii=False, indent=2), encoding="utf-8")

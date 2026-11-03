@@ -19,3 +19,7 @@ output
 # Local videos, downloaded dependencies, account state and run receipts.
 /runtime/
 /.runtime-backups/
+
+# Generated backups and Python bytecode.
+*.bak
+__pycache__/

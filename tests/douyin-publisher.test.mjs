@@ -88,11 +88,11 @@ test('only structured fill_value_mismatch is recoverable and raw CLI errors neve
     stdout: JSON.stringify({ code: 'cdp_failed', data: { reason: 'fill_value_mismatch' } }), stderr: secret
   };
   const publisher = new DouyinPublisher({ run: async () => result });
-  await assert.rejects(publisher.command(['fill', '--value', secret]), error => error.code === 'fill_value_mismatch' && !error.message.includes(secret));
+  await assert.rejects(publisher.execute(['fill', '--value', secret]), error => error.code === 'fill_value_mismatch' && !error.message.includes(secret));
   result.stdout = JSON.stringify({ code: 'cdp_failed', message: 'fill_value_mismatch', data: { reason: 'not_found' } });
-  await assert.rejects(publisher.command(['fill', '--value', secret]), error => error.code !== 'fill_value_mismatch' && !error.message.includes(secret));
+  await assert.rejects(publisher.execute(['fill', '--value', secret]), error => error.code !== 'fill_value_mismatch' && !error.message.includes(secret));
   result.stdout = JSON.stringify({ data: { reason: 'fill_value_mismatch' } });
-  await assert.rejects(publisher.command(['click', '--selector', '#publish']), error => error.code !== 'fill_value_mismatch');
+  await assert.rejects(publisher.execute(['click', '--selector', '#publish']), error => error.code !== 'fill_value_mismatch');
 });
 
 test('fill mismatch reads once without rewriting and accepts only editor whitespace normalization', async () => {
@@ -151,4 +151,51 @@ test('publish revalidates the normalized full caption before its single submit c
   assert.equal(result.evidence.publicationSettings.noCrosspost, true);
   assert.ok(Number.isFinite(Date.parse(result.evidence.publicationSettings.checkedAt)));
   assert.ok(!JSON.stringify(result.evidence.publicationSettings).includes(approval.asset));
+});
+
+
+test('safe upload diagnostics survive message-only persistence without raw file or page content', async () => {
+  let calls = 0;
+  const privateText = 'PRIVATE_FILE_CAPTION_AND_TOKEN';
+  const publisher = new DouyinPublisher({ run: async () => {
+    calls++;
+    return { ok: false, message: privateText, stderr: privateText, stdout: JSON.stringify({
+      error: { code: 'unsupported', message: privateText, data: { reason: 'file_input_not_activated', effect_state: 'none', phase: 'resolve_input', cleanup_state: 'complete', path: privateText } },
+    }) };
+  } });
+  await assert.rejects(publisher.execute(['upload', '--selector', privateText, '--file', privateText]), error => {
+    assert.equal(error.code, 'unsupported');
+    assert.equal(error.reason, 'file_input_not_activated');
+    assert.equal(error.effectState, 'none');
+    assert.equal(error.phase, 'resolve_input');
+    assert.equal(error.cleanupState, 'complete');
+    const persisted = JSON.parse(JSON.stringify({ message: error.message }));
+    for (const value of ['code=unsupported', 'reason=file_input_not_activated', 'effectState=none', 'phase=resolve_input', 'cleanupState=complete']) assert.ok(persisted.message.includes(value));
+    assert.equal(JSON.stringify({ message: error.message, ...error }).includes(privateText), false);
+    return true;
+  });
+  assert.equal(calls, 1, 'diagnostics never add an upload retry');
+});
+
+test('committed upload effects and failed cleanup remain explicit in safe diagnostics', async () => {
+  const publisher = new DouyinPublisher({ run: async () => ({ ok: false, stdout: JSON.stringify({
+    code: 'protocol_error', data: { reason: 'cleanup_failed', effect_state: 'committed', phase: 'cleanup', cleanup_state: 'failed' },
+  }) }) });
+  await assert.rejects(publisher.execute(['upload', '--file', 'not-read-by-mock.mp4']), error =>
+    error.effectState === 'committed' && error.cleanupState === 'failed'
+    && error.message.includes('effectState=committed') && error.message.includes('reason=cleanup_failed'));
+});
+
+test('unknown diagnostic values and command names are omitted instead of exposing untrusted strings', async () => {
+  const secret = 'PRIVATE_UNTRUSTED_VALUE';
+  const publisher = new DouyinPublisher({ run: async () => ({ ok: false, stdout: JSON.stringify({
+    code: secret, message: secret, data: { reason: secret, effect_state: secret, phase: secret, cleanup_state: secret },
+  }), stderr: secret }) });
+  await assert.rejects(publisher.execute([secret]), error => {
+    assert.deepEqual(Object.keys(error), ['code']);
+    assert.equal(error.code, 'BSK_COMMAND_FAILED');
+    assert.equal(error.message.includes(secret), false);
+    assert.equal(error.message.includes('code=BSK_COMMAND_FAILED'), true);
+    return true;
+  });
 });

@@ -111,6 +111,92 @@
         },
         "note": "2026-10-23 单次点击立即投稿后显示稿件投递成功。当前账号 Omni_Orange（631870098）；稿件管理中本条标题 AI生成｜双猫一起抬爪摇摆 与链接 BV1vynb6tENh 匹配，转码完成、审核中。进度页确认 360P/480P/720P 转码均完成，尚未确认公开发布。"
       }
+    },
+    {
+      "id": "81298cb0-60a0-4c43-8ab9-1902ec45841d",
+      "platform": "bilibili",
+      "account": {
+        "name": "Omni_Orange",
+        "uid": "631870098"
+      },
+      "browserId": "b31fc78b",
+      "title": "两只小猫的24秒默契舞",
+      "video": {
+        "path": "D:\\ai\\runtime\\bilibili-publish\\assets\\81298cb0-60a0-4c43-8ab9-1902ec45841d\\video.mp4",
+        "sha256": "44722d6529f90c40f7cdf618b58f9a5fbdf165e5645475be10ee94a1b68a8262",
+        "size": 5887386,
+        "sourcePath": "D:\\ai\\runtime\\free-video-daily\\production\\assembly-24s-20261030-v2\\pet-compilation-24s.mp4"
+      },
+      "plan": {
+        "title": "两只小猫的24秒默契舞",
+        "description": "橘猫负责领舞，布偶猫负责可爱。画面由AI生成，配乐为原创合成；使用不同平台生成的独立镜头剪辑完成。 画面使用 PixVerse 与 Kling AI 生成，保留平台水印。",
+        "tags": [
+          "AI生成",
+          "AI视频",
+          "猫咪",
+          "萌宠",
+          "双猫跳舞"
+        ],
+        "aiGenerated": true,
+        "category": "人工智能",
+        "coverFrameSeconds": 10,
+        "covers": {
+          "4:3": {
+            "path": "D:\\ai\\runtime\\bilibili-publish\\assets\\81298cb0-60a0-4c43-8ab9-1902ec45841d\\cover43Path.png",
+            "sha256": "d9537acb127b15b9f5b91623ef583aee1f54da3b7ca01926b2f0b542c0e97094",
+            "size": 582752
+          },
+          "16:9": {
+            "path": "D:\\ai\\runtime\\bilibili-publish\\assets\\81298cb0-60a0-4c43-8ab9-1902ec45841d\\cover169Path.png",
+            "sha256": "b30fe3bace8dd82eebf4c28611a2eb0c75be02990e0268b4cf9c0c7ccdd4525e",
+            "size": 604649
+          }
+        }
+      },
+      "status": "published",
+      "createdAt": "2026-10-30T04:07:28.538Z",
+      "updatedAt": "2026-10-30T04:31:41.018Z",
+      "history": [
+        {
+          "at": "2026-10-30T04:07:28.552Z",
+          "action": "prepare",
+          "detail": "保存视频副本和清单，尚未取得提交许可。"
+        },
+        {
+          "at": "2026-10-30T04:28:05.410Z",
+          "action": "begin-submit",
+          "detail": "已记录单次提交意图。接下来最多点击一次立即投稿；重启后不自动重试。"
+        },
+        {
+          "at": "2026-10-30T04:31:41.018Z",
+          "action": "published",
+          "detail": "本条24秒标题与BV1NXxY6TErU匹配；稿件管理已发布筛选包含本条，进行中0、已发布3，公开页展示同标题、Omni_Orange及含AI生成内容。真实证据为production/publication-evidence/bili-published-filter.json、bili-work-links.json、bili-public-page.json。BrowserSkill截图持续超时或返回空白，附图为实际失败捕获，不能独立证明结果；未伪造截图。按可见DOM核实已公开。"
+        }
+      ],
+      "planHash": "9bfb1ca63c893d9d261da324eb7bfc78b603dd7a372a935c83aab2978887f7a2",
+      "attempt": {
+        "id": "1ebf9f98-e9c5-4e0c-a00e-80da90bd4dd6",
+        "startedAt": "2026-10-30T04:28:05.410Z",
+        "authorization": "用户明确要求免费积分制作各段，合并后帮我发布，并选择两个平台都发；本条24秒成片orange-ragdoll-free-20261029在Omni_Orange账号立即投稿一次。当前表单与账号已读核对，封面真实渲染已验收；完整截图工具异常，实际字段观察和封面图分开保存。",
+        "accountObserved": {
+          "name": "Omni_Orange",
+          "uid": "631870098"
+        },
+        "evidence": {
+          "path": "D:\\ai\\runtime\\bilibili-publish\\evidence\\a8373118-0ecb-4ad2-9966-c60f2062c3e3.png",
+          "sha256": "d23e9368bcf14fd10149cda061ae5fc6a7d2083ef9ba47c773d1d6def5cd5faf"
+        }
+      },
+      "receipt": {
+        "bvid": "BV1NXxY6TErU",
+        "url": "https://www.bilibili.com/video/BV1NXxY6TErU/",
+        "observedAt": "2026-10-30T04:31:41.018Z",
+        "evidence": {
+          "path": "D:\\ai\\runtime\\bilibili-publish\\evidence\\a2195d2a-b1ff-4eed-9338-4deafa806b4b.png",
+          "sha256": "dd57a04fd93e79a1a33cd439eaf046319ca2b4e263bf1d397d2786bc52b2ecb1"
+        },
+        "note": "本条24秒标题与BV1NXxY6TErU匹配；稿件管理已发布筛选包含本条，进行中0、已发布3，公开页展示同标题、Omni_Orange及含AI生成内容。真实证据为production/publication-evidence/bili-published-filter.json、bili-work-links.json、bili-public-page.json。BrowserSkill截图持续超时或返回空白，附图为实际失败捕获，不能独立证明结果；未伪造截图。按可见DOM核实已公开。"
+      }
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { runBsk, parseBskJson, BSK_TIMEOUTS } from '../lib/bsk-client.mjs';
+import { BskCooperation, isControlledBskAction } from '../lib/bsk-cooperation.mjs';
 import { inspectPublishSettingsDOM, preparePublicationSettings, validatePublicationSettings } from './douyin-publish-settings.mjs';
 
 const creatorHome = 'https://creator.douyin.com/creator-micro/home';
@@ -49,20 +50,54 @@ export function inspectCreatorDOM() {
 }
 
 export class DouyinPublisher {
-  constructor({ run = runBsk } = {}) { this.run = run; }
-  async command(args, timeout = BSK_TIMEOUTS.DEFAULT_MS) {
-    const result = await this.run(args, { timeout });
+  constructor({ run = runBsk, cooperationOptions } = {}) {
+    this.run = run;
+    this.cooperation = new BskCooperation((args, timeout) => this.execute(args, timeout), cooperationOptions);
+  }
+  // Keep structured coordination information without exposing command lines,
+  // source scripts, captions, files, or arbitrary CLI error text.
+  async execute(args, timeout = BSK_TIMEOUTS.DEFAULT_MS) {
+    let result;
+    try { result = await this.run(args, { timeout }); }
+    catch { throw new Error('浏览器连接未完成，未自动重试。'); }
     const parsed = parseBskJson(result.stdout);
-    if (!result.ok) {
-      // Do not expose command lines containing captions, file names or page dumps.
-      if (result.code === 'BSK_NOT_FOUND') throw new Error('未找到 BrowserSkill，请在应用接入中完成安装和浏览器扩展连接。');
-      if (args[0] === 'fill' && parsed?.data?.reason === 'fill_value_mismatch') {
-        throw Object.assign(new Error('浏览器填写结果需要重新读取页面核对。'), { code: 'fill_value_mismatch' });
-      }
-      throw new Error(`浏览器步骤 ${args[0]} 未完成。请检查扩展、登录状态和页面；系统不会盲目重试。`);
+    if (!result.ok || !parsed || parsed.ok === false || parsed.error || parsed.success === false) {
+      if (result.code === 'BSK_NOT_FOUND') throw Object.assign(new Error('未找到 BrowserSkill，请在应用接入中完成安装和浏览器扩展连接。'), { code: 'BSK_NOT_FOUND' });
+      const knownCodes = new Set(['permission_denied', 'user_aborted', 'cancelled', 'timeout', 'cdp_failed', 'not_found', 'unsupported', 'invalid_params', 'protocol_error']);
+      const knownReasons = new Set(['cooperation_sync_required', 'user_aborted', 'cancelled', 'timeout', 'not_found', 'fill_value_mismatch', 'human_active', 'manual_hold', 'context_stale', 'context_consumed', 'tab_closed', 'session_not_found', 'file_input_probe_failed', 'file_input_not_activated', 'set_file_input_failed', 'upload_mechanism_unsupported', 'file_drop_target_unavailable', 'file_drop_failed', 'transfer_outcome_unknown', 'transfer_timeout', 'cleanup_failed']);
+      const safe = (value, allowed) => allowed.has(value) ? value : undefined;
+      const reason = safe(parsed?.data?.reason || parsed?.reason || parsed?.error?.data?.reason, knownReasons);
+      const rawCode = safe(parsed?.code || parsed?.error?.code, knownCodes);
+      const effectState = safe(parsed?.data?.effect_state || parsed?.error?.data?.effect_state, new Set(['none', 'committed', 'unknown']));
+      const phase = safe(parsed?.data?.phase || parsed?.error?.data?.phase, new Set(['arm_interception', 'arm_input_probe', 'trigger', 'resolve_input', 'set_files', 'cleanup']));
+      const cleanupState = safe(parsed?.data?.cleanup_state || parsed?.error?.data?.cleanup_state, new Set(['complete', 'failed']));
+      const mismatch = args[0] === 'fill' && reason === 'fill_value_mismatch';
+      const details = {
+        code: mismatch ? 'fill_value_mismatch' : rawCode || 'BSK_COMMAND_FAILED',
+        ...(reason ? { reason } : {}), ...(effectState ? { effectState } : {}),
+        ...(phase ? { phase } : {}), ...(cleanupState ? { cleanupState } : {}),
+      };
+      const step = safe(args[0], new Set(['browsers', 'session', 'cooperate', 'tab', 'navigate', 'evaluate', 'click', 'fill', 'press', 'upload', 'download', 'hover', 'select', 'drag', 'scroll-to', 'wheel'])) || 'unknown';
+      const message = mismatch ? '浏览器填写结果需要重新读取页面核对。' : `浏览器步骤 ${step} 未完成。请检查扩展、登录状态和页面；系统不会盲目重试。`;
+      // The queue already persists error.message. Retain only fixed diagnostic
+      // enums there; never include raw errors, command arguments or page content.
+      const diagnostic = Object.entries(details).map(([key, value]) => `${key}=${value}`).join('; ');
+      throw Object.assign(new Error(`${message}（${diagnostic}）`), details);
     }
-    if (!parsed || parsed.ok === false || parsed.error || parsed.success === false) throw new Error(`浏览器步骤 ${args[0]} 被拒绝或未完成，请在浏览器中检查。`);
     return parsed;
+  }
+  async command(args, timeout = BSK_TIMEOUTS.DEFAULT_MS) {
+    if (args[0] === 'evaluate') return this.cooperation.inspect(args, timeout);
+    if (isControlledBskAction(args)) return this.cooperation.action(args, timeout, value => {
+      try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password && (url.hostname === 'creator.douyin.com' || url.hostname === 'www.douyin.com') && !/\/login(?:[/?#]|$)/.test(url.pathname); } catch { return false; }
+    });
+    if (args[0] === 'tab') return this.cooperation.tabs(args, timeout);
+    if (!['browsers', 'session'].includes(args[0])) throw new Error('发布流程未启用该浏览器命令。');
+    return this.execute(args, timeout);
+  }
+  // Only callers with fixed, audited DOM readers use bounded re-inspection.
+  async inspectDOM(args, timeout = BSK_TIMEOUTS.EVALUATE_MS) {
+    return this.cooperation.inspect(args, timeout, { readOnly: true });
   }
   async browsers() {
     const result = await this.command(['browsers'], BSK_TIMEOUTS.SESSION_REQUEST_MS);
@@ -81,14 +116,16 @@ export class DouyinPublisher {
       if (!sessionId || started.browser_instance_id !== browserId) throw new Error('浏览器实例与审批绑定不一致，请重新检查连接。');
       const claimed = await this.command(['session', 'request', token, '--claim'], BSK_TIMEOUTS.SESSION_REQUEST_MS);
       if (claimed.state !== 'active' || claimed.session?.session_id !== sessionId) throw new Error('浏览器会话未能完成领取，请重新检查连接。');
+      await this.cooperation.open(sessionId);
       return await action(sessionId);
     } finally {
       if (sessionId) await this.command(['session', 'stop', sessionId], BSK_TIMEOUTS.SESSION_STOP_MS).catch(error => console.warn('浏览器会话清理失败：', error?.message || error));
       else await this.command(['session', 'request', token, '--cancel'], BSK_TIMEOUTS.CANCEL_MS).catch(error => console.warn('浏览器会话请求取消失败：', error?.message || error));
+      if (sessionId) await this.cooperation.close(sessionId).catch(() => console.warn('浏览器协作临时文件清理失败。'));
     }
   }
   async page(session) {
-    const result = await this.command(['evaluate', `({...(${inspectCreatorDOM.toString()})(),settings:(${inspectPublishSettingsDOM.toString()})()})`, '--session', session, '--timeout', '10s'], BSK_TIMEOUTS.EVALUATE_MS);
+    const result = await this.inspectDOM(['evaluate', `({...(${inspectCreatorDOM.toString()})(),settings:(${inspectPublishSettingsDOM.toString()})()})`, '--session', session, '--timeout', '10s'], BSK_TIMEOUTS.EVALUATE_MS);
     const value = result.value;
     if (!value || typeof value.url !== 'string') throw new Error('无法观察抖音页面，请检查浏览器连接。');
     let url; try { url = new URL(value.url); } catch {}

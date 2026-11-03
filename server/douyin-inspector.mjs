@@ -47,6 +47,7 @@ export function readDouyinManageDOM() {
   const searches = [...document.querySelectorAll('input[placeholder="搜索作品"]')].filter(node => visible(node) && !node.disabled);
   return {
     url: location.href, accountIds, cards, search: searches.length === 1 ? selector(searches[0]) : null,
+    searchValue: searches.length === 1 ? searches[0].value : null,
     needsHuman: password || /\/login(?:[/?#]|$)/.test(location.href) || dialogs.some(value => /验证|扫码|登录|滑块|安全|授权/.test(value)),
   };
 }
@@ -153,7 +154,7 @@ export class DouyinInspector {
     if (typeof now !== 'function' || !Number.isSafeInteger(manageTimeoutMs) || manageTimeoutMs < 1) throw new Error('作品管理页等待配置无效。');
     this.publisher = publisher;
     this.previewReader = previewReader || (async session => {
-      const result = await this.publisher.command(['evaluate', `(${readDouyinProfileDOM.toString()})()`, '--session', session, '--timeout', '10s'], BSK_TIMEOUTS.EVALUATE_MS);
+      const result = await this.publisher.inspectDOM(['evaluate', `(${readDouyinProfileDOM.toString()})()`, '--session', session, '--timeout', '10s'], BSK_TIMEOUTS.EVALUATE_MS);
       return result.value;
     });
     this.pause = pause;
@@ -166,7 +167,7 @@ export class DouyinInspector {
   }
   async managePage(session, remainingMs = BSK_TIMEOUTS.EVALUATE_MS) {
     const timeout = Math.max(1, Math.min(10000, Math.ceil(remainingMs)));
-    const result = await this.publisher.command(['evaluate', `(${readDouyinManageDOM.toString()})()`, '--session', session, '--timeout', `${timeout}ms`], Math.max(1, Math.min(BSK_TIMEOUTS.EVALUATE_MS, Math.ceil(remainingMs))));
+    const result = await this.publisher.inspectDOM(['evaluate', `(${readDouyinManageDOM.toString()})()`, '--session', session, '--timeout', `${timeout}ms`], Math.max(1, Math.min(BSK_TIMEOUTS.EVALUATE_MS, Math.ceil(remainingMs))));
     const page = result.value;
     let url;
     try { url = new URL(page?.url); } catch {}
@@ -213,6 +214,8 @@ export class DouyinInspector {
       catch (error) { if (this.now() >= deadline) throw timedOut(); throw error; }
     };
     await searchCommand(['fill', '--selector', page.search, '--value', target.title]);
+    page = await read();
+    if (!page.search || page.searchValue !== target.title) throw new Error('搜索输入与目标标题不一致，已停止，未重复填写。');
     await searchCommand(['press', 'Enter', '--selector', page.search]);
     while (true) {
       await pause();

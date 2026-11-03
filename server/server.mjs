@@ -15,6 +15,8 @@ import { assertDouyinVideoDraft } from '../shared/publish-target.mjs';
 import { OperationsService } from './operations-service.mjs';
 import { PetVideoPipeline } from './pet-video-pipeline.mjs';
 import { ensureProjectLocalModel } from '../lib/local-model-runtime.mjs';
+import { SuperagentService } from '../integrations/dingtalk-superagent/service.mjs';
+import { WorkflowService } from '../integrations/dingtalk-superagent/workflow-service.mjs';
 
 const root = resolve(fileURLToPath(new URL('../', import.meta.url)));
 const { version } = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
@@ -46,6 +48,8 @@ const douyinTracking = new DouyinTracking(runtimeDir, {
   collectBatch: targets => douyinInspector.collectBatch(targets),
 });
 const operations = new OperationsService(runtimeDir, { workspace: stateStore, automation, dailyProduction, tracking: douyinTracking, jobsStore });
+const superagent = new SuperagentService(runtimeDir);
+const development = new WorkflowService(runtimeDir);
 dailyProduction.petPipeline = new PetVideoPipeline(runtimeDir, { workspace: stateStore, content: operations.content, text: operations.text, media: operations.media });
 const publicFiles = new Set(['index.html', 'app.css', 'app.js', 'state-sync.js', 'video-studio.js', 'workbuddy/connector/lib/workspace-model.mjs', 'workbuddy/connector/lib/video-projects.mjs']);
 for (const file of ['product.css', 'workspace-ui.js', 'content-library.js', 'publish-planner.js', 'data-center.js', 'dashboard.js', 'legacy-pages.js', 'workbuddy/connector/lib/workspace-actions.mjs']) publicFiles.add(file);
@@ -57,6 +61,7 @@ publicFiles.add('shared/automation-model.mjs');
 publicFiles.add('shared/publish-target.mjs');
 publicFiles.add('operations.js');
 publicFiles.add('operations-form.js');
+publicFiles.add('superagent-panel.js');
 // Keep browser URLs stable while serving only explicitly allowed source files.
 const publicPaths = new Map([...publicFiles].map(file => [file, resolve(root,
   file.startsWith('workbuddy/') || file.startsWith('shared/') ? file
@@ -95,6 +100,40 @@ const server = createServer(async (req, res) => {
   if (url.pathname.startsWith('/api/')) {
     if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, message: '请求来源不受信任。' }); return; }
     try {
+      if (url.pathname === '/api/superagent/workflow' || url.pathname.startsWith('/api/superagent/workflow/')) {
+        const route = url.pathname.slice('/api/superagent/workflow'.length);
+        if (req.method === 'GET' && route === '') { sendJson(res, 200, { ok: true, ...(await development.snapshot()) }); return; }
+        if (['POST', 'PUT'].includes(req.method)) {
+          if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] || '')) throw Object.assign(new Error('此接口只接受 JSON 请求。'), { status: 415 });
+          const input = await bodyJson(req, 128 * 1024), revision = req.headers['if-match'];
+          let result;
+          if (req.method === 'PUT' && route === '/settings') result = await development.saveSettings(input, revision);
+          else if (req.method === 'POST' && route === '/requests') result = await development.request(input);
+          else if (req.method === 'POST' && route === '/settings/restore' && Object.keys(input).every(key => key === 'version')) result = await development.restoreSettings(input.version, revision);
+          else if (req.method === 'POST' && route === '/pause' && Object.keys(input).every(key => key === 'paused')) result = await development.pause(input.paused, revision);
+          else if (req.method === 'POST' && /^\/outbox\/[a-f0-9-]{36}\/reconcile$/.test(route) && Object.keys(input).every(key => key === 'resolution')) result = await development.reconcileOutbound(route.split('/')[2], input.resolution, revision);
+          else {
+            const match = /^\/tickets\/([a-f0-9-]{36})\/(queue|stop|retry|evaluate|complete)$/.exec(route);
+            if (!match || req.method !== 'POST' || Object.keys(input).length) throw Object.assign(new Error('开发代理操作或参数无效。'), { status: 400 });
+            result = await development.action(match[1], match[2], revision);
+          }
+          sendJson(res, 200, { ok: true, ...result }); return;
+        }
+        sendJson(res, 404, { ok: false, message: '开发代理接口不存在。' }); return;
+      }
+      if (url.pathname === '/api/superagent' || url.pathname.startsWith('/api/superagent/')) {
+        const route = url.pathname.slice('/api/superagent'.length);
+        if (req.method === 'GET' && route === '') { sendJson(res, 200, { ok: true, ...(await superagent.snapshot()) }); return; }
+        if (req.method === 'POST') {
+          if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] || '')) throw Object.assign(new Error('此接口只接受 JSON 请求。'), { status: 415 });
+          const input = await bodyJson(req, 1024);
+          if (Object.keys(input).length) throw Object.assign(new Error('观察模式不接受任务命令或权限覆盖参数。'), { status: 400 });
+          if (route === '/demo') { sendJson(res, 200, { ok: true, ...(await superagent.demo()) }); return; }
+          const match = /^\/(tickets|demo)\/([a-f0-9-]{36})\/cancel$/.exec(route);
+          if (match) { sendJson(res, 200, { ok: true, ...(await superagent.cancel(match[2], req.headers['if-match'], match[1] === 'demo')) }); return; }
+        }
+        sendJson(res, 404, { ok: false, message: '观察模式接口不存在；代码执行与远端投递尚未开放。' }); return;
+      }
       if (url.pathname === '/api/operations' || url.pathname.startsWith('/api/operations/')) {
         const route = url.pathname.slice('/api/operations'.length);
         if (req.method === 'GET' && route === '') { sendJson(res, 200, { ok: true, ...(await operations.snapshot()) }); return; }
@@ -184,7 +223,7 @@ const server = createServer(async (req, res) => {
               if (!draft) throw Object.assign(new Error('工作台草稿不存在。'), { status: 404 });
               assertDouyinVideoDraft(draft);
               if (draft.sourceProductionId) throw Object.assign(new Error('此成片由每日生产管理，请到每日自动生产查看，不能重复加入另一条发布队列。'), { status: 409 });
-              result = await automation.importDraft({ draftId, asset: draft.asset, title: draft.pubTitle || draft.title, caption: draft.caption, tags: draft.hashtags || draft.topics }, revision);
+              result = await automation.importDraft({ draftId, asset: draft.asset, title: draft.pubTitle || draft.title, caption: draft.caption, tags: draft.hashtags || draft.topics, contentDeclaration: draft.contentDeclaration, aiGenerated: draft.aiGenerated }, revision);
             }
             else {
             const match = /^\/items\/([a-f0-9-]{36})\/(edit|approve|cancel|reconcile)$/.exec(route);
@@ -295,6 +334,7 @@ const server = createServer(async (req, res) => {
 
 server.on('error', error => { if (error.code === 'EADDRINUSE') { console.error(`端口 ${port} 已被占用。请关闭旧服务，或设置其他端口后重新运行。`); process.exitCode = 1; return; } throw error; });
 server.listen(port, host, () => {
+  void development.start().catch(() => { console.error('开发代理初始化失败，请检查独立状态文件。'); });
   void ensureProjectLocalModel(runtimeDir).catch(error => console.error('项目本地模型未就绪：' + error.message));
   console.log(`豆蜂 WorkBuddy 运营工作台已就绪：${address}`);
   void Promise.all([
@@ -304,6 +344,7 @@ server.listen(port, host, () => {
   void operations.start().catch(error => { operations.runner.lastError = error.message; console.error('运营任务调度未启动：' + error.message); });
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
+  void development.stop().catch(() => {});
   automation.stop();
   dailyProduction.stop();
   douyinTracking.stop();

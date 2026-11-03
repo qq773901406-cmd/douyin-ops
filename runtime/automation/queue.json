@@ -7,7 +7,7 @@
     "enabled": false,
     "browserId": "b31fc78b",
     "accountId": "138528608",
-    "verifiedAt": "2026-10-23T07:19:12.416Z"
+    "verifiedAt": "2026-10-30T06:04:46.087Z"
   },
   "items": [
     {
@@ -48,15 +48,46 @@
       "platformUrl": "https://www.douyin.com/video/7699395315459198223",
       "platformReview": {
         "state": "published",
-        "observedAt": "2026-10-26T22:30:48.238Z",
+        "observedAt": "2026-10-29T22:30:53.812Z",
         "evidence": {
           "url": "https://www.douyin.com/video/7699395315459198223",
-          "text": "{\"accountId\":\"138528608\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026年10月22日 15:46\",\"cardStatus\":\"已发布\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"stableSamples\":3,\"rawMetrics\":{\"2秒跳出率\":\"57.89%\",\"分享\":\"0\",\"吸粉量\":\"0\",\"完播率\":\"1.52%\",\"播放\":\"64\",\"收藏\":\"0\",\"点赞\":\"0\",\"评论\":\"0\"},\"bindingProof\":{\"kind\":\"douyin-rendered-dom-v1\",\"targetRef\":\"queue:16fe01a5-7131-492a-af6f-e77f1dc86632\",\"browserId\":\"b31fc78b\",\"assetSha256\":\"ed9ab0a356f2845143cdd29238d95237b84f18a04a6c4de19f00e3482948fee5\",\"submittedAt\":\"2026-10-22T07:45:29.605Z\",\"accountId\":\"138528608\",\"workId\":\"7699395315459198223\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026-10-22T07:46:00.000Z\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"cardMatches\":1,\"profileMatches\":1,\"stableSamples\":3}}"
+          "text": "{\"accountId\":\"138528608\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026年10月22日 15:46\",\"cardStatus\":\"已发布\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"stableSamples\":3,\"rawMetrics\":{\"2秒跳出率\":\"60%\",\"分享\":\"0\",\"吸粉量\":\"0\",\"完播率\":\"1.43%\",\"播放\":\"71\",\"收藏\":\"0\",\"点赞\":\"0\",\"评论\":\"0\"},\"bindingProof\":{\"kind\":\"douyin-rendered-dom-v1\",\"targetRef\":\"queue:16fe01a5-7131-492a-af6f-e77f1dc86632\",\"browserId\":\"b31fc78b\",\"assetSha256\":\"ed9ab0a356f2845143cdd29238d95237b84f18a04a6c4de19f00e3482948fee5\",\"submittedAt\":\"2026-10-22T07:45:29.605Z\",\"accountId\":\"138528608\",\"workId\":\"7699395315459198223\",\"cardTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"cardTime\":\"2026-10-22T07:46:00.000Z\",\"previewTitle\":\"10月20日资讯速览 10月20日资讯速览｜资讯标题速览·非现场画面 根据来源公开标题制作图卡，完整内容以原文为准。 1. 华为畅享 90 Plus 官网涨价 300 元现售 1799 元起,Pro Max 也已涨至 1899 元起 来源：IT之家 https://www.ithome.com/1/015/319.htm 2. 乔思伯推出 DS360 黑色机箱风扇副屏:配 10.36 英寸 60Hz LCD 面板,299 元 来源：IT之家 https://www.ithome.com/1/015/317.htm 3. 万事达卡 Apple Pay 新增 3 家合作银行:交银、邮储、兴业信用卡 来源：IT之家 https://www.ithome.com/1/015/316.htm\",\"previewUrl\":\"https://www.douyin.com/video/7699395315459198223\",\"profileUrl\":\"https://www.douyin.com/user/self?modal_id=7699395315459198223\",\"cardMatches\":1,\"profileMatches\":1,\"stableSamples\":3}}"
         }
       },
-      "platformObservedAt": "2026-10-26T22:30:48.238Z",
+      "platformObservedAt": "2026-10-29T22:30:53.812Z",
       "platformTrackingRef": "queue:16fe01a5-7131-492a-af6f-e77f1dc86632",
       "platformPublishedAt": "2026-10-22T07:46:00.000Z"
+    },
+    {
+      "id": "ef043bf8-61eb-4f92-9173-58aa81bb841d",
+      "sourceDraftId": "free-video-orange-ragdoll-20261029-douyin",
+      "sourcePath": "D:\\ai\\runtime\\automation-inbox\\dbb80d1b-0098-4610-a9cc-bf1dbb6e6f6b.mp4",
+      "fileName": "dbb80d1b-0098-4610-a9cc-bf1dbb6e6f6b.mp4",
+      "sourceSize": 5887386,
+      "sourceMtime": 1793333023390.4746,
+      "title": "两只小猫的24秒默契舞",
+      "caption": "橘猫负责领舞，布偶猫负责可爱。画面由AI生成，配乐为原创合成；使用不同平台生成的独立镜头剪辑完成。 画面使用 PixVerse 与 Kling AI 生成，保留平台水印。\n\n#AI生成 #猫咪 #萌宠 #双猫跳舞",
+      "contentDeclaration": "ai-generated",
+      "aiGenerated": true,
+      "status": "failed",
+      "scheduledAt": "2026-10-30T06:27:00.000Z",
+      "approval": {
+        "sha256": "44722d6529f90c40f7cdf618b58f9a5fbdf165e5645475be10ee94a1b68a8262",
+        "asset": "D:\\ai\\runtime\\automation\\media\\4c6f28de-8ae7-4f0e-bd12-39cd6f2fcac9.mp4",
+        "accountId": "138528608",
+        "browserId": "b31fc78b",
+        "title": "两只小猫的24秒默契舞",
+        "caption": "橘猫负责领舞，布偶猫负责可爱。画面由AI生成，配乐为原创合成；使用不同平台生成的独立镜头剪辑完成。 画面使用 PixVerse 与 Kling AI 生成，保留平台水印。\n\n#AI生成 #猫咪 #萌宠 #双猫跳舞",
+        "contentDeclaration": "ai-generated",
+        "scheduleMode": "when-ready",
+        "scheduledAt": "2026-10-30T06:27:00.000Z"
+      },
+      "createdAt": "2026-10-30T04:34:26.961Z",
+      "message": "浏览器步骤 upload 未完成。请检查扩展、登录状态和页面；系统不会盲目重试。（code=permission_denied; reason=cooperation_sync_required; effectState=unknown）",
+      "scheduleMode": "when-ready",
+      "approvedAt": "2026-10-30T06:24:43.909Z",
+      "startedAt": "2026-10-30T06:27:00.811Z",
+      "finishedAt": "2026-10-30T06:27:20.256Z"
     }
   ],
   "events": [
@@ -179,6 +210,66 @@
       "itemId": "",
       "at": "2026-10-23T07:19:12.417Z",
       "message": "已识别抖音号 138528608，审批时请确认此账号。"
+    },
+    {
+      "id": "5614d9ab-7bc9-421d-9ea5-2e6e2fc2e751",
+      "itemId": "ef043bf8-61eb-4f92-9173-58aa81bb841d",
+      "at": "2026-10-30T04:34:26.962Z",
+      "message": "已从工作台草稿导入「两只小猫的24秒默契舞」，请在每日自动发布中预览并审批。"
+    },
+    {
+      "id": "c0bf3462-e7bc-47c1-a862-48b6a6aa3ac3",
+      "itemId": "",
+      "at": "2026-10-30T06:04:46.087Z",
+      "message": "已识别抖音号 138528608，审批时请确认此账号。"
+    },
+    {
+      "id": "46cd98f1-5fc2-4e4b-9001-cfe2498c1aa1",
+      "itemId": "ef043bf8-61eb-4f92-9173-58aa81bb841d",
+      "at": "2026-10-30T06:06:00.416Z",
+      "message": "已批准，计划 2026-10-30T06:09:00.000Z 发布到抖音号 138528608。"
+    },
+    {
+      "id": "e9c15f9a-3884-4e97-a6f3-3cfc1a409c7b",
+      "itemId": "",
+      "at": "2026-10-30T06:06:00.425Z",
+      "message": "每日自动发布已开启。"
+    },
+    {
+      "id": "87644046-6744-4c24-801f-d9cd39bc0818",
+      "itemId": "ef043bf8-61eb-4f92-9173-58aa81bb841d",
+      "at": "2026-10-30T06:09:14.418Z",
+      "message": "正在检查账号和视频。"
+    },
+    {
+      "id": "ac07449e-9f32-4b96-9d1c-d3bb11fbf876",
+      "itemId": "ef043bf8-61eb-4f92-9173-58aa81bb841d",
+      "at": "2026-10-30T06:09:28.481Z",
+      "message": "浏览器步骤 upload 未完成。请检查扩展、登录状态和页面；系统不会盲目重试。"
+    },
+    {
+      "id": "fd69a68a-62d4-4615-913c-d974ba6c8d4b",
+      "itemId": "ef043bf8-61eb-4f92-9173-58aa81bb841d",
+      "at": "2026-10-30T06:24:43.909Z",
+      "message": "已批准，计划 2026-10-30T06:27:00.000Z 发布到抖音号 138528608。"
+    },
+    {
+      "id": "30179749-3bed-405e-9ed0-e6d2bade6b4a",
+      "itemId": "",
+      "at": "2026-10-30T06:24:43.919Z",
+      "message": "每日自动发布已开启。"
+    },
+    {
+      "id": "ecd3e7b2-afc3-4e55-9f0f-cdec4eb5ffdf",
+      "itemId": "ef043bf8-61eb-4f92-9173-58aa81bb841d",
+      "at": "2026-10-30T06:27:00.811Z",
+      "message": "正在检查账号和视频。"
+    },
+    {
+      "id": "def13f64-78dd-4970-821c-7d7b11fddfce",
+      "itemId": "ef043bf8-61eb-4f92-9173-58aa81bb841d",
+      "at": "2026-10-30T06:27:20.256Z",
+      "message": "浏览器步骤 upload 未完成。请检查扩展、登录状态和页面；系统不会盲目重试。（code=permission_denied; reason=cooperation_sync_required; effectState=unknown）"
     }
   ]
 }

@@ -22,13 +22,26 @@ assert static_motion['passed'] is False
 clips=[]
 for i in range(4):
  path=root/f'moving-{i}.mp4'
- module.run(ffmpeg,['-v','error','-f','lavfi','-i','testsrc2=s=480x832:r=16:d=5','-vf',f'hue=h={i*35}','-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p',path])
+ module.run(ffmpeg,['-v','error','-f','lavfi','-i','testsrc2=s=480x832:r=16:d=5','-vf',f'hue=h={i*35},drawbox=x=0:y=0:w=4:h=ih:c=red:t=fill,drawbox=x=iw-4:y=0:w=4:h=ih:c=blue:t=fill','-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p',path])
  clips.append(str(path))
 config={'clips':clips,'output':str(root/'video.mp4'),'duration':20,'seed':42}
 receipt=module.assemble(config,ffmpeg)
 assert receipt['seconds']==20
 assert receipt['audioVerification']['nonSilent'] is True
 assert receipt['motionVerification']['passed'] is True
+assert receipt['fit']=='cover'
+contained=root/'contained';contained.mkdir()
+contained_receipt=module.assemble({**config,'output':str(contained/'video.mp4'),'fit':'contain'},ffmpeg)
+assert contained_receipt['fit']=='contain'
+pixels=module.run(ffmpeg,['-v','error','-i',contained/'video.mp4','-frames:v','1','-pix_fmt','rgb24','-f','rawvideo','-'],binary=True).stdout
+left=tuple(pixels[(416*468+1)*3:(416*468+1)*3+3]);right=tuple(pixels[(416*468+466)*3:(416*468+466)*3+3])
+assert left[0]>150 and left[1]<100 and left[2]<100,('left edge was cropped',left)
+assert right[2]>150 and right[0]<100 and right[1]<100,('right edge was cropped',right)
+try:
+ module.assemble({**config,'fit':'stretch'},ffmpeg)
+ raise AssertionError('invalid fit must fail')
+except ValueError as e:
+ assert 'fit must' in str(e)
 try:
  module.assemble(config,ffmpeg)
  raise AssertionError('must not overwrite existing media')
@@ -42,7 +55,7 @@ except ValueError as e:
 silent=root/'silent.wav'
 module.run(ffmpeg,['-v','error','-f','lavfi','-i','anullsrc=r=48000:cl=mono','-t','20',silent])
 assert module.measure_audio(ffmpeg,silent)['nonSilent'] is False
-print(json.dumps({'staticRejected':not static_motion['passed'],'receipt':receipt,'silentRejected':True}))`;
+print(json.dumps({'staticRejected':not static_motion['passed'],'receipt':receipt,'silentRejected':True,'containedEdgesPreserved':True}))`;
 
 test('真实FFmpeg组装四镜二十秒，检查可听音轨与运动，并拒绝静帧、静音、重复及覆盖', { timeout: 120000 }, async t => {
   const directory = await mkdtemp(join(tmpdir(), 'pet-assembly-'));
@@ -52,6 +65,7 @@ test('真实FFmpeg组装四镜二十秒，检查可听音轨与运动，并拒�
   catch (error) { if (error.code === 'ENOENT') { t.skip('本机未安装 Python。'); return; } throw error; }
   const verified = JSON.parse(result.stdout);
   assert.equal(verified.staticRejected, true); assert.equal(verified.silentRejected, true);
+  assert.equal(verified.containedEdgesPreserved, true);
   assert.equal(verified.receipt.video.frames, 320); assert.equal(verified.receipt.motionVerification.shots.length, 4);
   assert.ok(verified.receipt.audioVerification.rmsDb > -45); assert.ok(verified.receipt.audioVerification.seconds >= 19.9);
 });
