@@ -4,6 +4,12 @@ export const WORKER_PROTOCOL = 'doufeng-dsh-worker-v1';
 export const WORKER_REPOSITORY = 'qq773901406-cmd/douyin-ops';
 const id = value => typeof value === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(value);
 const fault = (message, status = 400) => Object.assign(new Error(message), { status });
+const steeringStates = new Set(['delivered', 'queued', 'unavailable', 'uncertain']);
+
+export function validateSteeringInput({ ticketId, assignmentId, inputId, text } = {}) {
+  if (![ticketId, assignmentId, inputId].every(id) || typeof text !== 'string' || !text.trim() || text.length > 16000) throw fault('Worker 追加消息的身份或正文无效。');
+  return { ticketId, assignmentId, inputId, text };
+}
 
 export function workerEndpoint(value) {
   let url; try { url = new URL(value); } catch { throw fault('Worker 地址无效。'); }
@@ -79,7 +85,7 @@ export class DshExecutor {
     let response;
     try { response = await this.fetch(config.endpoint + path, { method, redirect: 'error', signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs), headers: { Authorization: `Bearer ${config.token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) }); }
     catch { throw fault('无法访问独立 Worker；结果可能尚未确认，请先核对派工状态。', 503); }
-    if (!response.ok) throw fault(`Worker 请求未完成（HTTP ${response.status}）。`, response.status === 409 ? 409 : 502);
+    if (!response.ok) throw Object.assign(fault(`Worker 请求未完成（HTTP ${response.status}）。`, response.status === 409 ? 409 : 502), { httpStatus: response.status });
     let data; try { data = await response.json(); } catch { throw fault('Worker 响应无法读取。', 502); }
     if (data.protocol !== WORKER_PROTOCOL) throw fault('Worker 协议不兼容。', 502);
     return data;
@@ -87,7 +93,7 @@ export class DshExecutor {
   async health() {
     try {
       const data = await this.call('/v1/health');
-      return { ready: data.ready === true, state: data.ready ? 'ready' : 'unavailable', message: data.ready ? '独立 DSH Worker 已就绪。' : 'Worker 部署检查未通过。', protocol: WORKER_PROTOCOL };
+      return { ready: data.ready === true, steering: data.steering === true, state: data.ready ? 'ready' : 'unavailable', message: data.ready ? '独立 DSH Worker 已就绪。' : 'Worker 部署检查未通过。', protocol: WORKER_PROTOCOL };
     } catch (error) { return { ready: false, state: 'unavailable', message: error.message }; }
   }
   async execute({ ticket, assignmentId, signal, onProgress } = {}) {
@@ -103,17 +109,40 @@ export class DshExecutor {
         result = await this.call(`/v1/assignments/${encodeURIComponent(assignmentId)}`, { signal: lifetime });
       }
       if (result.assignmentId !== assignmentId || result.ticketId !== ticket.id) throw fault('Worker 回执不属于当前派工。', 502);
-      return validateWorkerReport({ ...result.report, assignmentId, sessionId: result.sessionId });
+      const report = validateWorkerReport({ ...result.report, assignmentId, sessionId: result.sessionId });
+      if (result.deliveredInputIds !== undefined) {
+        if (!Array.isArray(result.deliveredInputIds) || result.deliveredInputIds.length > 100 || !result.deliveredInputIds.every(id)) throw fault('Worker 追加消息回执无效。', 502);
+        report.deliveredInputIds = [...new Set(result.deliveredInputIds)];
+      }
+      return report;
     } catch (error) {
-      if (lifetime.aborted) {
+      // Either POST or a subsequent poll may fail after a process started.
+      // A stop keyed to this exact assignment also fences a delayed launch.
+      if (lifetime.aborted || ![400, 403, 404, 409, 413].includes(error.httpStatus)) {
         await this.stop({ ticketId: ticket.id, assignmentId }).catch(() => {});
-        throw fault('Worker 已请求停止；请以持久化派工回执确认最终状态。', 503);
+        if (lifetime.aborted) throw fault('Worker 已请求停止；请以持久化派工回执确认最终状态。', 503);
       }
       throw error;
     }
   }
+  async steer({ signal, ...raw }) {
+    const { ticketId, assignmentId, inputId, text } = validateSteeringInput(raw);
+    const identity = { ticketId, assignmentId, inputId };
+    if (signal?.aborted) return { ...identity, status: 'unavailable' };
+    this.config();
+    try {
+      const response = await this.call(`/v1/assignments/${assignmentId}/inputs`, { method: 'POST', body: { ticketId, inputId, text }, signal });
+      if (!steeringStates.has(response.status) || Object.entries(identity).some(([key, value]) => response[key] !== value)) return { ...identity, status: 'uncertain' };
+      return { ...identity, status: response.status };
+    } catch (error) {
+      if (error.httpStatus === 409) throw error;
+      return { ...identity, status: [400, 403, 404, 405, 413].includes(error.httpStatus) ? 'unavailable' : 'uncertain' };
+    }
+  }
   async stop({ ticketId, assignmentId }) {
     if (!id(ticketId) || !id(assignmentId)) throw fault('Worker 任务编号无效。');
-    return this.call(`/v1/assignments/${encodeURIComponent(assignmentId)}/stop`, { method: 'POST', body: { ticketId } });
+    const receipt = await this.call(`/v1/assignments/${encodeURIComponent(assignmentId)}/stop`, { method: 'POST', body: { ticketId } });
+    if (receipt.ticketId !== ticketId || receipt.assignmentId !== assignmentId || receipt.state !== 'done') throw fault('Worker 尚未确认目标派工已经结束。', 503);
+    return receipt;
   }
 }

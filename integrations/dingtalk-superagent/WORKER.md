@@ -31,6 +31,8 @@
 | `SUPERAGENT_WORKER_BASE_COMMIT` | 已核验的 40 位基线 SHA |
 | `SUPERAGENT_WORKER_MANIFEST` | 导出清单绝对路径；默认 `<SUPERAGENT_WORKER_SOURCE>.manifest.json`，须位于源码与状态目录之外 |
 | `SUPERAGENT_DSH_BIN` | 已安装官方 DSH 的物理可执行路径 |
+| `SUPERAGENT_DSH_PROFILE` | 默认 `headless`。设为 `sdk` 可向运行中的 Session 追加消息，已有 Ticket 续做须沿用原 profile |
+| `SUPERAGENT_DSH_MODEL` | SDK 使用的模型名，默认为官方 SDK 的 `deepseek-v4-flash` |
 | `SUPERAGENT_WORKER_TOKEN` | 至少 32 字符的随机 bridge 令牌，与控制侧一致 |
 | `DEEPSEEK_API_KEY` | 仅此隔离 Worker 的模型密钥（如路由使用它） |
 
@@ -50,4 +52,21 @@ DSH 必须返回结构化 `{status,summary,question?}`。`ready` 之后 bridge �
 
 `node --test tests/superagent-worker.test.mjs tests/superagent-export-source.test.mjs` 使用注入的进程 fixture 和临时 Git 仓库验证适配器契约、落盘、去重、会话恢复、权限检查、实际文件 diff、固定提交导出及清单校验；不调用真实 DSH 或模型。现场部署还需单独核验 DSH 版本、模型、Linux sandbox 支持与一次小型改动。
 
-本期 headless bridge 在一轮结束后接续补充信息，不实现上游同一运行中 Session 的实时 inbox steering。新消息由控制层排队，正在执行的 Worker 可停止后续接。源码快照只接受文本；二进制资产、新的顶层目录及超过变更限额的任务需拆分或人工处理。模型报告中的测试证据仍需审查；进程成功不等于所有测试成功。
+源码快照只接受文本。二进制资产、新的顶层目录及超过变更限额的任务需拆分或人工处理。模型报告中的测试证据仍需审查。
+
+## 运行中追加消息
+
+启用 SDK 时，bridge 为每次派工单独启动官方 `dsh --profile sdk` 子进程，通过标准输入输出传递 JSON-RPC。它完成 `initialize` 握手，验证 Session 的工作目录，使用 `session/prompt` 提交原始任务与后续文本，使用 `session/wait` 等待工作完成。后续文本始终受原授权范围约束。SDK 的原生 followup 可以在执行时入队，具体读取时机由 DSH 决定。bridge 固定 `DSH_PERMISSION_MODE=workspace-write`，拒绝所有请求提升权限的 SDK 请求，并对退出、超时与停止使用和 headless 相同的进程组边界。[SDK 传输协议](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/sdk/protocol/README.md) · [官方 SDK 服务端实现](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/sdk/server/src/server.ts)
+
+控制层调用 `DshExecutor.steer({ticketId, assignmentId, inputId, text, signal})`。bridge 通过已认证的 `POST /v1/assignments/:id/inputs` 接收追加消息。重复提交相同消息 ID 和正文会查询已有回执。同一 ID 更换正文将返回 409。每次派工最多登记 100 条，每条正文最多 16,000 字符。派工结束时，`DshExecutor.execute()` 的 `deliveredInputIds` 来自 bridge 保存的原生历史事件。[上游对已读的判定](https://github.com/deepseek-ai/dsh-superagent-prototype/blob/main/src/executor/dsh.ts)
+
+| 状态 | 控制层可依赖的事实 |
+| --- | --- |
+| `unavailable` | 本次未发送。headless 与旧 bridge 支持下一次派工时处理。SDK 会话启动期间可用同一消息 ID 再查 |
+| `queued` | SDK 的 `session/prompt` 已返回原生消息 ID，等待该 Session 的 `user/message` 历史事件 |
+| `delivered` | 目标 Session 的 `user/message` 已记录完全匹配的原生 ID，后续执行结果以任务报告为准 |
+| `uncertain` | 发送占位已落盘或请求结果未知。控制层可用原 ID 查询，bridge 将保留现有回执 |
+
+当前派工结束后，仍可查询逐条回执。若一次投递已进入 SDK 或结果未知，而进程结束前未取得已读证据，同一 Ticket 的新派工会暂停。操作者需核对独立 Session 的历史与目录，必要时以新任务接续剩余工作。SDK 公共协议未提供删除旧 inbox 消息的接口，恢复后再发送整份 Ticket 可能重复执行。
+
+离线测试使用按官方 JSON-RPC 契约编写的进程模拟器，覆盖运行中追加、跨 Session 消息隔离、排队与已读的区分、身份冲突、恢复和权限请求。现场仍需用部署的 DSH 版本和模型验证真实消息的读取时机。

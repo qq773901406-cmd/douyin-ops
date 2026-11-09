@@ -197,6 +197,48 @@
         },
         "note": "本条24秒标题与BV1NXxY6TErU匹配；稿件管理已发布筛选包含本条，进行中0、已发布3，公开页展示同标题、Omni_Orange及含AI生成内容。真实证据为production/publication-evidence/bili-published-filter.json、bili-work-links.json、bili-public-page.json。BrowserSkill截图持续超时或返回空白，附图为实际失败捕获，不能独立证明结果；未伪造截图。按可见DOM核实已公开。"
       }
+    },
+    {
+      "id": "eadb6134-e39d-48fc-ae7a-d5e9ace75076",
+      "platform": "bilibili",
+      "account": {
+        "name": "Omni_Orange",
+        "uid": "631870098"
+      },
+      "browserId": "b31fc78b",
+      "title": "橘猫和布偶的同步小舞步",
+      "video": {
+        "path": "D:\\ai\\runtime\\bilibili-publish\\assets\\eadb6134-e39d-48fc-ae7a-d5e9ace75076\\video.mp4",
+        "sha256": "dc1c6b0b0e9ef8e1041b409ddc1476071f4880875d9440df629bd9c933adaa16",
+        "size": 14778919,
+        "sourcePath": "D:\\ai\\runtime\\free-video-daily\\production\\rework-motion-20261030\\full-local-20261109\\two-cats-21p6s.mp4"
+      },
+      "plan": {
+        "title": "橘猫和布偶的同步小舞步",
+        "description": "橘猫和布偶一起抱头、歪头、挥爪。画面由 AI 重绘角色并按参考动作合成，配乐为原创合成音乐。\n动作参考：抖音用户239762shga《小帽迷》。非商业分享。",
+        "tags": [
+          "AI生成",
+          "AI视频",
+          "猫咪",
+          "萌宠",
+          "双猫跳舞"
+        ],
+        "aiGenerated": true,
+        "category": "人工智能",
+        "coverFrameSeconds": 18.2,
+        "covers": {}
+      },
+      "status": "prepared",
+      "createdAt": "2026-11-09T02:58:09.308Z",
+      "updatedAt": "2026-11-09T02:58:09.331Z",
+      "history": [
+        {
+          "at": "2026-11-09T02:58:09.331Z",
+          "action": "prepare",
+          "detail": "保存视频副本和清单，尚未取得提交许可。"
+        }
+      ],
+      "planHash": "c826a0c29841202bb1ec4d8813a8e7192b2ca4b182f755688d397081d7093d4a"
     }
   ]
 }

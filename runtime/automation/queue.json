@@ -7,7 +7,7 @@
     "enabled": false,
     "browserId": "b31fc78b",
     "accountId": "138528608",
-    "verifiedAt": "2026-10-30T06:04:46.087Z"
+    "verifiedAt": "2026-11-09T02:27:13.379Z"
   },
   "items": [
     {
@@ -270,6 +270,12 @@
       "itemId": "ef043bf8-61eb-4f92-9173-58aa81bb841d",
       "at": "2026-10-30T06:27:20.256Z",
       "message": "浏览器步骤 upload 未完成。请检查扩展、登录状态和页面；系统不会盲目重试。（code=permission_denied; reason=cooperation_sync_required; effectState=unknown）"
+    },
+    {
+      "id": "51279646-cdc7-4751-a631-9f59e4026912",
+      "itemId": "",
+      "at": "2026-11-09T02:27:13.379Z",
+      "message": "已识别抖音号 138528608，审批时请确认此账号。"
     }
   ]
 }

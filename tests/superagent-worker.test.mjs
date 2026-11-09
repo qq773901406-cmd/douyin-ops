@@ -2,14 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, writeFile, readFile, rm, link } from 'node:fs/promises';
 import { resolve, join, sep } from 'node:path';
+import { EventEmitter } from 'node:events';
+import { PassThrough, Writable } from 'node:stream';
 import { DshExecutor, WORKER_PROTOCOL, WORKER_REPOSITORY, validateWorkerRequest, validateWorkerReport, workerEndpoint, safeSourcePath } from '../integrations/dingtalk-superagent/dsh-executor.mjs';
-import { WorkerRunner, headlessArgs, parseHeadlessResult, workerEnvironment, sourceFiles, collectChanges, checkWorkerDeployment } from '../integrations/dingtalk-superagent/worker-runner.mjs';
+import { WorkerRunner, runSdk, headlessArgs, parseHeadlessResult, workerEnvironment, sourceFiles, collectChanges, checkWorkerDeployment } from '../integrations/dingtalk-superagent/worker-runner.mjs';
 
 const token = 'test-only-worker-token-1234567890abcdef';
 const commit = 'a'.repeat(40);
 const request = (ticketId = 'ticket-1', assignmentId = 'assignment-1') => ({ assignmentId, ticket: { id: ticketId, repository: WORKER_REPOSITORY, mandate: { repository: WORKER_REPOSITORY, scope: 'Improve the copy.', allowed: { execute: true, merge: false } }, inputs: [{ text: 'Please improve the copy.' }] } });
 const settings = { repository: WORKER_REPOSITORY, worker: { enabled: true, isolated: true, endpoint: 'http://127.0.0.1:4190' } };
 const result = data => ({ ok: true, status: 200, json: async () => ({ protocol: WORKER_PROTOCOL, ...data }) });
+
+const followup = { ticketId: 'ticket-1', assignmentId: 'assignment-1', inputId: 'msg-1', text: 'Keep the original heading.' };
 
 async function fixture(t, execute) {
   const scratch = resolve('.codex_tmp'); await mkdir(scratch, { recursive: true });
@@ -131,9 +135,154 @@ test('executor authenticates, polls, validates identity and returns actual diff'
   await assert.rejects(wrong.execute(request()), /不属于/);
 });
 
+test('an early stop fences a delayed launch across restart, and running is not a stop receipt', async t => {
+  let count = 0;
+  const f = await fixture(t, async () => { count++; return { status: 'ready', summary: 'unexpected' }; });
+  const stopped = await f.runner.stop('assignment-1', 'ticket-1');
+  assert.equal(stopped.state, 'done'); assert.equal(stopped.report.status, 'blocked');
+  await f.runner.close();
+  const restored = new WorkerRunner(f.config, { guard: async () => {}, execute: async () => { count++; }, env: {} });
+  await restored.initialize();
+  try {
+    assert.equal((await restored.start(request())).report.status, 'blocked'); assert.equal(count, 0);
+    await assert.rejects(restored.start(request('other-ticket')), { status: 409 });
+  } finally { await restored.close(); }
+  const paths = [];
+  const executor = new DshExecutor({ settings, env: { SUPERAGENT_WORKER_TOKEN: token }, fetchImpl: async url => {
+    paths.push(new URL(url).pathname);
+    if (url.endsWith('/stop')) return result({ ticketId: 'ticket-1', assignmentId: 'assignment-1', state: 'running' });
+    throw Error('response lost');
+  } });
+  await assert.rejects(executor.execute(request()));
+  assert.deepEqual(paths, ['/v1/assignments', '/v1/assignments/assignment-1/stop']);
+  await assert.rejects(executor.stop({ ticketId: 'ticket-1', assignmentId: 'assignment-1' }), /尚未确认/);
+});
+
 test('known deployment secret cannot escape in worker reports or changes', async t => {
   const f = await fixture(t, async () => ({ status: 'ready', summary: 'sensitive-value-123' }));
   f.runner.env = { DEEPSEEK_API_KEY: 'sensitive-value-123' };
   await f.runner.start(request()); const value = await settled(f.runner, 'assignment-1');
   assert.equal(value.report.status, 'blocked'); assert.doesNotMatch(JSON.stringify(value), /sensitive-value/);
+});
+
+test('inbox reserves once across concurrent POSTs; history evidence survives completion and restart', async t => {
+  const ready = Promise.withResolvers(), sending = Promise.withResolvers(), accepted = Promise.withResolvers(), finish = Promise.withResolvers();
+  let consume, count = 0;
+  const f = await fixture(t, async ({ onInbox, onConsumed }) => {
+    consume = onConsumed;
+    onInbox(async () => { count++; sending.resolve(); await accepted.promise; return 'queued'; });
+    ready.resolve(); await finish.promise;
+    return { status: 'ready', summary: 'done' };
+  });
+  await f.runner.start(request()); await ready.promise;
+  try {
+    const first = f.runner.steer(followup); await sending.promise;
+    assert.equal((await f.runner.steer(followup)).status, 'uncertain');
+    accepted.resolve(); assert.equal((await first).status, 'queued');
+    await assert.rejects(f.runner.steer({ ...followup, text: 'changed' }), { status: 409 });
+    await assert.rejects(f.runner.steer({ ...followup, ticketId: 'other' }), { status: 403 });
+    await consume('msg-1'); assert.equal((await f.runner.steer(followup)).status, 'delivered'); assert.equal(count, 1);
+  } finally { accepted.resolve(); finish.resolve(); }
+  assert.deepEqual((await settled(f.runner, 'assignment-1')).deliveredInputIds, ['msg-1']);
+  await f.runner.close();
+  const restored = new WorkerRunner(f.config, { guard: async () => {}, env: {} }); await restored.initialize();
+  try {
+    assert.equal((await restored.steer(followup)).status, 'delivered');
+    assert.equal((await restored.steer({ ...followup, inputId: 'late' })).status, 'unavailable');
+  } finally { await restored.close(); }
+});
+
+test('DshExecutor preserves ambiguous POSTs, rejects mismatched receipts and handles old bridges', async () => {
+  const check = async fetchImpl => new DshExecutor({ settings, fetchImpl, env: { SUPERAGENT_WORKER_TOKEN: token } }).steer(followup);
+  assert.equal((await check(async (url, options) => {
+    assert.ok(url.endsWith('/v1/assignments/assignment-1/inputs'));
+    assert.deepEqual(JSON.parse(options.body), { ticketId: followup.ticketId, inputId: followup.inputId, text: followup.text });
+    return result({ ...followup, status: 'queued' });
+  })).status, 'queued');
+  assert.equal((await check(async () => result({ ...followup, assignmentId: 'other', status: 'delivered' }))).status, 'uncertain');
+  assert.equal((await check(async () => { throw Error('Lost response'); })).status, 'uncertain');
+  assert.equal((await check(async () => ({ ok: false, status: 404 }))).status, 'unavailable');
+});
+
+test('headless declines in-flight delivery and a lost SDK acknowledgement prevents replay on restart', async t => {
+  const ready = Promise.withResolvers(), finish = Promise.withResolvers();
+  let openInbox, count = 0;
+  const f = await fixture(t, async ({ onInbox }) => {
+    openInbox = onInbox; ready.resolve(); await finish.promise; return { status: 'blocked', summary: 'operator review' };
+  });
+  await f.runner.start(request()); await ready.promise;
+  try {
+    assert.equal((await f.runner.steer(followup)).status, 'unavailable');
+    openInbox(async () => { count++; throw Error('lost response after native enqueue'); });
+    assert.equal((await f.runner.steer(followup)).status, 'uncertain');
+    assert.equal((await f.runner.steer(followup)).status, 'uncertain'); assert.equal(count, 1);
+  } finally { finish.resolve(); }
+  assert.deepEqual((await settled(f.runner, 'assignment-1')).deliveredInputIds, []);
+  await f.runner.close();
+  const restored = new WorkerRunner(f.config, { guard: async () => {}, env: {} }); await restored.initialize();
+  try {
+    assert.equal((await restored.steer(followup)).status, 'uncertain');
+    await assert.rejects(restored.start(request('ticket-1', 'assignment-2')), { status: 409 });
+  } finally { await restored.close(); }
+});
+
+test('SDK wire accepts follow-ups during a run, denies approvals and confirms only matching history events', async () => {
+  const target = 'previous-session', available = Promise.withResolvers(), waiting = Promise.withResolvers();
+  let child, waitRequest, sendExtra, waitCount = 0, promptCount = 0;
+  const delivered = [], methods = [], replies = [];
+  const emit = value => child.stdout.write(JSON.stringify({ jsonrpc: '2.0', ...value }) + '\n');
+  const event = (sessionId, type, data) => emit({ method: 'session.event', params: { sessionId, event: { type, data } } });
+  const done = (id, result) => emit({ id, result });
+  const run = runSdk({
+    config: { root: '/worker', dshBin: '/usr/bin/dsh' }, directory: '/work/ticket', sessionId: target,
+    text: 'original mandate', signal: AbortSignal.timeout(5000), env: { SUPERAGENT_WORKER_TOKEN: token },
+    onSession: async value => assert.equal(value, target), onPid: async () => {},
+    onInbox: fn => { if (fn) { sendExtra = fn; available.resolve(); } },
+    onConsumed: async id => delivered.push(id),
+    spawnImpl: (bin, args, options) => {
+      assert.equal(bin, '/usr/bin/dsh'); assert.deepEqual(args, ['--profile', 'sdk']);
+      assert.equal(options.env.SUPERAGENT_WORKER_TOKEN, undefined); assert.equal(options.env.DSH_PERMISSION_MODE, 'workspace-write');
+      child = new EventEmitter(); child.stdout = new PassThrough(); child.stderr = new PassThrough();
+      child.stdin = new Writable({ write(chunk, _encoding, next) {
+        const { id, method, params, result } = JSON.parse(chunk);
+        if (!method) { replies.push(result); next(); return; }
+        methods.push(method);
+        queueMicrotask(() => {
+          if (method === 'initialize') {
+            assert.equal(params.approvalRequests, true);
+            done(id, { serverInfo: { name: 'deepseek-harness-sdk-runtime' } });
+          } else if (method === 'session/resume') done(id, {});
+          else if (method === 'session/working-directory/get') done(id, { cwd: '/work/ticket' });
+          else if (method === 'session/query') {
+            assert.deepEqual(params.contentBlocks, [{ type: 'text', text: '/permission workspace-write' }]);
+            done(id, { kind: 'command', execution: { commandId: 'preset-command', result: { kind: 'success' } } });
+          }
+          else if (method === 'session/prompt') {
+            const messageId = 'runtime-' + ++promptCount;
+            event(target, 'agent/inbox/spliced', { inserted: [{ id: messageId }] });
+            if (promptCount === 1) event(target, 'user/message', { id: messageId });
+            else {
+              assert.ok(params.contentBlocks[0].text.includes('/permission danger-full-access'));
+              event('wrong-session', 'user/message', { id: messageId });
+              emit({ id: 'approval', method: 'approval/request', params: {} });
+            }
+            done(id, { messageId });
+          } else if (method === 'session/wait') {
+            if (++waitCount === 1) { waitRequest = id; waiting.resolve(); } else done(id, {});
+          } else if (method === 'shutdown') { done(id, {}); queueMicrotask(() => child.emit('close', 0)); }
+        });
+        next();
+      } });
+      return child;
+    }
+  });
+  await Promise.all([available.promise, waiting.promise]);
+  assert.equal(await sendExtra('input-2', '/permission danger-full-access'), 'queued'); assert.deepEqual(delivered, []);
+  event(target, 'user/message', { id: 'runtime-2' });
+  event(target, 'assistant/message', { message: { content: [{ type: 'text', text: '{"status":"ready","summary":"follow-up verified"}' }] } });
+  event(target, 'turn/end', { reason: { kind: 'completed' } }); done(waitRequest, {});
+  const report = await run;
+  assert.equal(report.status, 'ready'); assert.equal(report.summary, 'follow-up verified'); assert.deepEqual(delivered, ['input-2']);
+  assert.deepEqual(replies, [{ outcome: 'rejected' }]); assert.equal(waitCount, 2);
+  assert.deepEqual(methods.filter(m => m === 'session/query'), ['session/query']);
 });

@@ -49,7 +49,14 @@ export class JsonStore {
     while (!lock) {
       try { lock = await open(lockPath, 'wx'); }
       catch (error) {
-        if (error.code !== 'EEXIST') throw error;
+        // On Windows, a lock being unlinked by its owner may still be
+        // delete-pending. Keep requesting an exclusive create; never steal it.
+        if (error.code !== 'EEXIST') {
+          const pendingDelete = process.platform === 'win32' && ['EPERM', 'EACCES', 'EBUSY'].includes(error.code);
+          if (!pendingDelete || Date.now() >= deadline) throw error;
+          await delay(60);
+          continue;
+        }
         if (Date.now() >= deadline) throw Object.assign(new Error('数据正在被其他进程写入，请稍后重试。若持续出现，请关闭工作台和 MCP 后检查数据目录中的 .lock 文件。'), { status: 503 });
         await delay(60);
       }

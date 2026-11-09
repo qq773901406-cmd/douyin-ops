@@ -12,6 +12,7 @@ const compact = (value, limit = 220) => String(value ?? '').slice(0, limit);
 const textOf = ticket => ticket.inputs?.map(row => row.text || '').join('\n\n') || ticket.messages?.map(row => row.text || '').join('\n\n') || ticket.text || '';
 const pre = value => `<pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:45vh;overflow:auto">${esc(typeof value === 'string' ? value : JSON.stringify(value, null, 2))}</pre>`;
 const metric = (label, count, note) => `<div class="card metric-card"><div class="metric-top">${label}</div><div class="metric-value">${esc(count)}</div><div class="metric-note">${note}</div></div>`;
+const steeringLabels = { pending: '等待发送给 Worker', queued: '已进入 DSH 收件箱', delivered: '已进入本轮 DSH 会话', unavailable: 'Worker 尚未接收', uncertain: '送达待核对' };
 const pill = status => `<span class="pill ${['working', 'completed'].includes(status) ? 'green' : ['failed', 'blocked', 'waiting_answer'].includes(status) ? 'orange' : ''}">${esc(labels[status] || status || '未知')}</span>`;
 const input = (name, label, value, type = 'text', hint = '') => `<div class="field"><label for="sg-${name}">${label}</label><input id="sg-${name}" name="${name}" type="${type}" value="${esc(value)}" ${type === 'number' ? 'min="1" max="4" step="1"' : 'maxlength="2000"'}>${hint ? `<small class="form-hint">${hint}</small>` : ''}</div>`;
 const textarea = (name, label, value, hint = '', max = 16000) => `<div class="field full"><label for="sg-${name}">${label}</label><textarea id="sg-${name}" name="${name}" maxlength="${max}">${esc(value)}</textarea>${hint ? `<small class="form-hint">${hint}</small>` : ''}</div>`;
@@ -31,6 +32,7 @@ export function settingsFormValues(settings = {}) {
   return {
     mode: settings.mode || 'observe', acceptMode: settings.acceptMode || 'observe', concurrency: String(settings.concurrency ?? 1),
     sourceEnabled: !!settings.source?.enabled, corpId: settings.source?.corpId || '', clientId: settings.source?.clientId || '',
+    cardsEnabled: !!settings.cards?.enabled, cardTemplateId: settings.cards?.templateId || '',
     allowedUserIds: (settings.source?.allowedUserIds || []).join('\n'), allowedConversationIds: (settings.source?.allowedConversationIds || []).join('\n'),
     modelEnabled: !!settings.model?.enabled, modelEndpoint: settings.model?.endpoint || 'http://127.0.0.1:11434', modelName: settings.model?.name || '',
     workerEnabled: !!settings.worker?.enabled, workerEndpoint: settings.worker?.endpoint || '', workerIsolated: !!settings.worker?.isolated,
@@ -47,6 +49,7 @@ export function settingsFromForm(values, original) {
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 4) throw new Error('并发任务数须为 1–4 的整数。');
   return { ...structuredClone(original), mode: values.mode, acceptMode: values.acceptMode, concurrency,
     source: { ...original.source, enabled: values.sourceEnabled === true, corpId: values.corpId.trim(), clientId: values.clientId.trim(), allowedUserIds: listIds(values.allowedUserIds), allowedConversationIds: listIds(values.allowedConversationIds) },
+    cards: { enabled: values.cardsEnabled === true, templateId: values.cardTemplateId.trim() },
     model: { ...original.model, enabled: values.modelEnabled === true, endpoint: values.modelEndpoint.trim(), name: values.modelName.trim() },
     worker: { ...original.worker, enabled: values.workerEnabled === true, endpoint: values.workerEndpoint.trim(), isolated: values.workerIsolated === true },
     github: { ...original.github, enabled: values.githubEnabled === true, baseBranch: values.baseBranch.trim() },
@@ -91,7 +94,7 @@ export function createSuperagentPanel({ notify }) {
     if (!settingsBase) resetSettings(); const d = draft;
     return `<form id="sg-settings-form"><p class="notice">配置在本机保存。执行模式需要独立 Worker 就绪；候选评估不会直接授予代码执行权限。自动合并始终禁止。</p>
       <section class="card"><div class="card-title"><h3>处理方式</h3><span class="pill">${esc(snapshot.settings.repository || REPOSITORY)}</span></div><div class="form-grid">${select('mode', '执行模式', d.mode, [['observe', '观察：登记与评估'], ['manual', '手动：逐项授权执行']])}${select('acceptMode', '推断候选', d.acceptMode, [['off', '关闭'], ['observe', '观察：记录评估建议'], ['auto', '自动候选：仍需授权执行']])}${input('concurrency', '最大并发任务', d.concurrency, 'number')}</div></section>
-      <div class="section-row"><h2>外部接入</h2></div><div class="grid grid-2"><section class="card"><h3>钉钉机器人</h3>${check('sourceEnabled', '启用消息接收', d.sourceEnabled)}<div class="form-grid">${input('corpId', '企业 corpId', d.corpId)}${input('clientId', '机器人 ClientId', d.clientId)}${textarea('allowedUserIds', '允许发起任务的 userId', d.allowedUserIds, '每行一个 ID；群消息还需满足群白名单。', 8000)}${textarea('allowedConversationIds', '允许群聊 conversationId', d.allowedConversationIds, '每行一个 ID，群内还需 @机器人。', 8000)}</div><p class="form-hint">应用密钥由本机环境变量提供；此处只保存非敏感标识。</p></section>
+      <div class="section-row"><h2>外部接入</h2></div><div class="grid grid-2"><section class="card"><h3>钉钉机器人</h3>${check('sourceEnabled', '启用消息接收', d.sourceEnabled)}<div class="form-grid">${input('corpId', '企业 corpId', d.corpId)}${input('clientId', '机器人 ClientId', d.clientId)}${textarea('allowedUserIds', '允许发起任务的 userId', d.allowedUserIds, '每行一个 ID；群消息还需满足群白名单。', 8000)}${textarea('allowedConversationIds', '允许群聊 conversationId', d.allowedConversationIds, '每行一个 ID，群内还需 @机器人。', 8000)}</div>${check('cardsEnabled', '在原会话发送互动任务卡片', d.cardsEnabled)}${input('cardTemplateId', '已发布的卡片模板 ID', d.cardTemplateId)}<p class="form-hint">仅任务发起人可操作卡片。应用密钥由本机环境变量提供。</p></section>
       <section class="card"><h3>评估模型</h3>${check('modelEnabled', '启用本机模型评估', d.modelEnabled)}<div class="form-grid">${input('modelEndpoint', '本机 Ollama 地址', d.modelEndpoint)}${input('modelName', '模型名称', d.modelName)}</div><p class="form-hint">模型返回任务建议，权限由服务端检查。</p><h3>GitHub</h3>${check('githubEnabled', '启用仓库事件接收', d.githubEnabled)}${input('baseBranch', 'PR 目标分支', d.baseBranch)}<p class="form-hint">仓库固定为 ${REPOSITORY}，机器人凭据在本机配置。</p></section></div>
       <section class="card" style="margin-top:15px"><h3>独立 Worker</h3>${check('workerEnabled', '启用 Worker 接入', d.workerEnabled)}${input('workerEndpoint', 'Worker 服务地址', d.workerEndpoint)}${check('workerIsolated', '已在独立环境部署 Worker，并隔离宿主运行数据与凭据', d.workerIsolated)}<p class="form-hint">此选项记录部署情况；目录和复选框本身不提供隔离。连接检查通过后，才可逐项授权任务。</p></section>
       <div class="section-row"><h2>规则与提示词</h2></div><section class="card"><div class="form-grid">${textarea('rules', '候选规则（JSON 数组）', d.rules, '规则结构见使用说明；空数组不推断新工作。')}${textarea('routerPrompt', '路由提示词', d.routerPrompt)}${textarea('workerPrompt', 'Worker 提示词', d.workerPrompt)}</div></section>
@@ -137,14 +140,14 @@ export function createSuperagentPanel({ notify }) {
       el.querySelector('[data-sg-ticket-count]').textContent = `${selected.length} / ${tickets.length} 条任务`;
       el.querySelector('[data-superagent="more"]').hidden = selected.length <= visibleCount;
     } else if (tab === 'events') {
-      writeHtml(el.querySelector('[data-sg-events]'), table(['时间 / 来源', '消息', '关联任务'], [...(snapshot.events || [])].reverse().slice(0, 100).map(event => row([`${esc(when(stamp(event)))}<br>${esc(event.source || event.kind || '—')}`, esc(compact(event.text || event.message || event.type)), esc(event.ticketId || '—')]))));
+      writeHtml(el.querySelector('[data-sg-events]'), table(['时间 / 来源', '消息', '关联任务'], (snapshot.events || []).slice(0, 100).map(event => row([`${esc(when(stamp(event)))}<br>${esc(event.source || event.kind || '—')}`, esc(compact(event.text || event.message || event.type)), esc(event.ticketId || '—')]))));
       const outcomes = { would_accept: '观察建议：可接单', accepted_pending_authorization: '候选已接纳，等待执行授权', suggested: '模型建议', unavailable: '评估未完成' }, actions = { accept: '接单', ignore: '忽略', attach: '关联任务', stop: '停止', unavailable: '未完成' };
-      writeHtml(el.querySelector('[data-sg-decisions]'), table(['时间', '决定 / 原因', '规则 / 任务'], [...(snapshot.decisions || [])].reverse().slice(0, 100).map(decision => row([esc(when(stamp(decision))), `${esc(outcomes[decision.outcome] || decision.outcome || '评估记录')} · ${esc(actions[decision.action] || decision.action || '—')}<br>${esc(decision.reason || decision.summary || '')}`, `${esc((decision.matchedRules || []).join('、'))}<br>${esc(decision.ticketId || '—')}${decision.targetTicketId ? `<br>建议关联：${esc(decision.targetTicketId)}` : ''}`]))));
+      writeHtml(el.querySelector('[data-sg-decisions]'), table(['时间', '决定 / 原因', '规则 / 任务'], (snapshot.decisions || []).slice(0, 100).map(decision => row([esc(when(stamp(decision))), `${esc(outcomes[decision.outcome] || decision.outcome || '评估记录')} · ${esc(actions[decision.action] || decision.action || '—')}<br>${esc(decision.reason || decision.summary || '')}`, `${esc((decision.matchedRules || []).join('、'))}<br>${esc(decision.ticketId || '—')}${decision.targetTicketId ? `<br>建议关联：${esc(decision.targetTicketId)}` : ''}`]))));
     } else if (tab === 'health') {
       writeHtml(el.querySelector('[data-sg-health]'), healthMarkup());
       const deliveryLabels = { preview: '预览', pending: '待发送', sending: '发送中', sent: '已发送', failed: '失败', uncertain: '结果不确定', withdrawn: '已撤销' };
-      writeHtml(el.querySelector('[data-sg-outbox]'), table(['时间 / 状态', '消息', '结果', '人工核对'], [...(snapshot.outbox || [])].reverse().slice(0, 100).map(message => row([
-        `${esc(when(stamp(message)))}<br>${esc(deliveryLabels[message.status] || message.status || '—')}`, esc(compact(message.text || message.summary)), esc(message.error || message.reason || '—'),
+      writeHtml(el.querySelector('[data-sg-outbox]'), table(['时间 / 状态', '消息', '结果', '人工核对'], (snapshot.outbox || []).slice(0, 100).map(message => row([
+        `${esc(when(stamp(message)))}<br>${esc(deliveryLabels[message.status] || message.status || '—')}`, `${message.kind === 'card' ? '互动卡片 · ' : ''}${esc(compact(message.text || message.summary))}${message.kind === 'card' && message.status === 'uncertain' ? '<br>' + esc(message.card?.outTrackId || '') : ''}`, esc(message.error || message.reason || '—'),
         ['uncertain', 'failed'].includes(message.status) ? `${message.status === 'uncertain' ? '<p class="form-hint">请先核对原会话的发送状态，结果不确定时不重新发送。</p>' : ''}<div class="form-actions">${button('delivery-sent', '已核实送达', message.id)}${button('delivery-withdrawn', '放弃此条', message.id)}${message.status === 'failed' ? button('delivery-retry', '重试投递', message.id) : ''}</div>` : '—',
       ]))));
     } else if (tab === 'settings') {
@@ -171,7 +174,7 @@ export function createSuperagentPanel({ notify }) {
 
   function taskDetails(ticket) {
     const reports = (ticket.reports || []).map(report => `<section class="card" style="margin-top:12px">${pill(report.status)} <small>${esc(when(stamp(report)))}</small><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(report.summary || '')}</p>${report.question ? `<p class="notice orange">${esc(report.question)}</p>` : ''}</section>`).join('');
-    const inputs = (ticket.inputs || ticket.messages || []).map(message => `<div class="kb-item"><div class="kb-meta">${esc(message.senderId || message.source || '输入')} · ${esc(when(stamp(message)))}</div><p>${esc(message.text || '')}</p></div>`).join('');
+    const inputs = (ticket.inputs || ticket.messages || []).map(message => `<div class="kb-item"><div class="kb-meta">${esc(message.senderId || message.source || '输入')} · ${esc(when(stamp(message)))}${message.steering ? ' · ' + esc(steeringLabels[message.steering.status] || '送达待核对') : ''}</div><p>${esc(message.text || '')}</p></div>`).join('');
     dialog('任务详情', `<dl class="system-details"><dt>编号</dt><dd>${esc(ticket.id)}</dd><dt>状态</dt><dd>${esc(labels[ticket.status] || ticket.status)}</dd><dt>来源</dt><dd>${esc(ticket.source || '—')}</dd><dt>会话</dt><dd>${esc(ticket.conversationId || ticket.messages?.[0]?.conversationId || '—')}</dd></dl><h3>对话与补充</h3>${inputs || pre(textOf(ticket))}<h3>执行报告</h3>${reports || '<p class="muted">尚无报告</p>'}<details style="margin-top:16px"><summary>授权与派工记录</summary>${pre({ mandate: ticket.mandate || { executionAllowed: false }, assignment: ticket.assignment || null })}</details>`, { wide: true });
   }
 
@@ -181,7 +184,7 @@ export function createSuperagentPanel({ notify }) {
     return { pending, send: () => request(`${API}/requests`, { method: 'POST', body: JSON.stringify({ ...payload, idempotencyKey: pending.key }), signal: AbortSignal.timeout(65000) }) };
   }
   function followup(ticket) {
-    const modal = dialog(ticket.status === 'waiting_answer' ? '回答任务中的问题' : '补充同一任务', `<p>${esc(ticket.title || ticket.id)}</p>${latestReport(ticket)?.question ? `<p class="notice">${esc(latestReport(ticket).question)}</p>` : ''}<form id="sg-followup-form"><div class="field"><label for="sg-followup-text">补充内容</label><textarea id="sg-followup-text" name="text" required maxlength="8000"></textarea></div><p class="form-error" role="alert" data-followup-error></p><div class="form-actions"><button type="submit" class="button button-green">发送到此任务</button></div></form>`, { wide: true, guard: true });
+    const modal = dialog(ticket.status === 'waiting_answer' ? '回答任务中的问题' : '补充同一任务', `<p>${esc(ticket.title || ticket.id)}</p>${latestReport(ticket)?.question ? `<p class="notice">${esc(latestReport(ticket).question)}</p>` : ''}<form id="sg-followup-form"><div class="field"><label for="sg-followup-text">补充内容</label><textarea id="sg-followup-text" name="text" required maxlength="8000"></textarea></div>${ticket.status === 'working' ? '<p class="form-hint">支持追加的 Worker 会在当前任务中接收。可在详情中查看送达状态。</p>' : ''}<p class="form-error" role="alert" data-followup-error></p><div class="form-actions"><button type="submit" class="button button-green">发送到此任务</button></div></form>`, { wide: true, guard: true });
     let pending, submitting = false;
     modal.querySelector('form').addEventListener('submit', async event => {
       event.preventDefault(); event.stopPropagation(); if (submitting) return;

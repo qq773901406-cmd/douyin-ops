@@ -7,9 +7,9 @@
 - 任务核心：独立持久账本、事件去重、同任务补充信息、授权范围和版本、任务历史、配置历史及恢复。
 - 任务流程：观察、排队、工作中、等待回答、待审核、完成、失败、受阻、停止；逐任务人工执行授权。
 - 模型评估：本机 Ollama 结构化判断、任务和规则引用校验；评估结果可审阅，不能自行修改权限。
-- 钉钉：官方 Stream SDK 适配，白名单校验、持久化后 ACK、连接状态、重连、原会话文本回传。
+- 钉钉：官方 Stream SDK 适配，白名单校验、持久化后 ACK、连接状态、重连、原会话文本回传与互动任务卡片。卡片可批准执行、停止、引导补充或查看 PR，启用方法见 [CARDS.md](CARDS.md)。
 - GitHub：Issue/PR/评论/Review/CI 输入，提交、分支、草稿 PR、审查后更新原分支及结果评论。
-- 独立 Worker：真实 DSH headless 协议、Session 续做、净化源码目录、派工回执、停止、实际源码差异提取。
+- 独立 Worker：DSH headless 单轮执行、SDK 运行中追加消息、Session 续做、净化源码目录、派工回执、停止、实际源码差异提取。
 - 可靠性：并发槽位、重启恢复、版本冲突、每次 GitHub 写入重新验证授权、未知外部结果禁止自动重放。
 - 面板：任务、事件与评估、投递与运行、设置、历史观察五页签。
 
@@ -29,11 +29,11 @@
 
 ## 模式与授权
 
-mode=observe/manual 控制是否允许本机操作员授权执行，默认 observe。
+mode=observe/manual 控制是否允许逐任务授权执行。手动模式可由本机操作员授权，启用卡片后也可由该任务的钉钉原发起人授权执行，默认 observe。
 
 acceptMode=off/observe/auto 控制候选评估：off 不评估；observe 记录 would_accept；auto 中命中规则的候选记录 accepted_pending_authorization，仍待人工执行授权。
 
-模型的 attach/stop/ignore 是建议；实际关联通过明确任务编号或本机补充操作，停止由本机命令执行。原始任务范围固定，补充文字不自动扩大范围。这是本版有意采用的人工执行边界，与上游明确请求可直接执行的默认行为不同。
+模型的 attach/stop/ignore 是建议；实际关联通过明确任务编号或本机补充操作，停止可从工作台或原会话的有效任务卡片发起。原始任务范围固定，补充文字不自动扩大范围。这是本版有意采用的人工执行边界，与上游明确请求可直接执行的默认行为不同。
 
 策略版本变化会请求停止本服务正在执行的 Worker，排队任务和外部交付也重新检查授权。若远端停止结果未知，历史中保留提示，需人工核对。取消后的任务不会因新消息自动恢复。
 
@@ -48,7 +48,7 @@ acceptMode=off/observe/auto 控制候选评估：off 不评估；observe 记录 
 | SUPERAGENT_WORKER_TOKEN | 工作台及独立 Worker | 一致的随机身份令牌，至少32字符 |
 | DEEPSEEK_API_KEY | 独立 Worker | 根据官方 DSH 模型配置使用 |
 
-钉钉需要企业内部应用、Stream 机器人、corpId、ClientId、允许用户的 userId；群聊还需 conversationId。群消息同时要求人员、群白名单及真实 @机器人。缺失员工身份、跨企业和非文本消息拒绝。SDK 动态加载 dingtalk-stream；本次未安装依赖，部署时先核对官方注册表版本，固定安装并保存 lockfile。官方源码地址：https://github.com/open-dingtalk/dingtalk-stream-sdk-nodejs 。
+钉钉需要企业内部应用、Stream 机器人、corpId、ClientId、允许用户的 userId；群聊还需 conversationId。群消息同时要求人员、群白名单及真实 @机器人。缺失员工身份、跨企业和非文本消息拒绝。Stream 适配器按需加载官方 dingtalk-stream 包。部署时使用项目锁定并验收过的版本。官方源码地址：https://github.com/open-dingtalk/dingtalk-stream-sdk-nodejs 。
 
 模型使用本机 Ollama /api/chat，填写已有可用模型名；地址仅接受本机 HTTP 根地址。配置成功不等于调用已成功，运行页展示最近一次结果。
 
@@ -79,4 +79,4 @@ API根为 /api/superagent/workflow。GET读取；POST /requests登记；POST /ti
 
 测试使用临时数据、模拟Stream/Ollama/GitHub及模拟DSH进程，不发送真实消息或创建真实PR。真实模型、机器人、Linux隔离和GitHub交付，需要账号及环境准备好后另行验收。
 
-当前使用文本回传与工作台操作，尚无钉钉互动审批卡片。执行中的DSH不会即时注入补充消息；输入留到下一轮处理。不会自动开放已有抖音/B站发布任务，也未启用自动合并。
+SDK Worker 在同一派工期间接收补充消息，详情分别显示进入收件箱与进入会话记录的状态。本轮结束时仍有补充未确认读取，任务回到观察状态，等待核对和重新授权。headless 模式在下一轮接续。

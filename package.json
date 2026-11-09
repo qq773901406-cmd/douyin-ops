@@ -4,6 +4,16 @@
   "private": true,
   "type": "module",
   "description": "Local personal content operations workspace",
-  "engines": { "node": ">=20.11" },
-  "scripts": { "start": "node scripts/start.mjs", "serve": "node server.mjs", "check": "node scripts/check.mjs", "test": "node --test tests/*.test.mjs" }
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "serve": "node server.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "dingtalk-stream": "^2.1.6-beta.1"
+  }
 }

@@ -1,9 +1,17 @@
 import { normalizeRobotMessage } from './dingtalk-source.mjs';
 import { DingTalkOutboundTransport, DeliveryError } from './outbound-transport.mjs';
+import { deliverCard, normalizeCardCallback } from './card-transport.mjs';
+
+function cardFeedback(accepted, reason) {
+  if (accepted) return '操作已处理，请查看原会话回执。';
+  if (reason === 'worker_unavailable') return 'Worker 尚未就绪，本次批准已结束。请在 Worker 就绪后重新点击批准。';
+  return '请使用有权限的账号打开最新任务卡片。';
+}
 
 export class DingTalkStream {
-  constructor({ config, onMessage, onHealth = () => {}, loadSdk = () => import('dingtalk-stream'), fetchImpl = fetch, env = process.env } = {}) {
+  constructor({ config, cards, onMessage, onCardAction, onHealth = () => {}, loadSdk = () => import('dingtalk-stream'), fetchImpl = fetch, env = process.env } = {}) {
     this.config = config || {}; this.onMessage = onMessage; this.onHealth = onHealth;
+    this.cards = cards || { enabled: false }; this.onCardAction = onCardAction; this.fetchImpl = fetchImpl;
     this.loadSdk = loadSdk; this.env = env; this.client = null; this.timer = null;
     this.state = 'disabled'; this.message = '钉钉 Stream 已关闭。'; this.lastReceivedAt = null; this.generation = 0;
     this.outbound = new DingTalkOutboundTransport({ fetchImpl, getAccessToken: () => this.client?.getAccessToken() });
@@ -22,6 +30,9 @@ export class DingTalkStream {
     if (!this.config.clientId || !this.config.corpId || !this.config.allowedUserIds?.length || !this.env.DINGTALK_CLIENT_SECRET) {
       this.state = 'unconfigured'; this.message = '需要企业、机器人、人员白名单和本机 DINGTALK_CLIENT_SECRET。'; this.publish(); return this.health();
     }
+    if (this.cards.enabled && (!this.cards.templateId || typeof this.onCardAction !== 'function')) {
+      this.state = 'unconfigured'; this.message = '互动卡片需要已发布的模板和卡片操作处理器。'; this.publish(); return this.health();
+    }
     let sdk;
     try { sdk = await this.loadSdk(); }
     catch { this.state = 'unconfigured'; this.message = '缺少 dingtalk-stream 依赖，请按部署说明安装。'; this.publish(); return this.health(); }
@@ -31,6 +42,29 @@ export class DingTalkStream {
       debug: false, keepAlive: true, autoReconnect: true, subscriptions: [] });
     const client = this.client;
     this.client.on('error', () => { if (generation !== this.generation) return; this.message = 'Stream 发生连接错误，正在等待重连。'; this.publish(); });
+    if (this.cards.enabled) {
+      client.registerCallbackListener(sdk.TOPIC_CARD || '/v1.0/card/instances/callback', async envelope => {
+        if (generation !== this.generation || !envelope.headers?.messageId) return;
+        const ack = (accepted, reason) => client.socketCallBackResponse(envelope.headers.messageId, {
+          cardUpdateOptions: { updatePrivateDataByKey: true },
+          userPrivateData: { cardParamMap: { feedback: cardFeedback(accepted, reason) } },
+        });
+        let action;
+        try { action = normalizeCardCallback(envelope, this.config); }
+        catch { ack(false); return; }
+        try {
+          const result = await this.onCardAction(action);
+          if (generation !== this.generation) return;
+          if (typeof result?.accepted !== 'boolean') throw new Error('Invalid card action receipt');
+          ack(result.accepted, result.reason);
+        } catch (error) {
+          if (generation !== this.generation) return;
+          if ([400, 403, 404, 409, 410].includes(error.status)) { ack(false); return; }
+          // An ambiguous write must be retried with the same event ID.
+          this.message = '卡片操作正在等待持久化，请核对回执。'; this.publish();
+        }
+      });
+    }
     this.client.registerCallbackListener(sdk.TOPIC_ROBOT || '/v1.0/im/bot/messages/get', async envelope => {
       if (generation !== this.generation) return;
       const ack = () => client.socketCallBackResponse(envelope.headers?.messageId, { status: 'SUCCESS' });
@@ -71,8 +105,13 @@ export class DingTalkStream {
   async send(message) {
     if (!this.client || !this.config.enabled) throw new DeliveryError('钉钉来源已关闭。', { code: 'source_disabled', retryable: true });
     const generation = this.generation;
-    return this.outbound.send({ ...message, beforeSend: () => {
+    const beforeSend = async () => {
       if (generation !== this.generation || !this.client || !this.config.enabled) throw new DeliveryError('钉钉来源已关闭。', { code: 'source_disabled', retryable: true });
-    } });
+      await message.beforeSend?.();
+      if (generation !== this.generation || !this.client || !this.config.enabled) throw new DeliveryError('钉钉来源已关闭。', { code: 'source_disabled', retryable: true });
+    };
+    if (message.kind === 'card') return deliverCard({ config: this.config, cards: this.cards, message,
+      fetchImpl: this.fetchImpl, getAccessToken: () => this.client.getAccessToken(), beforeSend });
+    return this.outbound.send({ ...message, beforeSend });
   }
 }

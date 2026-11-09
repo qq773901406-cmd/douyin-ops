@@ -16,6 +16,7 @@ const bool = value => { if (typeof value !== 'boolean') throw fault('开关必�
 export function defaultSettings() {
   return { mode: 'observe', acceptMode: 'observe', paused: false, repository: REPOSITORY, concurrency: 1,
     source: { enabled: false, corpId: '', clientId: '', allowedUserIds: [], allowedConversationIds: [] },
+    cards: { enabled: false, templateId: '' },
     model: { enabled: false, endpoint: 'http://127.0.0.1:11434', name: '' },
     worker: { enabled: false, endpoint: '', isolated: false },
     github: { enabled: false, baseBranch: 'main' },
@@ -32,6 +33,11 @@ export function validateSettings(input) {
   keys(value.source, Object.keys(defaults.source));
   const source = normalizeConfig({ ...value.source, repository: REPOSITORY });
   value.source = Object.fromEntries(Object.keys(defaults.source).map(key => [key, source[key]]));
+  keys(value.cards, ['enabled', 'templateId']);
+  const templateId = text(value.cards.templateId, 200).trim();
+  if (templateId && !/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$/.test(templateId)) throw fault('互动卡片模板 ID 格式无效。');
+  value.cards = { enabled: bool(value.cards.enabled), templateId };
+  if (value.cards.enabled && (!source.enabled || !templateId)) throw fault('启用互动卡片需要已配置的钉钉机器人和已发布的模板 ID。');
   keys(value.model, Object.keys(defaults.model));
   value.model = { enabled: bool(value.model.enabled), endpoint: loopback(value.model.endpoint), name: text(value.model.name, 200).trim() };
   if (value.model.enabled && !value.model.name) throw fault('启用评估模型前需要填写模型名称。');
@@ -54,5 +60,10 @@ export function validateSettings(input) {
   return structuredClone(value);
 }
 
-export const settingsVersion = settings => createHash('sha256').update(JSON.stringify(validateSettings(settings))).digest('hex');
+export function settingsVersion(settings) {
+  const canonical = validateSettings(settings);
+  // Preserve the policy hash on existing grants until card settings actually change.
+  if (!canonical.cards.enabled && !canonical.cards.templateId) delete canonical.cards;
+  return createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
+}
 export const safeText = text;

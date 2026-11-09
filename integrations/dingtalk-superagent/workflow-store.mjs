@@ -14,6 +14,12 @@ const revisionRequired = revision => { if (typeof revision !== 'string' || !revi
 const validId = value => typeof value === 'string' && value.length > 0 && value.length <= 512 && !/[\u0000-\u0020\u007f]/.test(value);
 export function safePR(url) { try { const parsed = new URL(url); return parsed.origin === 'https://github.com' && new RegExp(`^/${REPOSITORY}/pull/[1-9][0-9]*$`).test(parsed.pathname) && !parsed.search && !parsed.hash && !parsed.username && !parsed.password ? parsed.href : undefined; } catch { return undefined; } }
 
+export function hasOutstandingInputs(ticket) {
+  return ticket.inputs.slice(ticket.assignment.inputCount).some(input =>
+    !(input.source === 'github' && input.context === true) &&
+    (input.steering?.assignmentId !== ticket.assignment.id || input.steering.status !== 'delivered'));
+}
+
 function validate(state) {
   if (!state || state.version !== 1 || !Array.isArray(state.tickets) || !Array.isArray(state.events) || !Array.isArray(state.outbox) || !Array.isArray(state.decisions) || !Array.isArray(state.settingsHistory)) throw fault('开发代理状态损坏，原文件已保留。', 500);
   validateSettings(state.settings);
@@ -39,12 +45,90 @@ function stillAllowed(ticket, settings) {
   return ticket.source === 'github' && ticket.executionApprovedBy === 'local-operator';
 }
 
+const queueable = new Set(['observed', 'failed', 'blocked', 'waiting_answer']);
+function manualQueueEnabled(settings) {
+  return settings.mode === 'manual' && !settings.paused && settings.worker.enabled;
+}
+function queueTicket(ticket, settings, actor) {
+  if (!manualQueueEnabled(settings)) throw fault('需要手动执行模式、已启用的独立 Worker，且调度未暂停。', 409);
+  if (!queueable.has(ticket.status)) throw fault('当前任务状态不能排队。', 409);
+  if (ticket.source !== 'github' && !stillAllowed(ticket, settings)) throw fault('任务原始授权已失效。', 403);
+  ticket.executionApprovedBy = actor;
+  ticket.mandate = grant(ticket, settings, true);
+  ticket.mandate.inputCount = ticket.inputs.length;
+  ticket.grants.push(ticket.mandate);
+  ticket.status = 'queued';
+}
+function stopTicket(state, ticket) {
+  if (['completed', 'cancelled'].includes(ticket.status)) throw fault('任务已经结束。', 409);
+  ticket.status = 'cancelled';
+  receipt(state, ticket, `任务 ${ticket.id} 已停止。`, 'result');
+}
+
+// The ticket scope and policy generation prevent an old card from becoming
+// valid again when an operator restores earlier settings or a task is retried.
+function cardView(state, ticket, policy = settingsVersion(state.settings)) {
+  if (!state.settings.cards?.enabled || ticket.source !== 'dingtalk' || !stillAllowed(ticket, state.settings)) return null;
+  const actions = [];
+  if (manualQueueEnabled(state.settings) && queueable.has(ticket.status)) actions.push('approve');
+  if (!['completed', 'cancelled'].includes(ticket.status)) actions.push('stop', 'supplement');
+  const prUrl = safePR(ticket.prUrl);
+  if (prUrl) actions.push('view_pr');
+  if (!actions.length) return null;
+  const scopeVersion = hash([ticket.id, policy, state.settingsHistory.length, ticket.inputs.length,
+    ticket.inputs.at(-1).id, ticket.reports.length]);
+  const mandateId = ticket.mandate.id;
+  const version = hash([scopeVersion, mandateId, ticket.status, prUrl || '']);
+  return { ticketId: ticket.id, title: ticket.title, text: ticket.inputs.at(-1).text, status: ticket.status,
+    scope: ticket.inputs[0].text, allowPush: state.settings.github.enabled,
+    actions, scopeVersion, version, mandateId, ...(prUrl ? { prUrl } : {}) };
+}
+
+function refreshCards(state) {
+  const policy = state.settings.cards?.enabled ? settingsVersion(state.settings) : null;
+  const views = new Map();
+  if (policy) for (const ticket of state.tickets) {
+    const view = cardView(state, ticket, policy);
+    if (view) views.set(ticket.id, { view, ticket });
+  }
+  const seen = new Set();
+  for (const row of state.outbox) {
+    if (row.kind !== 'card') continue;
+    if (views.get(row.ticketId)?.view.version === row.card.version) {
+      seen.add(row.ticketId); // Failed/uncertain deliveries require reconciliation.
+    } else if (row.status === 'pending') {
+      row.status = 'withdrawn'; row.error = '卡片授权或任务版本已更新。';
+    }
+  }
+  for (const [id, { view, ticket }] of views) {
+    if (seen.has(id)) continue;
+    if (state.outbox.length >= 10000) break;
+    const createdAt = now();
+    state.outbox.push({ id: randomUUID(), ticketId: id, kind: 'card', status: 'pending', source: 'dingtalk',
+      requesterId: ticket.requesterId, conversationId: ticket.conversationId, conversationType: ticket.origin.conversationType,
+      text: ticket.title, card: { ...view, outTrackId: randomUUID() }, attempts: 0, createdAt, nextAt: createdAt });
+  }
+}
+
+function assertCardActor(row, ticket, callback, settings) {
+  if (!settings.cards?.enabled || ticket.source !== 'dingtalk' || !stillAllowed(ticket, settings)
+    || row.card.ticketId !== ticket.id || row.conversationId !== ticket.conversationId || row.requesterId !== ticket.requesterId
+    || callback.senderId !== ticket.requesterId || callback.corpId !== ticket.origin.corpId
+    || callback.robotCode !== ticket.origin.robotCode) throw fault('当前用户或机器人无权操作此卡片。', 403);
+  const group = ticket.origin.conversationType === '2';
+  const spaceType = group ? 'IM_GROUP' : 'IM_ROBOT', spaceId = group ? row.conversationId : ticket.requesterId;
+  if ((callback.spaceType !== undefined && callback.spaceType !== spaceType)
+    || (callback.spaceId !== undefined && ![spaceId, `dtv1.card//${spaceType}.${spaceId}`].includes(callback.spaceId))
+    || (callback.conversationId !== undefined && callback.conversationId !== row.conversationId)) throw fault('卡片会话不匹配。', 403);
+}
+
 export class WorkflowStore {
   constructor(runtimeDir) {
     this.store = new JsonStore(join(runtimeDir, 'dingtalk-superagent', 'workflow.json'), { version: 1, settings: defaultSettings(), settingsHistory: [], tickets: [], events: [], decisions: [], outbox: [], cursors: {} }, validate);
   }
   async snapshot() {
     const saved = await this.store.read(), state = structuredClone(saved.value);
+    state.settings = validateSettings(state.settings);
     return { ...state, revision: saved.revision, settingsRevision: settingsVersion(state.settings), tickets: state.tickets.reverse(), events: state.events.slice(-200).reverse(), decisions: state.decisions.slice(-200).reverse(), outbox: state.outbox.slice(-200).reverse() };
   }
   async saveSettings(input, expected) {
@@ -71,6 +155,7 @@ export class WorkflowStore {
       if (ticketId) {
         ticket = find(state, ticketId);
         if (source !== 'local' && (ticket.source !== source || ticket.conversationId !== conversationId)) throw fault('消息不能关联到其他会话的任务。', 403);
+        if (source === 'dingtalk' && (ticket.requesterId !== senderId || ticket.origin.corpId !== origin.corpId || ticket.origin.robotCode !== origin.robotCode)) throw fault('只有原发起人可在原会话补充此任务。', 403);
         if (ticket.status === 'cancelled') throw fault('已停止任务不能恢复，请创建新任务。', 409);
         if (!stillAllowed(ticket, state.settings)) throw fault('原任务授权已失效。', 403);
         bounded(ticket.inputs, 500, '任务消息');
@@ -80,6 +165,9 @@ export class WorkflowStore {
         state.tickets.push(ticket);
       }
       const input = { id: randomUUID(), text, senderId, source, at: now() }; ticket.inputs.push(input);
+      if (ticket.status === 'working' && (source === 'local' || source === 'dingtalk' && senderId === ticket.requesterId)) {
+        input.steering = { assignmentId: ticket.assignment.id, status: 'pending' };
+      }
       if (!ticket.mandate) { ticket.mandate = grant(ticket, state.settings); ticket.grants.push(ticket.mandate); }
       // Follow-ups are retained; they never silently widen execution authority.
       if (['waiting_answer', 'completed', 'failed', 'blocked', 'awaiting_review'].includes(ticket.status)) ticket.status = 'observed';
@@ -95,14 +183,9 @@ export class WorkflowStore {
     await this.store.update(state => {
       const ticket = find(state, id);
       if (['queue', 'retry'].includes(action)) {
-        if (state.settings.mode !== 'manual' || state.settings.paused || !state.settings.worker.enabled) throw fault('需要手动执行模式、已启用的独立 Worker，且调度未暂停。', 409);
-        if (!['observed', 'failed', 'blocked', 'waiting_answer'].includes(ticket.status)) throw fault('当前任务状态不能排队。', 409);
-        if (ticket.source !== 'github' && !stillAllowed(ticket, state.settings)) throw fault('任务原始授权已失效。', 403);
-        ticket.executionApprovedBy = 'local-operator';
-        ticket.mandate = grant(ticket, state.settings, true); ticket.grants.push(ticket.mandate); ticket.status = 'queued';
+        queueTicket(ticket, state.settings, 'local-operator');
       } else if (action === 'stop') {
-        if (['completed', 'cancelled'].includes(ticket.status)) throw fault('任务已经结束。', 409);
-        ticket.status = 'cancelled'; receipt(state, ticket, `任务 ${ticket.id} 已停止。`, 'result');
+        stopTicket(state, ticket);
       } else if (action === 'complete') {
         if (!['observed', 'awaiting_review', 'waiting_answer', 'blocked', 'failed'].includes(ticket.status)) throw fault('运行或排队中的任务不能直接标记完成。', 409);
         ticket.status = 'completed'; receipt(state, ticket, `任务 ${ticket.id} 已由本机操作员确认完成。`, 'result');
@@ -128,8 +211,17 @@ export class WorkflowStore {
     const saved = await this.store.update(state => {
       const cfg = state.settings;
       if (cfg.paused || cfg.mode !== 'manual' || !cfg.worker.enabled || state.tickets.filter(t => t.status === 'working').length >= cfg.concurrency) return null;
-      const ticket = state.tickets.find(t => t.status === 'queued'); if (!ticket) return null;
-      if (!stillAllowed(ticket, cfg) || ticket.mandate.policyVersion !== settingsVersion(cfg) || !ticket.mandate.allowed.execute) { ticket.status = 'blocked'; audit(state, ticket, 'authorization_changed', '排队后的策略已变化，需要重新授权。'); return null; }
+      const policy = settingsVersion(cfg);
+      const ticket = state.tickets.find(candidate => {
+        if (candidate.status !== 'queued') return false;
+        const { mandate } = candidate;
+        const sameInputs = mandate.inputCount === undefined || mandate.inputCount === candidate.inputs.length;
+        if (sameInputs && mandate.policyVersion === policy && mandate.allowed.execute && stillAllowed(candidate, cfg)) return true;
+        candidate.status = 'blocked';
+        audit(state, candidate, 'authorization_changed', '排队后的输入或策略已变化，需要重新授权。');
+        return false;
+      });
+      if (!ticket) return null;
       const assignment = { id: randomUUID(), owner, pid: process.pid, startedAt: now(), inputCount: ticket.inputs.length, status: 'running' };
       ticket.assignment = assignment; ticket.status = 'working'; audit(state, ticket, 'started');
       return { ticket: structuredClone(ticket), settings: structuredClone(cfg), assignmentId: assignment.id };
@@ -147,7 +239,7 @@ export class WorkflowStore {
       bounded(ticket.reports, 500, '任务报告'); ticket.reports.push(report); if (prUrl) ticket.prUrl = prUrl;
       ticket.assignment.status = 'ended'; ticket.assignment.endedAt = now();
       ticket.status = status === 'ready' ? (ticket.prUrl ? 'awaiting_review' : 'completed') : status;
-      if (ticket.inputs.length > ticket.assignment.inputCount) ticket.status = 'observed';
+      if (hasOutstandingInputs(ticket)) ticket.status = 'observed';
       audit(state, ticket, 'reported', report.summary);
       receipt(state, ticket, `${ticket.title}\n${report.summary.slice(0, 6000)}${report.summary.length > 6000 ? '\n完整报告见工作台。' : ''}${report.question ? '\n需要补充：' + report.question.slice(0, 1200) : ''}${prUrl ? '\n' + prUrl : ''}`, report.question ? 'attention' : 'result');
     }); return this.snapshot();
@@ -167,14 +259,88 @@ export class WorkflowStore {
   }
   async claimOutbound(owner) {
     const saved = await this.store.update(state => {
+      refreshCards(state);
       for (const item of state.outbox) if (item.status === 'pending' && item.source === 'dingtalk' && state.settings.source.enabled) {
         const ticket = state.tickets.find(t => t.id === item.ticketId);
         if (!ticket || !stillAllowed(ticket, state.settings)) { item.status = 'withdrawn'; item.error = '目标会话或人员已不在当前授权范围。'; }
       }
-      const message = state.outbox.find((item, index) => item.status === 'pending' && (item.source === 'dingtalk' ? state.settings.source.enabled : item.source === 'github' && state.settings.github.enabled) && Date.parse(item.nextAt) <= Date.now() && !state.outbox.slice(0, index).some(prior => prior.ticketId === item.ticketId && prior.conversationId === item.conversationId && ['pending', 'sending', 'uncertain'].includes(prior.status)));
+      const message = state.outbox.find((item, index) => {
+        const dueAt = Date.parse(item.nextAt);
+        if (item.status !== 'pending' || !Number.isFinite(dueAt) || dueAt > Date.now()) return false;
+        const enabled = item.source === 'dingtalk' ? state.settings.source.enabled : item.source === 'github' && state.settings.github.enabled;
+        if (!enabled) return false;
+        // Cards use their own authenticated delivery channel. An expired text
+        // sessionWebhook must not prevent an actionable card from arriving.
+        return !state.outbox.slice(0, index).some(prior => {
+          if (prior.ticketId !== item.ticketId || prior.conversationId !== item.conversationId) return false;
+          const sameChannel = item.kind === 'card' ? prior.card?.version === item.card.version : prior.kind !== 'card';
+          return sameChannel && ['pending', 'sending', 'uncertain'].includes(prior.status);
+        });
+      });
       if (!message) return null;
       message.status = 'sending'; message.owner = owner; message.pid = process.pid; message.attempts++; return structuredClone(message);
     }); return saved.result;
+  }
+  async assertCardDelivery(outboxId) {
+    const { value: state } = await this.store.read();
+    const row = state.outbox.find(item => item.id === outboxId && item.kind === 'card' && item.status === 'sending');
+    if (!row || cardView(state, find(state, row.ticketId))?.version !== row.card.version) throw fault('卡片授权或版本已变化，已停止投递。', 409);
+  }
+  async applyCardAction(callback, { workerReady = false } = {}) {
+    const { eventId, outTrackId, action } = callback || {};
+    if (!validId(eventId) || !validId(outTrackId) || !['approve', 'stop', 'supplement', 'view_pr'].includes(action)) throw fault('卡片动作或事件标识无效。');
+    const saved = await this.store.update(state => {
+      const row = state.outbox.find(item => item.kind === 'card' && item.card.outTrackId === outTrackId);
+      if (row?.status === 'sending') throw fault('卡片投递回执正在写入，请稍后重试。', 503);
+      if (!row || row.status !== 'sent') throw fault('卡片实例不存在或尚未确认送达。', 409);
+      const ticket = find(state, row.ticketId);
+      assertCardActor(row, ticket, callback, state.settings);
+      const key = hash(['dingtalk-card', callback.corpId, callback.robotCode, eventId]);
+      const prior = state.events.find(e => e.key === key);
+      if (prior) {
+        if (prior.outTrackId !== outTrackId || prior.action !== action || prior.senderId !== callback.senderId) throw fault('卡片事件 ID 已用于其他请求。', 409);
+        if (prior.outcome === 'worker_unavailable') return { accepted: false, reason: prior.outcome };
+        return { accepted: true, duplicate: true, action, ticketId: ticket.id };
+      }
+      const current = cardView(state, ticket);
+      // After approval, the same control can stop the execution it authorized.
+      // A different grant, new input/report, or policy change ends that right.
+      const sameExecutionStop = action === 'stop' && ['queued', 'working'].includes(ticket.status)
+        && current?.scopeVersion === row.card.scopeVersion
+        && [row.authorizedMandateId, row.card.mandateId].includes(ticket.mandate.id);
+      if (!current || (!sameExecutionStop && current.version !== row.card.version)) throw fault('卡片已过期，请使用原会话中的最新卡片。', 409);
+      if (!row.card.actions.includes(action) || !current.actions.includes(action)) throw fault('当前卡片未授权此操作。', 403);
+      if (row.usedActions?.includes(action)) throw fault('此卡片操作已经处理。', 409);
+      bounded(state.events, 10000, '事件');
+      const result = { accepted: true, duplicate: false, action, ticketId: ticket.id };
+      const event = { id: randomUUID(), key, eventId, outTrackId, action, ticketId: ticket.id, source: 'dingtalk',
+        conversationId: ticket.conversationId, senderId: callback.senderId, text: '卡片操作 ' + action, at: now() };
+      if (action === 'approve') {
+        if (workerReady !== true) {
+          // The platform can redeliver a rejected click after an ACK is lost.
+          // Record the decision before acknowledging; only a new click can retry.
+          state.events.push({ ...event, outcome: 'worker_unavailable', text: '独立 Worker 未就绪，此次批准未入队。' });
+          return { accepted: false, reason: 'worker_unavailable' };
+        }
+        queueTicket(ticket, state.settings, 'dingtalk:' + callback.senderId);
+        row.authorizedMandateId = ticket.mandate.id;
+      } else if (action === 'stop') {
+        if (ticket.status === 'working') result.assignmentId = ticket.assignment?.id;
+        stopTicket(state, ticket);
+      } else if (action === 'supplement') {
+        receipt(state, ticket, `请在原会话${ticket.origin.conversationType === '2' ? ' @机器人，' : ''}回复「任务 ${ticket.id} 补充内容」，补充信息将关联到这个任务。`, 'attention');
+      } else {
+        result.prUrl = current.prUrl;
+        receipt(state, ticket, `任务 ${ticket.id} 的 PR：${current.prUrl}`, 'result');
+      }
+      (row.usedActions ??= []).push(action);
+      const detail = `钉钉原发起人 ${callback.senderId}`;
+      audit(state, ticket, 'card_' + action, detail);
+      state.events.push(event);
+      return result;
+    });
+    if (!saved.result.accepted) throw Object.assign(fault('独立 Worker 健康检查尚未通过。此次批准未入队。', 503), { code: saved.result.reason });
+    return saved.result;
   }
   async finishOutbound(id, { ok, retryable = false, uncertain = false }) {
     await this.store.update(state => {
@@ -206,9 +372,31 @@ export class WorkflowStore {
     }); return this.snapshot();
   }
   async note(id, type, detail) { await this.store.update(state => audit(state, find(state, id), type, safeText(detail))); }
+  async steeringBatch(id, assignmentId) {
+    const state = (await this.store.read()).value, ticket = find(state, id);
+    if (ticket.status !== 'working' || ticket.assignment?.id !== assignmentId ||
+        !ticket.mandate.allowed.execute || ticket.mandate.policyVersion !== settingsVersion(state.settings) ||
+        state.settings.paused || state.settings.mode !== 'manual' || !stillAllowed(ticket, state.settings)) return [];
+    return ticket.inputs.filter(input => input.steering?.assignmentId === assignmentId && input.steering.status !== 'delivered');
+  }
+  async markSteering(id, assignmentId, receipts) {
+    if (!receipts.length) return;
+    const byId = new Map(receipts.map(({ inputId, status }) => [inputId, status]));
+    await this.store.update(state => {
+      const ticket = find(state, id);
+      if (ticket.status !== 'working' || ticket.assignment?.id !== assignmentId) return;
+      for (const input of ticket.inputs) {
+        const status = byId.get(input.id);
+        if (input.steering?.assignmentId !== assignmentId || input.steering.status === 'delivered' ||
+            !['queued', 'delivered', 'unavailable', 'uncertain'].includes(status) || status === input.steering.status) continue;
+        input.steering = { assignmentId, status, at: now() };
+      }
+    });
+  }
   async assertDelivery(id, assignmentId, policyVersion) {
     const state = (await this.store.read()).value, ticket = find(state, id);
     if (ticket.status !== 'working' || ticket.assignment?.id !== assignmentId || !ticket.mandate.allowed.push || !state.settings.github.enabled || state.settings.paused || state.settings.mode !== 'manual' || settingsVersion(state.settings) !== policyVersion || !stillAllowed(ticket, state.settings)) throw fault('交付授权已变化，停止外部写入。', 409);
+    if (hasOutstandingInputs(ticket)) throw fault('还有补充信息等待处理，请核对后再交付。', 409);
   }
   async reconcileOutbound(id, resolution, revision) {
     revisionRequired(revision);

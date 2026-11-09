@@ -30,7 +30,7 @@
 
 **捷径：工作台草稿直推队列（2026-10-16 新增）**：发布计划页（publish-planner）草稿列表里点「加入自动发布」即可——后端 `POST /api/automation/import-draft` 会把草稿视频拷入 `config.folder`（inbox）并生成待审批队列项（标题/文案/话题自动带入，按 sourceDraftId 防重复）。之后照常去「每日自动发布」预览审批即可，**不必再手动把文件丢进 inbox**。
 
-**#3 修复（2026-10-16）**：`douyin-publisher.mjs` 的 `publish()` 已删除提交前开"第二个受控会话复核账号"的逻辑（同浏览器实例双会话会抢走上传表单），改复用当前会话；账号变更由 `page()` 的 needsHuman/登录检测捕获。自动发布尾部仍可能因 bsk fill 闪退失败，兜底仍是让用户手动点最后一下发布。
+**#3 修复（演进至 2026-11-03）**：`douyin-publisher.mjs` 已移除提交前开"第二个受控会话复核账号"的逻辑（同浏览器实例双会话会抢走上传表单），改为引入 `lib/bsk-cooperation.mjs` 的 `BskCooperation` 协作层，发布动作与 DOM 观察都复用当前会话（`cooperation.action` / `inspectDOM`），不再二次开会话。账号变更由 `page()` 的 needsHuman/登录检测捕获。自动发布尾部仍可能因 bsk fill 闪退失败，兜底仍是让用户手动点最后一下发布。
 
 **默认标题/文案/话题**（用户未另给时用）：
 - 标题：橘猫捡到发夹跳喵阿里嘎多
@@ -41,7 +41,7 @@
 - bsk 0.3.2 会话协议：`douyin-publisher.mjs` 的 `session()` 已补 `session request --prepare`，否则 connect 报 "request is not prepared"。
 - navigate 超时：`douyin-publisher.mjs` 三处 navigate 超时已从 30000→60000（抖音首屏加载偶发卡 30s）。
 - **fill 偶发闪退（最常见）**：bsk 会话在"填标题"那步可能掉线（报 "连接或操作失败"），属环境不稳非内容问题。兜底方案：**若自动发布在 fill 失败，让用户手动在抖音网页点最后一下发布即可**（已验证可行）。
-- 4174 旧实例：若 `/api/automation` 404，kill 后重启最新 server.mjs。
+- 4174 旧实例占端口：若 `POST /api/automation/import-draft` 返回 404「API 不存在。」说明跑的是旧 server 实例（旧代码无此路由），需 `taskkill` 掉 4174 占用进程再重启最新 `server.mjs`；返回 404「工作台草稿不存在。」才是新代码已加载。2026-11-03 实测：11-02 启动的旧实例霸端口导致重启失败，kill 后重启才生效。
 - 音乐授权：成片配乐若是 Flova 原创 AI 曲，发布前需用户确认接受。
 
 ## 上次发布（2026-10-16）
@@ -53,4 +53,5 @@
   `http.proxy=http://127.0.0.1:7897` 与 `https.proxy=http://127.0.0.1:7897`。换节点/改端口后重跑这两条 `git config` 即可。
 - 代理通时可从沙箱直接 push（7897 出口对 api.github.com 返 200）；沙箱仅报 `unable to write credential store: Permission denied` 属正常（不写凭据缓存），不影响推送。
 - WorkBuddy 沙箱与该机器网络隔离：沙箱内连 GitHub 始终 000（代理出口与直连都不通），**push 必须由用户在本机联网终端执行**。
-- 本仓库 `origin` = `https://github.com/qq773901406-cmd/douyin-ops.git`，分支 `main`；推送会连带之前本地未推的 4 个 `wcy` commit。
+- 本仓库 `origin` = `https://github.com/qq773901406-cmd/douyin-ops.git`；另有 `upstream` = `tengfei527/douyin-ops-skill.git`。当前开发分支为 `codex/dingtalk-superagent-observe`（功能分支，**无 upstream**，提交默认落此分支，不是 main）。推送前先定：是 `git push -u origin codex/dingtalk-superagent-observe` 推功能分支，还是先 `git checkout main && git merge codex/dingtalk-superagent-observe` 再 `git push origin main`。
+- 2026-11-03 提交 `b23aeb1`（57 文件）含三处功能修复 + dingtalk-superagent/bsk-cooperation 等配套（与发布流程强耦合，一并提交）。`.gitignore` 已补 `*.bak`、`__pycache__/`，并解除对 `runtime/*.json.bak` 的跟踪。
